@@ -15,6 +15,7 @@ import {
   Plus,
   ArrowRight,
   ShoppingCart,
+  CheckCircle2,
 } from 'lucide-react';
 import AddExpenseDialog from '@/components/expenses/AddExpenseDialog';
 
@@ -177,6 +178,17 @@ export default function Dashboard() {
                       <ShoppingCart className="h-4 w-4 text-warning" />
                     </div>
                     <span>Grocery List</span>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </Link>
+              <Link to="/settlement">
+                <Button variant="outline" className="w-full justify-between h-14 group">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-success/10">
+                      <CheckCircle2 className="h-4 w-4 text-success" />
+                    </div>
+                    <span>Settlement</span>
                   </div>
                   <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
                 </Button>
