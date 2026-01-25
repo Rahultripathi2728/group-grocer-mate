@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import CalendarPage from "./pages/CalendarPage";
 import GroupsPage from "./pages/GroupsPage";
 import GroceryPage from "./pages/GroceryPage";
+import SettlementPage from "./pages/SettlementPage";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
@@ -54,6 +55,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <GroceryPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settlement"
+              element={
+                <ProtectedRoute>
+                  <SettlementPage />
                 </ProtectedRoute>
               }
             />
