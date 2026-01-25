@@ -16,9 +16,11 @@ import {
   startOfWeek,
   endOfWeek,
 } from 'date-fns';
-import { ChevronLeft, ChevronRight, Plus, Wallet, Users } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import AddExpenseDialog from '@/components/expenses/AddExpenseDialog';
+import ExpenseCard from '@/components/expenses/ExpenseCard';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface DayExpense {
   date: string;
@@ -28,6 +30,7 @@ interface DayExpense {
     description: string;
     amount: number;
     expense_type: string;
+    category?: string | null;
   }>;
 }
 
@@ -67,6 +70,7 @@ export default function CalendarPage() {
           description: expense.description,
           amount: Number(expense.amount),
           expense_type: expense.expense_type,
+          category: expense.category,
         });
         grouped.set(dateKey, existing);
       });
@@ -86,11 +90,17 @@ export default function CalendarPage() {
   const calendarEnd = endOfWeek(monthEnd);
   const calendarDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
 
-  const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const weekDays = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
   const selectedDateExpenses = selectedDate
     ? expensesByDate.get(format(selectedDate, 'yyyy-MM-dd'))
     : null;
+
+  // Calculate max expense for intensity
+  const maxDayExpense = Math.max(
+    ...Array.from(expensesByDate.values()).map((d) => d.total),
+    1
+  );
 
   return (
     <DashboardLayout>
@@ -98,7 +108,9 @@ export default function CalendarPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-display font-bold">Calendar</h1>
+            <h1 className="text-3xl font-display font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+              Calendar
+            </h1>
             <p className="text-muted-foreground mt-1">Track your daily expenses</p>
           </div>
           <Button
@@ -106,7 +118,7 @@ export default function CalendarPage() {
               setSelectedDate(new Date());
               setAddExpenseOpen(true);
             }}
-            className="gradient-primary text-primary-foreground shadow-glow-sm hover:shadow-glow transition-shadow"
+            className="gradient-primary text-primary-foreground shadow-glow-sm hover:shadow-glow transition-all duration-300 hover:scale-105"
           >
             <Plus className="h-4 w-4 mr-2" />
             Add Expense
@@ -115,35 +127,45 @@ export default function CalendarPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Calendar */}
-          <Card className="lg:col-span-2 border-0 shadow-md">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-              <CardTitle className="font-display text-xl">
-                {format(currentMonth, 'MMMM yyyy')}
-              </CardTitle>
-              <div className="flex gap-1">
+          <Card className="lg:col-span-2 border-0 shadow-lg bg-card/80 backdrop-blur-sm">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-6">
+              <div className="flex items-center gap-3">
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
+                  className="rounded-full hover:bg-primary/10"
                 >
                   <ChevronLeft className="h-5 w-5" />
                 </Button>
+                <CardTitle className="font-display text-xl min-w-[180px] text-center">
+                  {format(currentMonth, 'MMMM yyyy')}
+                </CardTitle>
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
+                  className="rounded-full hover:bg-primary/10"
                 >
                   <ChevronRight className="h-5 w-5" />
                 </Button>
               </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setCurrentMonth(new Date())}
+                className="text-primary"
+              >
+                Today
+              </Button>
             </CardHeader>
             <CardContent>
               {/* Week Days Header */}
-              <div className="grid grid-cols-7 gap-1 mb-2">
-                {weekDays.map((day) => (
+              <div className="grid grid-cols-7 gap-1 mb-3">
+                {weekDays.map((day, i) => (
                   <div
-                    key={day}
-                    className="text-center text-sm font-medium text-muted-foreground py-2"
+                    key={i}
+                    className="text-center text-xs font-semibold text-muted-foreground py-2"
                   >
                     {day}
                   </div>
@@ -152,40 +174,55 @@ export default function CalendarPage() {
 
               {/* Calendar Grid */}
               <div className="grid grid-cols-7 gap-1">
-                {calendarDays.map((day) => {
+                {calendarDays.map((day, index) => {
                   const dateKey = format(day, 'yyyy-MM-dd');
                   const dayExpenses = expensesByDate.get(dateKey);
                   const isCurrentMonth = isSameMonth(day, currentMonth);
                   const isToday = isSameDay(day, new Date());
                   const isSelected = selectedDate && isSameDay(day, selectedDate);
 
+                  // Calculate intensity based on spending
+                  const intensity = dayExpenses
+                    ? Math.min(dayExpenses.total / maxDayExpense, 1)
+                    : 0;
+
                   return (
-                    <button
+                    <motion.button
                       key={dateKey}
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: index * 0.005 }}
                       onClick={() => setSelectedDate(day)}
                       className={cn(
-                        'relative aspect-square p-1 rounded-lg transition-all text-sm',
-                        !isCurrentMonth && 'text-muted-foreground/40',
-                        isToday && 'ring-2 ring-primary',
-                        isSelected && 'bg-primary text-primary-foreground',
-                        !isSelected && isCurrentMonth && 'hover:bg-muted',
-                        dayExpenses && !isSelected && 'bg-accent'
+                        'relative aspect-square p-1 rounded-xl transition-all text-sm font-medium',
+                        'hover:ring-2 hover:ring-primary/30 focus:outline-none focus:ring-2 focus:ring-primary',
+                        !isCurrentMonth && 'text-muted-foreground/30',
+                        isToday && !isSelected && 'ring-2 ring-primary/50',
+                        isSelected && 'bg-primary text-primary-foreground ring-2 ring-primary shadow-glow-sm'
                       )}
+                      style={{
+                        backgroundColor:
+                          !isSelected && dayExpenses && isCurrentMonth
+                            ? `hsl(var(--primary) / ${0.1 + intensity * 0.3})`
+                            : undefined,
+                      }}
                     >
-                      <span className="absolute top-1 left-2 font-medium">
+                      <span className="absolute top-1.5 left-1/2 -translate-x-1/2">
                         {format(day, 'd')}
                       </span>
-                      {dayExpenses && (
+                      {dayExpenses && isCurrentMonth && (
                         <span
                           className={cn(
-                            'absolute bottom-1 left-1 right-1 text-[10px] font-semibold truncate',
+                            'absolute bottom-1 left-1/2 -translate-x-1/2 text-[9px] font-bold',
                             isSelected ? 'text-primary-foreground' : 'text-primary'
                           )}
                         >
-                          ₹{dayExpenses.total.toLocaleString('en-IN')}
+                          ₹{dayExpenses.total >= 1000
+                            ? `${(dayExpenses.total / 1000).toFixed(1)}k`
+                            : dayExpenses.total.toLocaleString('en-IN')}
                         </span>
                       )}
-                    </button>
+                    </motion.button>
                   );
                 })}
               </div>
@@ -193,82 +230,86 @@ export default function CalendarPage() {
           </Card>
 
           {/* Selected Day Details */}
-          <Card className="border-0 shadow-md">
+          <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-              <CardTitle className="font-display">
-                {selectedDate
-                  ? format(selectedDate, 'dd MMMM yyyy')
-                  : 'Select a date'}
+              <CardTitle className="font-display text-lg">
+                {selectedDate ? format(selectedDate, 'dd MMMM') : 'Select a date'}
               </CardTitle>
               {selectedDate && (
                 <Button
                   size="sm"
-                  variant="ghost"
-                  className="text-primary"
                   onClick={() => setAddExpenseOpen(true)}
+                  className="rounded-full gradient-primary text-primary-foreground h-8 w-8 p-0"
                 >
                   <Plus className="h-4 w-4" />
                 </Button>
               )}
             </CardHeader>
             <CardContent>
-              {!selectedDate ? (
-                <p className="text-muted-foreground text-center py-8">
-                  Click on a date to see expenses
-                </p>
-              ) : !selectedDateExpenses ? (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground mb-4">No expenses on this day</p>
-                  <Button
-                    variant="outline"
-                    onClick={() => setAddExpenseOpen(true)}
-                    className="text-primary"
+              <AnimatePresence mode="wait">
+                {!selectedDate ? (
+                  <motion.div
+                    key="empty"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="text-center py-12"
                   >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Expense
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-primary/10">
-                    <span className="font-medium">Total</span>
-                    <span className="font-bold text-lg">
-                      ₹{selectedDateExpenses.total.toLocaleString('en-IN')}
-                    </span>
-                  </div>
-                  <div className="space-y-2 max-h-80 overflow-y-auto">
-                    {selectedDateExpenses.expenses.map((expense) => (
-                      <div
-                        key={expense.id}
-                        className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
-                      >
-                        <div className="flex items-center gap-2">
-                          <div
-                            className={cn(
-                              'p-1.5 rounded-md',
-                              expense.expense_type === 'personal'
-                                ? 'bg-primary/10'
-                                : 'bg-accent'
-                            )}
-                          >
-                            {expense.expense_type === 'personal' ? (
-                              <Wallet className="h-3 w-3 text-primary" />
-                            ) : (
-                              <Users className="h-3 w-3 text-accent-foreground" />
-                            )}
-                          </div>
-                          <span className="text-sm font-medium truncate max-w-[120px]">
-                            {expense.description}
-                          </span>
-                        </div>
-                        <span className="font-semibold text-sm">
-                          ₹{expense.amount.toLocaleString('en-IN')}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+                    <Sparkles className="h-12 w-12 text-primary/30 mx-auto mb-3" />
+                    <p className="text-muted-foreground">
+                      Click on a date to see expenses
+                    </p>
+                  </motion.div>
+                ) : !selectedDateExpenses ? (
+                  <motion.div
+                    key="no-expenses"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="text-center py-12"
+                  >
+                    <div className="inline-flex p-4 rounded-full bg-muted/50 mb-4">
+                      <Sparkles className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <p className="text-muted-foreground mb-4">No expenses on this day</p>
+                    <Button
+                      variant="outline"
+                      onClick={() => setAddExpenseOpen(true)}
+                      className="text-primary border-primary/30 hover:bg-primary/10"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Expense
+                    </Button>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="expenses"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="space-y-4"
+                  >
+                    <div className="p-4 rounded-2xl bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20">
+                      <p className="text-sm text-muted-foreground">Total Spent</p>
+                      <p className="text-3xl font-display font-bold text-primary">
+                        ₹{selectedDateExpenses.total.toLocaleString('en-IN')}
+                      </p>
+                    </div>
+                    <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                      {selectedDateExpenses.expenses.map((expense, i) => (
+                        <motion.div
+                          key={expense.id}
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: i * 0.05 }}
+                        >
+                          <ExpenseCard {...expense} compact />
+                        </motion.div>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </CardContent>
           </Card>
         </div>
