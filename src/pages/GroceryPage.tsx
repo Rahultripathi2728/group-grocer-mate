@@ -7,8 +7,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { Plus, ShoppingCart, Trash2, Check } from 'lucide-react';
+import { Plus, ShoppingCart, Trash2, Check, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface GroceryItem {
   id: string;
@@ -41,7 +42,6 @@ export default function GroceryPage() {
       .order('created_at', { ascending: false });
 
     if (groceryLists) {
-      // Fetch items for each list
       const listsWithItems = await Promise.all(
         groceryLists.map(async (list) => {
           const { data: items } = await supabase
@@ -106,9 +106,7 @@ export default function GroceryPage() {
     } else {
       setLists((prev) =>
         prev.map((list) =>
-          list.id === listId
-            ? { ...list, items: [...list.items, data] }
-            : list
+          list.id === listId ? { ...list, items: [...list.items, data] } : list
         )
       );
       setNewItemName('');
@@ -164,10 +162,7 @@ export default function GroceryPage() {
 
     if (checkedIds.length === 0) return;
 
-    const { error } = await supabase
-      .from('grocery_items')
-      .delete()
-      .in('id', checkedIds);
+    const { error } = await supabase.from('grocery_items').delete().in('id', checkedIds);
 
     if (error) {
       toast.error('Failed to clear items');
@@ -190,14 +185,12 @@ export default function GroceryPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-display font-bold">Grocery List</h1>
-            <p className="text-muted-foreground mt-1">
-              Never forget what to buy
-            </p>
+            <p className="text-muted-foreground mt-1">Never forget what to buy</p>
           </div>
           {lists.length === 0 && (
             <Button
               onClick={createDefaultList}
-              className="gradient-primary text-primary-foreground shadow-glow-sm hover:shadow-glow transition-shadow"
+              className="gradient-primary text-primary-foreground shadow-glow-sm hover:shadow-glow transition-all duration-300 hover:scale-105"
             >
               <Plus className="h-4 w-4 mr-2" />
               Create Shopping List
@@ -208,13 +201,20 @@ export default function GroceryPage() {
         {loading ? (
           <div className="space-y-4">
             {[1, 2].map((i) => (
-              <div key={i} className="h-48 bg-muted rounded-lg animate-pulse" />
+              <div key={i} className="h-48 bg-muted/50 rounded-2xl animate-pulse" />
             ))}
           </div>
         ) : lists.length === 0 ? (
-          <Card className="border-0 shadow-md">
-            <CardContent className="pt-12 pb-12 text-center">
-              <ShoppingCart className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+          <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
+            <CardContent className="pt-16 pb-16 text-center">
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: 'spring', bounce: 0.4 }}
+                className="inline-flex p-6 rounded-full bg-primary/10 mb-6"
+              >
+                <ShoppingCart className="h-12 w-12 text-primary" />
+              </motion.div>
               <h3 className="text-xl font-display font-semibold mb-2">
                 No shopping lists yet
               </h3>
@@ -237,107 +237,135 @@ export default function GroceryPage() {
               const checkedCount = list.items.filter((i) => i.is_checked).length;
 
               return (
-                <Card key={list.id} className="border-0 shadow-md">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-                    <div>
-                      <CardTitle className="font-display">{list.name}</CardTitle>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {uncheckedCount} item{uncheckedCount !== 1 ? 's' : ''} remaining
-                      </p>
+                <Card
+                  key={list.id}
+                  className="border-0 shadow-lg bg-card/80 backdrop-blur-sm overflow-hidden"
+                >
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 border-b border-border/50">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-xl bg-primary/10">
+                        <ShoppingCart className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <CardTitle className="font-display">{list.name}</CardTitle>
+                        <p className="text-sm text-muted-foreground mt-0.5">
+                          {uncheckedCount} item{uncheckedCount !== 1 ? 's' : ''} remaining
+                        </p>
+                      </div>
                     </div>
                     {checkedCount > 0 && (
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => clearCheckedItems(list.id)}
-                        className="text-destructive hover:text-destructive"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
                       >
                         <Trash2 className="h-4 w-4 mr-1" />
                         Clear ({checkedCount})
                       </Button>
                     )}
                   </CardHeader>
-                  <CardContent className="space-y-3">
+                  <CardContent className="pt-4 space-y-3">
                     {/* Add Item */}
-                    {addingToList === list.id ? (
-                      <div className="flex gap-2">
-                        <Input
-                          value={newItemName}
-                          onChange={(e) => setNewItemName(e.target.value)}
-                          placeholder="Item name"
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') addItem(list.id);
-                            if (e.key === 'Escape') {
-                              setAddingToList(null);
-                              setNewItemName('');
-                            }
-                          }}
-                          autoFocus
-                        />
-                        <Button
-                          onClick={() => addItem(list.id)}
-                          size="icon"
-                          className="shrink-0 gradient-primary text-primary-foreground"
+                    <AnimatePresence mode="wait">
+                      {addingToList === list.id ? (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="flex gap-2"
                         >
-                          <Check className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start text-muted-foreground"
-                        onClick={() => setAddingToList(list.id)}
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add item
-                      </Button>
-                    )}
+                          <Input
+                            value={newItemName}
+                            onChange={(e) => setNewItemName(e.target.value)}
+                            placeholder="Item name"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') addItem(list.id);
+                              if (e.key === 'Escape') {
+                                setAddingToList(null);
+                                setNewItemName('');
+                              }
+                            }}
+                            autoFocus
+                            className="bg-muted/50 border-0"
+                          />
+                          <Button
+                            onClick={() => addItem(list.id)}
+                            size="icon"
+                            className="shrink-0 gradient-primary text-primary-foreground rounded-xl"
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                        </motion.div>
+                      ) : (
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                        >
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start text-muted-foreground border-dashed border-2 hover:border-primary/50 hover:bg-primary/5"
+                            onClick={() => setAddingToList(list.id)}
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add item
+                          </Button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
 
                     {/* Items List */}
                     <div className="space-y-2 max-h-80 overflow-y-auto">
-                      {list.items
-                        .sort((a, b) => (a.is_checked ? 1 : 0) - (b.is_checked ? 1 : 0))
-                        .map((item) => (
-                          <div
-                            key={item.id}
-                            className={cn(
-                              'flex items-center gap-3 p-3 rounded-lg transition-all',
-                              item.is_checked
-                                ? 'bg-muted/50 opacity-60'
-                                : 'bg-muted hover:bg-muted/80'
-                            )}
-                          >
-                            <Checkbox
-                              checked={item.is_checked}
-                              onCheckedChange={() =>
-                                toggleItem(list.id, item.id, item.is_checked)
-                              }
-                              className="data-[state=checked]:bg-success data-[state=checked]:border-success"
-                            />
-                            <span
+                      <AnimatePresence>
+                        {list.items
+                          .sort((a, b) => (a.is_checked ? 1 : 0) - (b.is_checked ? 1 : 0))
+                          .map((item) => (
+                            <motion.div
+                              key={item.id}
+                              layout
+                              initial={{ opacity: 0, x: -20 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              exit={{ opacity: 0, x: 20 }}
                               className={cn(
-                                'flex-1 font-medium',
-                                item.is_checked && 'line-through text-muted-foreground'
+                                'flex items-center gap-3 p-3 rounded-xl transition-all duration-200',
+                                item.is_checked
+                                  ? 'bg-muted/30'
+                                  : 'bg-muted/50 hover:bg-muted'
                               )}
                             >
-                              {item.name}
-                            </span>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                              onClick={() => deleteItem(list.id, item.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ))}
+                              <Checkbox
+                                checked={item.is_checked}
+                                onCheckedChange={() =>
+                                  toggleItem(list.id, item.id, item.is_checked)
+                                }
+                                className="h-5 w-5 rounded-md data-[state=checked]:bg-success data-[state=checked]:border-success"
+                              />
+                              <span
+                                className={cn(
+                                  'flex-1 font-medium transition-all duration-200',
+                                  item.is_checked &&
+                                    'line-through text-muted-foreground/60'
+                                )}
+                              >
+                                {item.name}
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={() => deleteItem(list.id, item.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </motion.div>
+                          ))}
+                      </AnimatePresence>
                     </div>
 
                     {list.items.length === 0 && (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <ShoppingCart className="h-10 w-10 mx-auto mb-2 opacity-50" />
-                        <p>No items yet</p>
+                      <div className="text-center py-8">
+                        <Sparkles className="h-10 w-10 mx-auto mb-2 text-muted-foreground/30" />
+                        <p className="text-muted-foreground">No items yet</p>
                       </div>
                     )}
                   </CardContent>

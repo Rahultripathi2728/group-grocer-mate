@@ -18,8 +18,11 @@ import {
   Users,
   Wallet,
   Calendar,
+  Sparkles,
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 interface Group {
   id: string;
@@ -55,7 +58,6 @@ export default function SettlementPage() {
   const [loading, setLoading] = useState(false);
   const [settling, setSettling] = useState(false);
 
-  // Fetch user's groups
   useEffect(() => {
     const fetchGroups = async () => {
       if (!user) return;
@@ -90,14 +92,12 @@ export default function SettlementPage() {
     fetchGroups();
   }, [user]);
 
-  // Fetch members and calculate balances when group changes
   useEffect(() => {
     if (!selectedGroupId) return;
 
     const fetchGroupData = async () => {
       setLoading(true);
 
-      // Fetch members
       const { data: memberships } = await supabase
         .from('group_memberships')
         .select('user_id, profiles(full_name, email)')
@@ -111,7 +111,6 @@ export default function SettlementPage() {
 
       const memberList: Member[] = [];
 
-      // Add owner
       if (group?.profiles) {
         memberList.push({
           user_id: group.owner_id,
@@ -120,7 +119,6 @@ export default function SettlementPage() {
         });
       }
 
-      // Add other members
       memberships?.forEach((m: any) => {
         if (m.user_id !== group?.owner_id) {
           memberList.push({
@@ -133,7 +131,6 @@ export default function SettlementPage() {
 
       setMembers(memberList);
 
-      // Fetch last settlement
       const { data: settlements } = await supabase
         .from('settlements')
         .select('*')
@@ -144,7 +141,6 @@ export default function SettlementPage() {
       const lastSettlementData = settlements?.[0] || null;
       setLastSettlement(lastSettlementData);
 
-      // Calculate balances from expenses since last settlement
       await calculateBalances(selectedGroupId, memberList, lastSettlementData?.settled_at);
 
       setLoading(false);
@@ -158,7 +154,6 @@ export default function SettlementPage() {
     memberList: Member[],
     sinceDate?: string
   ) => {
-    // Get all group expenses since last settlement
     let query = supabase
       .from('expenses')
       .select('*')
@@ -177,7 +172,6 @@ export default function SettlementPage() {
       return;
     }
 
-    // Calculate what each person paid vs what they owe
     const memberCount = memberList.length;
     const paidByUser: Record<string, number> = {};
     const owedByUser: Record<string, number> = {};
@@ -191,24 +185,20 @@ export default function SettlementPage() {
       const payerId = expense.user_id;
       const sharePerPerson = expense.amount / memberCount;
 
-      // Track what payer paid
       if (paidByUser[payerId] !== undefined) {
         paidByUser[payerId] += expense.amount;
       }
 
-      // Track what each person owes (their share)
       memberList.forEach((m) => {
         owedByUser[m.user_id] += sharePerPerson;
       });
     });
 
-    // Calculate net balance (positive = owed money, negative = owes money)
     const netBalance: Record<string, number> = {};
     memberList.forEach((m) => {
       netBalance[m.user_id] = paidByUser[m.user_id] - owedByUser[m.user_id];
     });
 
-    // Calculate who owes whom using min-transfers algorithm
     const debtors: { user: Member; amount: number }[] = [];
     const creditors: { user: Member; amount: number }[] = [];
 
@@ -221,13 +211,13 @@ export default function SettlementPage() {
       }
     });
 
-    // Match debtors to creditors
     const newBalances: Balance[] = [];
-    
+
     debtors.sort((a, b) => b.amount - a.amount);
     creditors.sort((a, b) => b.amount - a.amount);
 
-    let i = 0, j = 0;
+    let i = 0,
+      j = 0;
     while (i < debtors.length && j < creditors.length) {
       const debtor = debtors[i];
       const creditor = creditors[j];
@@ -257,7 +247,6 @@ export default function SettlementPage() {
     setSettling(true);
 
     try {
-      // Mark all unsettled expenses as settled
       const { error: expenseError } = await supabase
         .from('expenses')
         .update({ is_settled: true, settled_at: new Date().toISOString() })
@@ -266,20 +255,16 @@ export default function SettlementPage() {
 
       if (expenseError) throw expenseError;
 
-      // Create settlement record
-      const { error: settlementError } = await supabase
-        .from('settlements')
-        .insert({
-          group_id: selectedGroupId,
-          settled_by: user.id,
-          notes: `Settled all expenses as of ${format(new Date(), 'dd MMM yyyy HH:mm')}`,
-        });
+      const { error: settlementError } = await supabase.from('settlements').insert({
+        group_id: selectedGroupId,
+        settled_by: user.id,
+        notes: `Settled all expenses as of ${format(new Date(), 'dd MMM yyyy HH:mm')}`,
+      });
 
       if (settlementError) throw settlementError;
 
       toast.success('All expenses settled!');
-      
-      // Refresh data
+
       setBalances([]);
       setLastSettlement({
         id: 'new',
@@ -293,8 +278,6 @@ export default function SettlementPage() {
     setSettling(false);
   };
 
-  const selectedGroup = groups.find((g) => g.id === selectedGroupId);
-
   return (
     <DashboardLayout>
       <div className="space-y-6 animate-fade-in">
@@ -307,7 +290,7 @@ export default function SettlementPage() {
         </div>
 
         {/* Group Selector */}
-        <Card className="border-0 shadow-md">
+        <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
           <CardContent className="pt-6">
             <div className="flex flex-col sm:flex-row sm:items-center gap-4">
               <div className="flex-1">
@@ -315,14 +298,14 @@ export default function SettlementPage() {
                   Select Group
                 </label>
                 <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger className="w-full bg-muted/50 border-0">
                     <SelectValue placeholder="Select a group" />
                   </SelectTrigger>
                   <SelectContent>
                     {groups.map((group) => (
                       <SelectItem key={group.id} value={group.id}>
                         <div className="flex items-center gap-2">
-                          <Users className="h-4 w-4" />
+                          <Users className="h-4 w-4 text-primary" />
                           {group.name}
                         </div>
                       </SelectItem>
@@ -332,7 +315,7 @@ export default function SettlementPage() {
               </div>
 
               {lastSettlement && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted px-3 py-2 rounded-lg">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 px-4 py-2.5 rounded-xl">
                   <Calendar className="h-4 w-4" />
                   <span>
                     Last settled: {format(new Date(lastSettlement.settled_at), 'dd MMM yyyy')}
@@ -344,9 +327,15 @@ export default function SettlementPage() {
         </Card>
 
         {groups.length === 0 ? (
-          <Card className="border-0 shadow-md">
-            <CardContent className="pt-8 pb-8 text-center">
-              <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
+            <CardContent className="pt-12 pb-12 text-center">
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="inline-flex p-6 rounded-full bg-primary/10 mb-6"
+              >
+                <Users className="h-10 w-10 text-primary" />
+              </motion.div>
               <p className="text-muted-foreground mb-2">No groups found</p>
               <p className="text-sm text-muted-foreground">
                 Create or join a group to start tracking settlements
@@ -356,116 +345,148 @@ export default function SettlementPage() {
         ) : loading ? (
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-20 bg-muted rounded-lg animate-pulse" />
+              <div key={i} className="h-20 bg-muted/50 rounded-2xl animate-pulse" />
             ))}
           </div>
         ) : (
           <>
             {/* Balances */}
-            <Card className="border-0 shadow-md">
-              <CardHeader>
+            <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm overflow-hidden">
+              <CardHeader className="border-b border-border/50">
                 <CardTitle className="font-display flex items-center gap-2">
                   <Wallet className="h-5 w-5 text-primary" />
                   Outstanding Balances
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                {balances.length === 0 ? (
-                  <div className="text-center py-8">
-                    <CheckCircle2 className="h-12 w-12 text-success mx-auto mb-4" />
-                    <p className="text-lg font-medium text-success">All settled up!</p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      No outstanding balances in this group
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {balances.map((balance, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between p-4 rounded-xl bg-muted/50 hover:bg-muted transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center">
-                            <span className="text-sm font-semibold text-destructive">
-                              {balance.from_user.full_name[0]?.toUpperCase() || 'U'}
-                            </span>
-                          </div>
-                          <div>
-                            <p className="font-medium">
-                              {balance.from_user.full_name}
-                              {balance.from_user.user_id === user?.id && (
-                                <span className="text-muted-foreground ml-1">(You)</span>
-                              )}
-                            </p>
-                            <p className="text-xs text-muted-foreground">owes</p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                          <ArrowRight className="h-5 w-5 text-muted-foreground" />
-                          <div className="text-center">
-                            <p className="text-lg font-bold text-primary">
-                              ₹{balance.amount.toFixed(2)}
-                            </p>
-                          </div>
-                          <ArrowRight className="h-5 w-5 text-muted-foreground" />
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                          <div className="text-right">
-                            <p className="font-medium">
-                              {balance.to_user.full_name}
-                              {balance.to_user.user_id === user?.id && (
-                                <span className="text-muted-foreground ml-1">(You)</span>
-                              )}
-                            </p>
-                            <p className="text-xs text-muted-foreground">receives</p>
-                          </div>
-                          <div className="h-10 w-10 rounded-full bg-success/10 flex items-center justify-center">
-                            <span className="text-sm font-semibold text-success">
-                              {balance.to_user.full_name[0]?.toUpperCase() || 'U'}
-                            </span>
-                          </div>
-                        </div>
+              <CardContent className="pt-6">
+                <AnimatePresence mode="wait">
+                  {balances.length === 0 ? (
+                    <motion.div
+                      key="settled"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      className="text-center py-12"
+                    >
+                      <div className="inline-flex p-4 rounded-full bg-success/10 mb-4">
+                        <CheckCircle2 className="h-10 w-10 text-success" />
                       </div>
-                    ))}
-                  </div>
-                )}
+                      <p className="text-xl font-display font-semibold text-success">
+                        All settled up!
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        No outstanding balances in this group
+                      </p>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="balances"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="space-y-4"
+                    >
+                      {balances.map((balance, index) => (
+                        <motion.div
+                          key={index}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.1 }}
+                          className="flex flex-col sm:flex-row items-center justify-between p-5 rounded-2xl bg-gradient-to-r from-muted/50 to-muted/30 hover:from-muted/70 hover:to-muted/50 transition-colors gap-4"
+                        >
+                          {/* Debtor */}
+                          <div className="flex items-center gap-3">
+                            <div className="h-12 w-12 rounded-full bg-gradient-to-br from-destructive/30 to-destructive/10 flex items-center justify-center">
+                              <span className="text-sm font-bold text-destructive">
+                                {balance.from_user.full_name[0]?.toUpperCase() || 'U'}
+                              </span>
+                            </div>
+                            <div>
+                              <p className="font-semibold">
+                                {balance.from_user.full_name}
+                                {balance.from_user.user_id === user?.id && (
+                                  <span className="text-muted-foreground ml-1 text-sm">(You)</span>
+                                )}
+                              </p>
+                              <p className="text-xs text-muted-foreground">owes</p>
+                            </div>
+                          </div>
+
+                          {/* Amount */}
+                          <div className="flex items-center gap-3">
+                            <ArrowRight className="h-5 w-5 text-muted-foreground hidden sm:block" />
+                            <div className="px-4 py-2 rounded-xl bg-primary/10 border border-primary/20">
+                              <p className="text-xl font-display font-bold text-primary">
+                                ₹{balance.amount.toFixed(0)}
+                              </p>
+                            </div>
+                            <ArrowRight className="h-5 w-5 text-muted-foreground hidden sm:block" />
+                          </div>
+
+                          {/* Creditor */}
+                          <div className="flex items-center gap-3">
+                            <div className="text-right sm:text-left">
+                              <p className="font-semibold">
+                                {balance.to_user.full_name}
+                                {balance.to_user.user_id === user?.id && (
+                                  <span className="text-muted-foreground ml-1 text-sm">(You)</span>
+                                )}
+                              </p>
+                              <p className="text-xs text-muted-foreground">receives</p>
+                            </div>
+                            <div className="h-12 w-12 rounded-full bg-gradient-to-br from-success/30 to-success/10 flex items-center justify-center">
+                              <span className="text-sm font-bold text-success">
+                                {balance.to_user.full_name[0]?.toUpperCase() || 'U'}
+                              </span>
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </CardContent>
             </Card>
 
             {/* Settle Button */}
             {balances.length > 0 && (
-              <div className="flex justify-center">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex justify-center"
+              >
                 <Button
                   size="lg"
-                  className="gradient-primary text-primary-foreground shadow-glow px-8"
+                  className="gradient-primary text-primary-foreground shadow-glow px-10 py-6 text-lg hover:scale-105 transition-transform"
                   onClick={handleSettleAll}
                   disabled={settling}
                 >
                   <CheckCircle2 className="h-5 w-5 mr-2" />
                   {settling ? 'Settling...' : 'Mark All as Settled'}
                 </Button>
-              </div>
+              </motion.div>
             )}
 
             {/* Members Summary */}
-            <Card className="border-0 shadow-md">
+            <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
               <CardHeader>
-                <CardTitle className="font-display text-lg">
+                <CardTitle className="font-display text-lg flex items-center gap-2">
+                  <Users className="h-4 w-4 text-muted-foreground" />
                   Group Members ({members.length})
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2">
-                  {members.map((member) => (
-                    <div
+                  {members.map((member, i) => (
+                    <motion.div
                       key={member.user_id}
-                      className="flex items-center gap-2 px-3 py-2 rounded-full bg-muted/50"
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: i * 0.05 }}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-muted/50 hover:bg-muted transition-colors"
                     >
-                      <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center">
-                        <span className="text-xs font-semibold text-primary">
+                      <div className="h-7 w-7 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center">
+                        <span className="text-xs font-bold text-primary">
                           {member.full_name[0]?.toUpperCase() || 'U'}
                         </span>
                       </div>
@@ -473,7 +494,7 @@ export default function SettlementPage() {
                         {member.full_name}
                         {member.user_id === user?.id && ' (You)'}
                       </span>
-                    </div>
+                    </motion.div>
                   ))}
                 </div>
               </CardContent>

@@ -16,8 +16,12 @@ import {
   ArrowRight,
   ShoppingCart,
   CheckCircle2,
+  Sparkles,
 } from 'lucide-react';
 import AddExpenseDialog from '@/components/expenses/AddExpenseDialog';
+import StatCard from '@/components/ui/stat-card';
+import ExpenseCard from '@/components/expenses/ExpenseCard';
+import { motion } from 'framer-motion';
 
 interface ExpenseSummary {
   totalPersonal: number;
@@ -28,6 +32,7 @@ interface ExpenseSummary {
     amount: number;
     expense_date: string;
     expense_type: string;
+    category?: string | null;
   }>;
 }
 
@@ -47,7 +52,6 @@ export default function Dashboard() {
     const startDate = format(startOfMonth(new Date()), 'yyyy-MM-dd');
     const endDate = format(endOfMonth(new Date()), 'yyyy-MM-dd');
 
-    // Fetch expenses for current month
     const { data: expenses } = await supabase
       .from('expenses')
       .select('*')
@@ -67,7 +71,10 @@ export default function Dashboard() {
       setSummary({
         totalPersonal: personal,
         totalGroup: group,
-        recentExpenses: expenses.slice(0, 5),
+        recentExpenses: expenses.slice(0, 5).map((e) => ({
+          ...e,
+          amount: Number(e.amount),
+        })),
       });
     }
 
@@ -78,25 +85,32 @@ export default function Dashboard() {
     fetchSummary();
   }, [user]);
 
-  const stats = [
+  const quickActions = [
     {
-      title: 'Personal Expenses',
-      value: `₹${summary.totalPersonal.toLocaleString('en-IN')}`,
-      icon: Wallet,
+      to: '/calendar',
+      icon: Calendar,
+      label: 'View Calendar',
       color: 'text-primary',
       bgColor: 'bg-primary/10',
     },
     {
-      title: 'Group Expenses',
-      value: `₹${summary.totalGroup.toLocaleString('en-IN')}`,
+      to: '/groups',
       icon: Users,
+      label: 'Manage Groups',
       color: 'text-accent-foreground',
       bgColor: 'bg-accent',
     },
     {
-      title: 'Total This Month',
-      value: `₹${(summary.totalPersonal + summary.totalGroup).toLocaleString('en-IN')}`,
-      icon: TrendingUp,
+      to: '/grocery',
+      icon: ShoppingCart,
+      label: 'Grocery List',
+      color: 'text-warning',
+      bgColor: 'bg-warning/10',
+    },
+    {
+      to: '/settlement',
+      icon: CheckCircle2,
+      label: 'Settlement',
       color: 'text-success',
       bgColor: 'bg-success/10',
     },
@@ -108,160 +122,178 @@ export default function Dashboard() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-display font-bold">Dashboard</h1>
-            <p className="text-muted-foreground mt-1">
+            <motion.h1
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-3xl font-display font-bold"
+            >
+              Dashboard
+            </motion.h1>
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.1 }}
+              className="text-muted-foreground mt-1"
+            >
               {format(new Date(), 'MMMM yyyy')} Overview
-            </p>
+            </motion.p>
           </div>
-          <Button
-            onClick={() => setAddExpenseOpen(true)}
-            className="gradient-primary text-primary-foreground shadow-glow-sm hover:shadow-glow transition-shadow"
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.2 }}
           >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Expense
-          </Button>
+            <Button
+              onClick={() => setAddExpenseOpen(true)}
+              className="gradient-primary text-primary-foreground shadow-glow-sm hover:shadow-glow transition-all duration-300 hover:scale-105"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Expense
+            </Button>
+          </motion.div>
         </div>
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {stats.map((stat) => (
-            <Card key={stat.title} className="border-0 shadow-md hover:shadow-lg transition-shadow">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">{stat.title}</p>
-                    <p className="text-3xl font-display font-bold mt-1">{stat.value}</p>
-                  </div>
-                  <div className={`p-3 rounded-xl ${stat.bgColor}`}>
-                    <stat.icon className={`h-6 w-6 ${stat.color}`} />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+          >
+            <StatCard
+              title="Personal Expenses"
+              value={`₹${summary.totalPersonal.toLocaleString('en-IN')}`}
+              icon={Wallet}
+              iconColor="text-primary"
+              iconBgColor="bg-primary/10"
+            />
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <StatCard
+              title="Group Expenses"
+              value={`₹${summary.totalGroup.toLocaleString('en-IN')}`}
+              icon={Users}
+              iconColor="text-accent-foreground"
+              iconBgColor="bg-accent"
+            />
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <StatCard
+              title="Total This Month"
+              value={`₹${(summary.totalPersonal + summary.totalGroup).toLocaleString('en-IN')}`}
+              icon={TrendingUp}
+              iconColor="text-success"
+              iconBgColor="bg-success/10"
+            />
+          </motion.div>
         </div>
 
         {/* Quick Actions & Recent Expenses */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Quick Actions */}
-          <Card className="border-0 shadow-md">
-            <CardHeader>
-              <CardTitle className="font-display">Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Link to="/calendar">
-                <Button variant="outline" className="w-full justify-between h-14 group">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-primary/10">
-                      <Calendar className="h-4 w-4 text-primary" />
-                    </div>
-                    <span>View Calendar</span>
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
-                </Button>
-              </Link>
-              <Link to="/groups">
-                <Button variant="outline" className="w-full justify-between h-14 group">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-accent">
-                      <Users className="h-4 w-4 text-accent-foreground" />
-                    </div>
-                    <span>Manage Groups</span>
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
-                </Button>
-              </Link>
-              <Link to="/grocery">
-                <Button variant="outline" className="w-full justify-between h-14 group">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-warning/10">
-                      <ShoppingCart className="h-4 w-4 text-warning" />
-                    </div>
-                    <span>Grocery List</span>
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
-                </Button>
-              </Link>
-              <Link to="/settlement">
-                <Button variant="outline" className="w-full justify-between h-14 group">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-success/10">
-                      <CheckCircle2 className="h-4 w-4 text-success" />
-                    </div>
-                    <span>Settlement</span>
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.4 }}
+          >
+            <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm h-full">
+              <CardHeader>
+                <CardTitle className="font-display flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  Quick Actions
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {quickActions.map((action, i) => (
+                  <motion.div
+                    key={action.to}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.5 + i * 0.1 }}
+                  >
+                    <Link to={action.to}>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-between h-14 group border-border/50 hover:border-primary/30 hover:bg-primary/5"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-xl ${action.bgColor} transition-transform duration-300 group-hover:scale-110`}>
+                            <action.icon className={`h-4 w-4 ${action.color}`} />
+                          </div>
+                          <span className="font-medium">{action.label}</span>
+                        </div>
+                        <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-1 group-hover:text-primary transition-all" />
+                      </Button>
+                    </Link>
+                  </motion.div>
+                ))}
+              </CardContent>
+            </Card>
+          </motion.div>
 
           {/* Recent Expenses */}
-          <Card className="border-0 shadow-md">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="font-display">Recent Expenses</CardTitle>
-              <Link to="/calendar">
-                <Button variant="ghost" size="sm" className="text-primary">
-                  View All
-                </Button>
-              </Link>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="h-16 bg-muted rounded-lg animate-pulse" />
-                  ))}
-                </div>
-              ) : summary.recentExpenses.length === 0 ? (
-                <div className="text-center py-8">
-                  <TrendingDown className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                  <p className="text-muted-foreground">No expenses yet this month</p>
-                  <Button
-                    onClick={() => setAddExpenseOpen(true)}
-                    variant="link"
-                    className="mt-2 text-primary"
-                  >
-                    Add your first expense
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.4 }}
+          >
+            <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm h-full">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="font-display">Recent Expenses</CardTitle>
+                <Link to="/calendar">
+                  <Button variant="ghost" size="sm" className="text-primary hover:text-primary">
+                    View All
+                    <ArrowRight className="h-4 w-4 ml-1" />
                   </Button>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {summary.recentExpenses.map((expense) => (
-                    <div
-                      key={expense.id}
-                      className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`p-2 rounded-lg ${
-                            expense.expense_type === 'personal'
-                              ? 'bg-primary/10'
-                              : 'bg-accent'
-                          }`}
-                        >
-                          {expense.expense_type === 'personal' ? (
-                            <Wallet className="h-4 w-4 text-primary" />
-                          ) : (
-                            <Users className="h-4 w-4 text-accent-foreground" />
-                          )}
-                        </div>
-                        <div>
-                          <p className="font-medium text-sm">{expense.description}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {format(new Date(expense.expense_date), 'dd MMM')}
-                          </p>
-                        </div>
-                      </div>
-                      <p className="font-semibold">
-                        ₹{Number(expense.amount).toLocaleString('en-IN')}
-                      </p>
+                </Link>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="space-y-3">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="h-16 bg-muted/50 rounded-xl animate-pulse" />
+                    ))}
+                  </div>
+                ) : summary.recentExpenses.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="inline-flex p-4 rounded-full bg-muted/50 mb-4">
+                      <TrendingDown className="h-8 w-8 text-muted-foreground" />
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    <p className="text-muted-foreground mb-4">No expenses yet this month</p>
+                    <Button
+                      onClick={() => setAddExpenseOpen(true)}
+                      variant="outline"
+                      className="text-primary border-primary/30"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add your first expense
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {summary.recentExpenses.map((expense, i) => (
+                      <motion.div
+                        key={expense.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.5 + i * 0.05 }}
+                      >
+                        <ExpenseCard {...expense} showDate compact />
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
         </div>
       </div>
 
