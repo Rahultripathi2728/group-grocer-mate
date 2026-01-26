@@ -6,11 +6,10 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
-import Dashboard from "./pages/Dashboard";
+import ExpensesPage from "./pages/ExpensesPage";
 import CalendarPage from "./pages/CalendarPage";
 import GroupsPage from "./pages/GroupsPage";
-import GroceryPage from "./pages/GroceryPage";
-import SettlementPage from "./pages/SettlementPage";
+import ListPage from "./pages/ListPage";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
@@ -30,7 +29,7 @@ const App = () => (
               path="/dashboard"
               element={
                 <ProtectedRoute>
-                  <Dashboard />
+                  <ExpensesPage />
                 </ProtectedRoute>
               }
             />
@@ -51,18 +50,10 @@ const App = () => (
               }
             />
             <Route
-              path="/grocery"
+              path="/list"
               element={
                 <ProtectedRoute>
-                  <GroceryPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/settlement"
-              element={
-                <ProtectedRoute>
-                  <SettlementPage />
+                  <ListPage />
                 </ProtectedRoute>
               }
             />
