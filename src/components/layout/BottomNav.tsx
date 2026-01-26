@@ -1,14 +1,13 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Calendar, LayoutDashboard, ShoppingCart, Users, Wallet } from 'lucide-react';
+import { Calendar, ClipboardList, Users, Wallet } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 
 const navItems = [
   { href: '/calendar', label: 'Calendar', icon: Calendar },
-  { href: '/dashboard', label: 'Home', icon: LayoutDashboard },
-  { href: '/grocery', label: 'List', icon: ShoppingCart },
+  { href: '/dashboard', label: 'Expenses', icon: Wallet },
+  { href: '/list', label: 'List', icon: ClipboardList },
   { href: '/groups', label: 'Groups', icon: Users },
-  { href: '/settlement', label: 'Settle', icon: Wallet },
 ];
 
 export default function BottomNav() {
