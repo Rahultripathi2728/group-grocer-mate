@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,7 +15,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { Plus, Trash2, Check, Sparkles, User, Users, ClipboardList } from 'lucide-react';
+import { Plus, Trash2, Check, Sparkles, User, Users, ClipboardList, Wifi } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -26,6 +26,7 @@ interface ListItem {
   is_checked: boolean;
   created_at: string;
   added_by: string | null;
+  list_id: string;
 }
 
 interface GroceryList {
@@ -50,6 +51,7 @@ export default function ListPage() {
   const [loading, setLoading] = useState(true);
   const [newItemName, setNewItemName] = useState('');
   const [isAdding, setIsAdding] = useState(false);
+  const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
 
   const fetchData = async () => {
     if (!user) return;
@@ -132,6 +134,45 @@ export default function ListPage() {
     }
   };
 
+  // Handle real-time updates for group list items
+  const handleRealtimeUpdate = useCallback((payload: any) => {
+    const { eventType, new: newRecord, old: oldRecord } = payload;
+    
+    setGroupLists((prevLists) => {
+      return prevLists.map((list) => {
+        // Only update if this event is for the current group list
+        if (eventType === 'INSERT' && newRecord.list_id === list.id) {
+          // Check if item already exists (to prevent duplicates from own actions)
+          const exists = list.items.some(item => item.id === newRecord.id);
+          if (exists) return list;
+          
+          return {
+            ...list,
+            items: [...list.items, newRecord as ListItem],
+          };
+        }
+        
+        if (eventType === 'UPDATE' && newRecord.list_id === list.id) {
+          return {
+            ...list,
+            items: list.items.map((item) =>
+              item.id === newRecord.id ? (newRecord as ListItem) : item
+            ),
+          };
+        }
+        
+        if (eventType === 'DELETE' && oldRecord.list_id === list.id) {
+          return {
+            ...list,
+            items: list.items.filter((item) => item.id !== oldRecord.id),
+          };
+        }
+        
+        return list;
+      });
+    });
+  }, []);
+
   useEffect(() => {
     fetchData();
   }, [user]);
@@ -141,6 +182,34 @@ export default function ListPage() {
       fetchGroupList(selectedGroupId);
     }
   }, [selectedGroupId]);
+
+  // Set up real-time subscription for group list
+  useEffect(() => {
+    if (!groupLists[0]?.id) return;
+
+    const listId = groupLists[0].id;
+    
+    const channel = supabase
+      .channel(`grocery-items-${listId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'grocery_items',
+          filter: `list_id=eq.${listId}`,
+        },
+        handleRealtimeUpdate
+      )
+      .subscribe((status) => {
+        setIsRealtimeConnected(status === 'SUBSCRIBED');
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+      setIsRealtimeConnected(false);
+    };
+  }, [groupLists[0]?.id, handleRealtimeUpdate]);
 
   const createPersonalList = async () => {
     if (!user) return;
@@ -350,9 +419,22 @@ export default function ListPage() {
               )}
             </div>
             <div>
-              <CardTitle className="font-display">{list.name}</CardTitle>
+              <div className="flex items-center gap-2">
+                <CardTitle className="font-display">{list.name}</CardTitle>
+                {isGroup && isRealtimeConnected && (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-success/10 text-success text-xs font-medium"
+                  >
+                    <Wifi className="h-3 w-3" />
+                    <span>Live</span>
+                  </motion.div>
+                )}
+              </div>
               <p className="text-sm text-muted-foreground mt-0.5">
                 {uncheckedCount} item{uncheckedCount !== 1 ? 's' : ''} remaining
+                {isGroup && ' • Synced with group'}
               </p>
             </div>
           </div>
