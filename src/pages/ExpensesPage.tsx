@@ -26,6 +26,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import AddExpenseDialog from '@/components/expenses/AddExpenseDialog';
+import BudgetCard from '@/components/expenses/BudgetCard';
 import StatCard from '@/components/ui/stat-card';
 import ExpenseCard from '@/components/expenses/ExpenseCard';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -380,6 +381,17 @@ export default function ExpensesPage() {
 
           {/* Personal Expenses Tab */}
           <TabsContent value="personal" className="mt-6 space-y-6">
+            {/* Budget Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <BudgetCard 
+                totalSpent={summary.totalPersonal + summary.totalGroup} 
+                onBudgetChange={fetchSummary}
+              />
+            </motion.div>
+
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <motion.div
