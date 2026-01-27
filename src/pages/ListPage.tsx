@@ -12,12 +12,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { Plus, Trash2, Check, Sparkles, User, Users, ClipboardList, Wifi } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+
+interface Profile {
+  id: string;
+  full_name: string;
+}
 
 interface ListItem {
   id: string;
@@ -52,6 +58,7 @@ export default function ListPage() {
   const [newItemName, setNewItemName] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
+  const [memberProfiles, setMemberProfiles] = useState<Record<string, Profile>>({});
 
   const fetchData = async () => {
     if (!user) return;
@@ -129,9 +136,42 @@ export default function ListPage() {
         ...lists[0],
         items: items || [],
       }]);
+      
+      // Fetch member profiles for avatars
+      await fetchGroupMembers(groupId);
     } else {
       setGroupLists([]);
     }
+  };
+
+  const fetchGroupMembers = async (groupId: string) => {
+    // Fetch group owner
+    const { data: group } = await supabase
+      .from('groups')
+      .select('owner_id, profiles(id, full_name)')
+      .eq('id', groupId)
+      .single();
+
+    // Fetch group members
+    const { data: memberships } = await supabase
+      .from('group_memberships')
+      .select('user_id, profiles(id, full_name)')
+      .eq('group_id', groupId);
+
+    const profiles: Record<string, Profile> = {};
+    
+    if (group?.profiles) {
+      const ownerProfile = group.profiles as unknown as Profile;
+      profiles[group.owner_id] = ownerProfile;
+    }
+    
+    memberships?.forEach((m: any) => {
+      if (m.profiles) {
+        profiles[m.user_id] = m.profiles;
+      }
+    });
+
+    setMemberProfiles(profiles);
   };
 
   // Handle real-time updates for group list items
@@ -501,41 +541,60 @@ export default function ListPage() {
             <AnimatePresence>
               {list.items
                 .sort((a, b) => (a.is_checked ? 1 : 0) - (b.is_checked ? 1 : 0))
-                .map((item) => (
-                  <motion.div
-                    key={item.id}
-                    layout
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
-                    className={cn(
-                      'group flex items-center gap-3 p-3 rounded-xl transition-all duration-200',
-                      item.is_checked ? 'bg-muted/30' : 'bg-muted/50 hover:bg-muted'
-                    )}
-                  >
-                    <Checkbox
-                      checked={item.is_checked}
-                      onCheckedChange={() => toggleItem(list.id, item.id, item.is_checked, isGroup)}
-                      className="h-5 w-5 rounded-md data-[state=checked]:bg-success data-[state=checked]:border-success"
-                    />
-                    <span
+                .map((item) => {
+                  const addedByProfile = item.added_by ? memberProfiles[item.added_by] : null;
+                  const isCurrentUser = item.added_by === user?.id;
+                  
+                  return (
+                    <motion.div
+                      key={item.id}
+                      layout
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
                       className={cn(
-                        'flex-1 font-medium transition-all duration-200',
-                        item.is_checked && 'line-through text-muted-foreground/60'
+                        'group flex items-center gap-3 p-3 rounded-xl transition-all duration-200',
+                        item.is_checked ? 'bg-muted/30' : 'bg-muted/50 hover:bg-muted'
                       )}
                     >
-                      {item.name}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => deleteItem(list.id, item.id, isGroup)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </motion.div>
-                ))}
+                      <Checkbox
+                        checked={item.is_checked}
+                        onCheckedChange={() => toggleItem(list.id, item.id, item.is_checked, isGroup)}
+                        className="h-5 w-5 rounded-md data-[state=checked]:bg-success data-[state=checked]:border-success"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <span
+                          className={cn(
+                            'font-medium transition-all duration-200 block',
+                            item.is_checked && 'line-through text-muted-foreground/60'
+                          )}
+                        >
+                          {item.name}
+                        </span>
+                        {isGroup && addedByProfile && (
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <Avatar className="h-4 w-4">
+                              <AvatarFallback className="text-[8px] bg-primary/20 text-primary">
+                                {addedByProfile.full_name?.[0]?.toUpperCase() || 'U'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-xs text-muted-foreground">
+                              {isCurrentUser ? 'You' : addedByProfile.full_name}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                        onClick={() => deleteItem(list.id, item.id, isGroup)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </motion.div>
+                  );
+                })}
             </AnimatePresence>
           </div>
 

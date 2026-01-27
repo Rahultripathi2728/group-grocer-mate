@@ -339,39 +339,24 @@ export default function ExpensesPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 animate-fade-in">
+      <div className="space-y-6 animate-fade-in pb-24">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <motion.h1
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-3xl font-display font-bold"
-            >
-              Expenses
-            </motion.h1>
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.1 }}
-              className="text-muted-foreground mt-1"
-            >
-              {format(new Date(), 'MMMM yyyy')} Overview
-            </motion.p>
-          </div>
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2 }}
+        <div>
+          <motion.h1
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-3xl font-display font-bold"
           >
-            <Button
-              onClick={() => setAddExpenseOpen(true)}
-              className="gradient-primary text-primary-foreground shadow-glow-sm hover:shadow-glow transition-all duration-300 hover:scale-105"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Expense
-            </Button>
-          </motion.div>
+            Expenses
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.1 }}
+            className="text-muted-foreground mt-1"
+          >
+            {format(new Date(), 'MMMM yyyy')} Overview
+          </motion.p>
         </div>
 
         {/* Tabs */}
@@ -461,15 +446,8 @@ export default function ExpensesPage() {
                     <div className="inline-flex p-4 rounded-full bg-muted/50 mb-4">
                       <TrendingDown className="h-8 w-8 text-muted-foreground" />
                     </div>
-                    <p className="text-muted-foreground mb-4">No expenses yet this month</p>
-                    <Button
-                      onClick={() => setAddExpenseOpen(true)}
-                      variant="outline"
-                      className="text-primary border-primary/30"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add your first expense
-                    </Button>
+                    <p className="text-muted-foreground">No expenses yet this month</p>
+                    <p className="text-sm text-muted-foreground mt-1">Tap + to add your first expense</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -734,6 +712,22 @@ export default function ExpensesPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Floating Action Button */}
+      <motion.div
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 0.3, type: 'spring', bounce: 0.4 }}
+        className="fixed bottom-24 right-4 z-50"
+      >
+        <Button
+          onClick={() => setAddExpenseOpen(true)}
+          size="lg"
+          className="h-14 w-14 rounded-full gradient-primary text-primary-foreground shadow-glow hover:shadow-glow-lg transition-all duration-300 hover:scale-110"
+        >
+          <Plus className="h-6 w-6" />
+        </Button>
+      </motion.div>
 
       <AddExpenseDialog
         open={addExpenseOpen}
