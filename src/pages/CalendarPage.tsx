@@ -104,25 +104,13 @@ export default function CalendarPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 animate-fade-in">
+      <div className="space-y-6 animate-fade-in pb-20">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-display font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
-              Calendar
-            </h1>
-            <p className="text-muted-foreground mt-1">Track your daily expenses</p>
-          </div>
-          <Button
-            onClick={() => {
-              setSelectedDate(new Date());
-              setAddExpenseOpen(true);
-            }}
-            className="gradient-primary text-primary-foreground shadow-glow-sm hover:shadow-glow transition-all duration-300 hover:scale-105"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Expense
-          </Button>
+        <div>
+          <h1 className="text-3xl font-display font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+            Calendar
+          </h1>
+          <p className="text-muted-foreground mt-1">Track your daily expenses</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -231,19 +219,10 @@ export default function CalendarPage() {
 
           {/* Selected Day Details */}
           <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+            <CardHeader className="pb-4">
               <CardTitle className="font-display text-lg">
                 {selectedDate ? format(selectedDate, 'dd MMMM') : 'Select a date'}
               </CardTitle>
-              {selectedDate && (
-                <Button
-                  size="sm"
-                  onClick={() => setAddExpenseOpen(true)}
-                  className="rounded-full gradient-primary text-primary-foreground h-8 w-8 p-0"
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              )}
             </CardHeader>
             <CardContent>
               <AnimatePresence mode="wait">
@@ -271,15 +250,8 @@ export default function CalendarPage() {
                     <div className="inline-flex p-4 rounded-full bg-muted/50 mb-4">
                       <Sparkles className="h-8 w-8 text-muted-foreground" />
                     </div>
-                    <p className="text-muted-foreground mb-4">No expenses on this day</p>
-                    <Button
-                      variant="outline"
-                      onClick={() => setAddExpenseOpen(true)}
-                      className="text-primary border-primary/30 hover:bg-primary/10"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Expense
-                    </Button>
+                    <p className="text-muted-foreground">No expenses on this day</p>
+                    <p className="text-xs text-muted-foreground/70 mt-1">Tap + to add one</p>
                   </motion.div>
                 ) : (
                   <motion.div
@@ -313,6 +285,24 @@ export default function CalendarPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Floating Action Button */}
+        <motion.div
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: 0.3, type: 'spring', stiffness: 200 }}
+          className="fixed bottom-24 right-6 z-50"
+        >
+          <Button
+            onClick={() => {
+              if (!selectedDate) setSelectedDate(new Date());
+              setAddExpenseOpen(true);
+            }}
+            className="h-14 w-14 rounded-full gradient-primary text-primary-foreground shadow-glow hover:shadow-glow-lg transition-all duration-300 hover:scale-110"
+          >
+            <Plus className="h-6 w-6" />
+          </Button>
+        </motion.div>
       </div>
 
       <AddExpenseDialog
