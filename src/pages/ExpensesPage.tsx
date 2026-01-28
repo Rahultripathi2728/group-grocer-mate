@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import AddExpenseDialog from '@/components/expenses/AddExpenseDialog';
 import BudgetCard from '@/components/expenses/BudgetCard';
+import GroupExpensesBreakdown from '@/components/expenses/GroupExpensesBreakdown';
 import StatCard from '@/components/ui/stat-card';
 import ExpenseCard from '@/components/expenses/ExpenseCard';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -52,18 +53,6 @@ interface Group {
   owner_id: string;
 }
 
-interface Member {
-  user_id: string;
-  full_name: string;
-  email: string;
-}
-
-interface Balance {
-  from_user: Member;
-  to_user: Member;
-  amount: number;
-}
-
 export default function ExpensesPage() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'personal' | 'settlement'>('personal');
@@ -78,10 +67,6 @@ export default function ExpensesPage() {
   // Settlement state
   const [groups, setGroups] = useState<Group[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string>('');
-  const [members, setMembers] = useState<Member[]>([]);
-  const [balances, setBalances] = useState<Balance[]>([]);
-  const [lastSettlement, setLastSettlement] = useState<{ settled_at: string } | null>(null);
-  const [settlementLoading, setSettlementLoading] = useState(false);
   const [settling, setSettling] = useState(false);
 
   const fetchSummary = async () => {
@@ -149,149 +134,6 @@ export default function ExpensesPage() {
     }
   };
 
-  const fetchSettlementData = async (groupId: string) => {
-    if (!groupId) return;
-    setSettlementLoading(true);
-
-    const { data: memberships } = await supabase
-      .from('group_memberships')
-      .select('user_id, profiles(full_name, email)')
-      .eq('group_id', groupId);
-
-    const { data: group } = await supabase
-      .from('groups')
-      .select('owner_id, profiles(full_name, email)')
-      .eq('id', groupId)
-      .single();
-
-    const memberList: Member[] = [];
-
-    if (group?.profiles) {
-      memberList.push({
-        user_id: group.owner_id,
-        full_name: (group.profiles as any).full_name || 'Unknown',
-        email: (group.profiles as any).email || '',
-      });
-    }
-
-    memberships?.forEach((m: any) => {
-      if (m.user_id !== group?.owner_id) {
-        memberList.push({
-          user_id: m.user_id,
-          full_name: m.profiles?.full_name || 'Unknown',
-          email: m.profiles?.email || '',
-        });
-      }
-    });
-
-    setMembers(memberList);
-
-    const { data: settlements } = await supabase
-      .from('settlements')
-      .select('*')
-      .eq('group_id', groupId)
-      .order('settled_at', { ascending: false })
-      .limit(1);
-
-    const lastSettlementData = settlements?.[0] || null;
-    setLastSettlement(lastSettlementData);
-
-    await calculateBalances(groupId, memberList, lastSettlementData?.settled_at);
-    setSettlementLoading(false);
-  };
-
-  const calculateBalances = async (
-    groupId: string,
-    memberList: Member[],
-    sinceDate?: string
-  ) => {
-    let query = supabase
-      .from('expenses')
-      .select('*')
-      .eq('group_id', groupId)
-      .eq('expense_type', 'group')
-      .eq('is_settled', false);
-
-    if (sinceDate) {
-      query = query.gte('created_at', sinceDate);
-    }
-
-    const { data: expenses } = await query;
-
-    if (!expenses || expenses.length === 0) {
-      setBalances([]);
-      return;
-    }
-
-    const memberCount = memberList.length;
-    const paidByUser: Record<string, number> = {};
-    const owedByUser: Record<string, number> = {};
-
-    memberList.forEach((m) => {
-      paidByUser[m.user_id] = 0;
-      owedByUser[m.user_id] = 0;
-    });
-
-    expenses.forEach((expense) => {
-      const payerId = expense.user_id;
-      const sharePerPerson = expense.amount / memberCount;
-
-      if (paidByUser[payerId] !== undefined) {
-        paidByUser[payerId] += expense.amount;
-      }
-
-      memberList.forEach((m) => {
-        owedByUser[m.user_id] += sharePerPerson;
-      });
-    });
-
-    const netBalance: Record<string, number> = {};
-    memberList.forEach((m) => {
-      netBalance[m.user_id] = paidByUser[m.user_id] - owedByUser[m.user_id];
-    });
-
-    const debtors: { user: Member; amount: number }[] = [];
-    const creditors: { user: Member; amount: number }[] = [];
-
-    memberList.forEach((m) => {
-      const balance = netBalance[m.user_id];
-      if (balance < -0.01) {
-        debtors.push({ user: m, amount: Math.abs(balance) });
-      } else if (balance > 0.01) {
-        creditors.push({ user: m, amount: balance });
-      }
-    });
-
-    const newBalances: Balance[] = [];
-
-    debtors.sort((a, b) => b.amount - a.amount);
-    creditors.sort((a, b) => b.amount - a.amount);
-
-    let i = 0,
-      j = 0;
-    while (i < debtors.length && j < creditors.length) {
-      const debtor = debtors[i];
-      const creditor = creditors[j];
-      const transferAmount = Math.min(debtor.amount, creditor.amount);
-
-      if (transferAmount > 0.01) {
-        newBalances.push({
-          from_user: debtor.user,
-          to_user: creditor.user,
-          amount: transferAmount,
-        });
-      }
-
-      debtor.amount -= transferAmount;
-      creditor.amount -= transferAmount;
-
-      if (debtor.amount < 0.01) i++;
-      if (creditor.amount < 0.01) j++;
-    }
-
-    setBalances(newBalances);
-  };
-
   const handleSettleAll = async () => {
     if (!user || !selectedGroupId) return;
 
@@ -314,12 +156,12 @@ export default function ExpensesPage() {
 
       if (settlementError) throw settlementError;
 
-      toast.success('All expenses settled!');
-
-      setBalances([]);
-      setLastSettlement({
-        settled_at: new Date().toISOString(),
-      });
+      toast.success('All expenses settled! The page will refresh to show updated data.');
+      
+      // Force a re-render by changing the selected group and back
+      const currentGroup = selectedGroupId;
+      setSelectedGroupId('');
+      setTimeout(() => setSelectedGroupId(currentGroup), 100);
     } catch (error) {
       toast.error('Failed to settle expenses');
     }
@@ -331,12 +173,6 @@ export default function ExpensesPage() {
     fetchSummary();
     fetchGroups();
   }, [user]);
-
-  useEffect(() => {
-    if (selectedGroupId && activeTab === 'settlement') {
-      fetchSettlementData(selectedGroupId);
-    }
-  }, [selectedGroupId, activeTab]);
 
   return (
     <DashboardLayout>
@@ -531,15 +367,6 @@ export default function ExpensesPage() {
                       </SelectContent>
                     </Select>
                   </div>
-
-                  {lastSettlement && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 px-4 py-2.5 rounded-xl">
-                      <Calendar className="h-4 w-4" />
-                      <span>
-                        Last settled: {format(new Date(lastSettlement.settled_at), 'dd MMM yyyy')}
-                      </span>
-                    </div>
-                  )}
                 </div>
               </CardContent>
             </Card>
@@ -560,166 +387,26 @@ export default function ExpensesPage() {
                   </p>
                 </CardContent>
               </Card>
-            ) : settlementLoading ? (
-              <div className="space-y-4">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-20 bg-muted/50 rounded-2xl animate-pulse" />
-                ))}
-              </div>
+            ) : selectedGroupId ? (
+              <GroupExpensesBreakdown
+                groupId={selectedGroupId}
+                groupName={groups.find(g => g.id === selectedGroupId)?.name || ''}
+                onSettle={handleSettleAll}
+                settling={settling}
+              />
             ) : (
-              <>
-                {/* Balances */}
-                <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm overflow-hidden">
-                  <CardHeader className="border-b border-border/50">
-                    <CardTitle className="font-display flex items-center gap-2">
-                      <Wallet className="h-5 w-5 text-primary" />
-                      Outstanding Balances
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-6">
-                    <AnimatePresence mode="wait">
-                      {balances.length === 0 ? (
-                        <motion.div
-                          key="settled"
-                          initial={{ opacity: 0, scale: 0.95 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.95 }}
-                          className="text-center py-12"
-                        >
-                          <div className="inline-flex p-4 rounded-full bg-success/10 mb-4">
-                            <CheckCircle2 className="h-10 w-10 text-success" />
-                          </div>
-                          <p className="text-xl font-display font-semibold text-success">
-                            All settled up!
-                          </p>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            No outstanding balances in this group
-                          </p>
-                        </motion.div>
-                      ) : (
-                        <motion.div
-                          key="balances"
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          exit={{ opacity: 0 }}
-                          className="space-y-4"
-                        >
-                          {balances.map((balance, index) => (
-                            <motion.div
-                              key={index}
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ delay: index * 0.1 }}
-                              className="flex flex-col sm:flex-row items-center justify-between p-5 rounded-2xl bg-gradient-to-r from-muted/50 to-muted/30 hover:from-muted/70 hover:to-muted/50 transition-colors gap-4"
-                            >
-                              {/* Debtor */}
-                              <div className="flex items-center gap-3">
-                                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-destructive/30 to-destructive/10 flex items-center justify-center">
-                                  <span className="text-sm font-bold text-destructive">
-                                    {balance.from_user.full_name[0]?.toUpperCase() || 'U'}
-                                  </span>
-                                </div>
-                                <div>
-                                  <p className="font-semibold">
-                                    {balance.from_user.full_name}
-                                    {balance.from_user.user_id === user?.id && (
-                                      <span className="text-muted-foreground ml-1 text-sm">(You)</span>
-                                    )}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">owes</p>
-                                </div>
-                              </div>
-
-                              {/* Amount */}
-                              <div className="flex items-center gap-3">
-                                <ArrowRight className="h-5 w-5 text-muted-foreground hidden sm:block" />
-                                <div className="px-4 py-2 rounded-xl bg-primary/10 border border-primary/20">
-                                  <p className="text-xl font-display font-bold text-primary">
-                                    ₹{balance.amount.toFixed(0)}
-                                  </p>
-                                </div>
-                                <ArrowRight className="h-5 w-5 text-muted-foreground hidden sm:block" />
-                              </div>
-
-                              {/* Creditor */}
-                              <div className="flex items-center gap-3">
-                                <div className="text-right sm:text-left">
-                                  <p className="font-semibold">
-                                    {balance.to_user.full_name}
-                                    {balance.to_user.user_id === user?.id && (
-                                      <span className="text-muted-foreground ml-1 text-sm">(You)</span>
-                                    )}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">receives</p>
-                                </div>
-                                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-success/30 to-success/10 flex items-center justify-center">
-                                  <span className="text-sm font-bold text-success">
-                                    {balance.to_user.full_name[0]?.toUpperCase() || 'U'}
-                                  </span>
-                                </div>
-                              </div>
-                            </motion.div>
-                          ))}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </CardContent>
-                </Card>
-
-                {/* Settle Button */}
-                {balances.length > 0 && (
+              <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
+                <CardContent className="pt-12 pb-12 text-center">
                   <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex justify-center"
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    className="inline-flex p-6 rounded-full bg-muted/50 mb-6"
                   >
-                    <Button
-                      size="lg"
-                      className="gradient-primary text-primary-foreground shadow-glow px-10 py-6 text-lg hover:scale-105 transition-transform"
-                      onClick={handleSettleAll}
-                      disabled={settling}
-                    >
-                      <CheckCircle2 className="h-5 w-5 mr-2" />
-                      {settling ? 'Settling...' : 'Mark All as Settled'}
-                    </Button>
+                    <Sparkles className="h-10 w-10 text-muted-foreground" />
                   </motion.div>
-                )}
-
-                {/* Members Summary */}
-                <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="font-display text-lg flex items-center gap-2">
-                      <Users className="h-4 w-4 text-muted-foreground" />
-                      Group Members ({members.length})
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-wrap gap-2">
-                      {members.map((member, i) => (
-                        <motion.div
-                          key={member.user_id}
-                          initial={{ opacity: 0, scale: 0.9 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          transition={{ delay: i * 0.05 }}
-                          className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-muted/50 hover:bg-muted transition-colors"
-                        >
-                          <div className="h-7 w-7 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center">
-                            <span className="text-xs font-bold text-primary">
-                              {member.full_name[0]?.toUpperCase() || 'U'}
-                            </span>
-                          </div>
-                          <span className="text-sm font-medium">
-                            {member.full_name}
-                            {member.user_id === user?.id && (
-                              <span className="text-muted-foreground ml-1">(You)</span>
-                            )}
-                          </span>
-                        </motion.div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </>
+                  <p className="text-muted-foreground">Select a group to view settlements</p>
+                </CardContent>
+              </Card>
             )}
           </TabsContent>
         </Tabs>
