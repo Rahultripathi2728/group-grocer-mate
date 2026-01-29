@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import ExpensesPage from "./pages/ExpensesPage";
+import AllExpensesPage from "./pages/AllExpensesPage";
 import CalendarPage from "./pages/CalendarPage";
 import GroupsPage from "./pages/GroupsPage";
 import ListPage from "./pages/ListPage";
@@ -54,6 +55,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <ListPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/expenses/all"
+              element={
+                <ProtectedRoute>
+                  <AllExpensesPage />
                 </ProtectedRoute>
               }
             />

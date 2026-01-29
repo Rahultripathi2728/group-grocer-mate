@@ -275,7 +275,7 @@ export default function ExpensesPage() {
             <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="font-display">Recent Expenses</CardTitle>
-                <Link to="/calendar">
+                <Link to="/expenses/all">
                   <Button variant="ghost" size="sm" className="text-primary hover:text-primary">
                     View All
                     <ArrowRight className="h-4 w-4 ml-1" />
