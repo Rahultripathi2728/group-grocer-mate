@@ -245,13 +245,19 @@ export default function CalendarPage() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    className="text-center py-12"
+                    className="text-center py-8"
                   >
                     <div className="inline-flex p-4 rounded-full bg-muted/50 mb-4">
                       <Sparkles className="h-8 w-8 text-muted-foreground" />
                     </div>
                     <p className="text-muted-foreground">No expenses on this day</p>
-                    <p className="text-xs text-muted-foreground/70 mt-1">Tap + to add one</p>
+                    <Button
+                      onClick={() => setAddExpenseOpen(true)}
+                      className="mt-4 gradient-primary text-primary-foreground"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add expense on this date
+                    </Button>
                   </motion.div>
                 ) : (
                   <motion.div
@@ -279,6 +285,14 @@ export default function CalendarPage() {
                         </motion.div>
                       ))}
                     </div>
+                    <Button
+                      onClick={() => setAddExpenseOpen(true)}
+                      variant="outline"
+                      className="w-full mt-4 border-primary/30 text-primary hover:bg-primary/10"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add expense on this date
+                    </Button>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -286,23 +300,6 @@ export default function CalendarPage() {
           </Card>
         </div>
 
-        {/* Floating Action Button */}
-        <motion.div
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.3, type: 'spring', stiffness: 200 }}
-          className="fixed bottom-24 right-6 z-50"
-        >
-          <Button
-            onClick={() => {
-              if (!selectedDate) setSelectedDate(new Date());
-              setAddExpenseOpen(true);
-            }}
-            className="h-14 w-14 rounded-full gradient-primary text-primary-foreground shadow-glow hover:shadow-glow-lg transition-all duration-300 hover:scale-110"
-          >
-            <Plus className="h-6 w-6" />
-          </Button>
-        </motion.div>
       </div>
 
       <AddExpenseDialog
