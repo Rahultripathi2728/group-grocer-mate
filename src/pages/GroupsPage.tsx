@@ -52,7 +52,6 @@ interface Member {
   joined_at: string;
   profile?: {
     full_name: string;
-    email: string;
   };
 }
 
@@ -96,12 +95,12 @@ export default function GroupsPage() {
   const fetchMembers = async (groupId: string) => {
     const { data: memberships } = await supabase
       .from('group_memberships')
-      .select('*, profiles(full_name, email)')
+      .select('*, profiles(full_name)')
       .eq('group_id', groupId);
 
     const { data: group } = await supabase
       .from('groups')
-      .select('owner_id, profiles(full_name, email)')
+      .select('owner_id, profiles(full_name)')
       .eq('id', groupId)
       .single();
 
@@ -492,8 +491,8 @@ export default function GroupsPage() {
                                   <span className="text-muted-foreground ml-1">(You)</span>
                                 )}
                               </p>
-                              <p className="text-sm text-muted-foreground">
-                                {member.profile?.email}
+                              <p className="text-sm text-muted-foreground capitalize">
+                                {member.role}
                               </p>
                             </div>
                           </div>
