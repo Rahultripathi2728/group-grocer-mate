@@ -1,5 +1,14 @@
 import { format } from 'date-fns';
 
+function escapeHtml(unsafe: string): string {
+  return unsafe
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 interface ExpenseData {
   id: string;
   description: string;
@@ -83,10 +92,10 @@ export function exportToPDF(expenses: ExpenseData[], filename: string = 'expense
         <tbody>
           ${expenses.map(expense => `
             <tr>
-              <td>${format(new Date(expense.expense_date), 'dd MMM yyyy')}</td>
-              <td>${expense.description}</td>
-              <td><span class="category">${expense.category || 'General'}</span></td>
-              <td>${expense.expense_type}</td>
+              <td>${escapeHtml(format(new Date(expense.expense_date), 'dd MMM yyyy'))}</td>
+              <td>${escapeHtml(expense.description)}</td>
+              <td><span class="category">${escapeHtml(expense.category || 'General')}</span></td>
+              <td>${escapeHtml(expense.expense_type)}</td>
               <td class="amount">₹${expense.amount.toLocaleString('en-IN')}</td>
             </tr>
           `).join('')}

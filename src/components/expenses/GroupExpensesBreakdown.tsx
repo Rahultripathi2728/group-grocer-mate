@@ -31,7 +31,6 @@ import { getCategoryById } from '@/lib/categories';
 interface Member {
   user_id: string;
   full_name: string;
-  email: string;
 }
 
 interface GroupExpense {
@@ -90,12 +89,12 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
     // Fetch group members
     const { data: memberships } = await supabase
       .from('group_memberships')
-      .select('user_id, profiles(full_name, email)')
+      .select('user_id, profiles(full_name)')
       .eq('group_id', groupId);
 
     const { data: group } = await supabase
       .from('groups')
-      .select('owner_id, profiles(full_name, email)')
+      .select('owner_id, profiles(full_name)')
       .eq('id', groupId)
       .single();
 
@@ -105,7 +104,6 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
       memberList.push({
         user_id: group.owner_id,
         full_name: (group.profiles as any).full_name || 'Unknown',
-        email: (group.profiles as any).email || '',
       });
     }
 
@@ -114,7 +112,6 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
         memberList.push({
           user_id: m.user_id,
           full_name: m.profiles?.full_name || 'Unknown',
-          email: m.profiles?.email || '',
         });
       }
     });
