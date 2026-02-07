@@ -379,16 +379,18 @@ export default function GroupsPage() {
                                 <MoreVertical className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  copyInviteCode(group.invite_code);
-                                }}
-                              >
-                                <Copy className="h-4 w-4 mr-2" />
-                                Copy Invite Code
-                              </DropdownMenuItem>
+                             <DropdownMenuContent align="end">
+                              {group.is_owner && (
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    copyInviteCode(group.invite_code);
+                                  }}
+                                >
+                                  <Copy className="h-4 w-4 mr-2" />
+                                  Copy Invite Code
+                                </DropdownMenuItem>
+                              )}
                               {group.is_owner ? (
                                 <DropdownMenuItem
                                   className="text-destructive focus:text-destructive"
@@ -448,20 +450,22 @@ export default function GroupsPage() {
                           Created {format(new Date(selectedGroup.created_at), 'dd MMM yyyy')}
                         </p>
                       </div>
-                      <div className="flex items-center gap-2 bg-muted/50 px-3 py-2 rounded-xl">
-                        <span className="text-sm text-muted-foreground">Invite:</span>
-                        <code className="text-sm font-mono font-semibold">
-                          {selectedGroup.invite_code}
-                        </code>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 rounded-lg"
-                          onClick={() => copyInviteCode(selectedGroup.invite_code)}
-                        >
-                          <Copy className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
+                      {selectedGroup.is_owner && (
+                        <div className="flex items-center gap-2 bg-muted/50 px-3 py-2 rounded-xl">
+                          <span className="text-sm text-muted-foreground">Invite:</span>
+                          <code className="text-sm font-mono font-semibold">
+                            {selectedGroup.invite_code}
+                          </code>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 rounded-lg"
+                            onClick={() => copyInviteCode(selectedGroup.invite_code)}
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </CardHeader>
                   <CardContent className="pt-6">
