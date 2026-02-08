@@ -100,10 +100,11 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
 
     const memberList: Member[] = [];
 
-    if (group?.profiles) {
+    // Always add the owner to the member list regardless of profile data
+    if (group) {
       memberList.push({
         user_id: group.owner_id,
-        full_name: (group.profiles as any).full_name || 'Unknown',
+        full_name: (group.profiles as any)?.full_name || 'Unknown',
       });
     }
 
