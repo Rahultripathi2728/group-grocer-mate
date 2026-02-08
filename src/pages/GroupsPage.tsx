@@ -165,19 +165,16 @@ export default function GroupsPage() {
     const formData = new FormData(e.currentTarget);
     const inviteCode = (formData.get('inviteCode') as string).trim();
 
-    const { data: group, error: groupError } = await supabase
-      .from('groups')
-      .select('id')
-      .eq('invite_code', inviteCode)
-      .maybeSingle();
+    const { data: groupId, error: groupError } = await supabase
+      .rpc('get_group_id_by_invite_code', { p_invite_code: inviteCode });
 
-    if (!group || groupError) {
+    if (!groupId || groupError) {
       toast.error('Invalid invite code');
       return;
     }
 
     const { error } = await supabase.from('group_memberships').insert({
-      group_id: group.id,
+      group_id: groupId,
       user_id: user.id,
       role: 'member',
     });

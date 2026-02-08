@@ -389,6 +389,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_group_id_by_invite_code: {
+        Args: { p_invite_code: string }
+        Returns: string
+      }
       is_group_admin: { Args: { p_group_id: string }; Returns: boolean }
       is_group_member: { Args: { p_group_id: string }; Returns: boolean }
     }
