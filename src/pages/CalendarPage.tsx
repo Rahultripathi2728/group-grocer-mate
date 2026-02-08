@@ -31,6 +31,7 @@ interface DayExpense {
     amount: number;
     expense_type: string;
     category?: string | null;
+    is_settled: boolean;
   }>;
 }
 
@@ -71,6 +72,7 @@ export default function CalendarPage() {
           amount: Number(expense.amount),
           expense_type: expense.expense_type,
           category: expense.category,
+          is_settled: expense.is_settled,
         });
         grouped.set(dateKey, existing);
       });

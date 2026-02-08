@@ -140,6 +140,17 @@ export default function ExpensesPage() {
     setSettling(true);
 
     try {
+      // Calculate total amount being settled
+      const { data: unsettledExpenses } = await supabase
+        .from('expenses')
+        .select('amount')
+        .eq('group_id', selectedGroupId)
+        .eq('is_settled', false);
+
+      const totalSettledAmount = (unsettledExpenses || []).reduce(
+        (sum, e) => sum + Number(e.amount), 0
+      );
+
       const { error: expenseError } = await supabase
         .from('expenses')
         .update({ is_settled: true, settled_at: new Date().toISOString() })
@@ -151,7 +162,8 @@ export default function ExpensesPage() {
       const { error: settlementError } = await supabase.from('settlements').insert({
         group_id: selectedGroupId,
         settled_by: user.id,
-        notes: `Settled all expenses as of ${format(new Date(), 'dd MMM yyyy HH:mm')}`,
+        total_amount: totalSettledAmount,
+        notes: `Settled ₹${totalSettledAmount.toLocaleString('en-IN')} on ${format(new Date(), 'dd MMM yyyy HH:mm')}`,
       });
 
       if (settlementError) throw settlementError;

@@ -352,6 +352,7 @@ export type Database = {
           notes: string | null
           settled_at: string
           settled_by: string
+          total_amount: number | null
         }
         Insert: {
           group_id: string
@@ -359,6 +360,7 @@ export type Database = {
           notes?: string | null
           settled_at?: string
           settled_by: string
+          total_amount?: number | null
         }
         Update: {
           group_id?: string
@@ -366,6 +368,7 @@ export type Database = {
           notes?: string | null
           settled_at?: string
           settled_by?: string
+          total_amount?: number | null
         }
         Relationships: [
           {

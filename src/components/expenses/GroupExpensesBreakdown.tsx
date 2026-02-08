@@ -62,6 +62,7 @@ interface Settlement {
   settled_at: string;
   settled_by: string;
   notes: string | null;
+  total_amount?: number;
   settled_by_name?: string;
 }
 
@@ -129,6 +130,7 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
 
     const formattedSettlements = (settlementData || []).map((s: any) => ({
       ...s,
+      total_amount: Number(s.total_amount) || 0,
       settled_by_name: s.profiles?.full_name || 'Unknown',
     }));
 
@@ -567,6 +569,11 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
                           <span className="text-muted-foreground ml-1">(You)</span>
                         )}
                       </p>
+                      {settlement.total_amount > 0 && (
+                        <p className="text-sm font-bold text-success">
+                          ₹{settlement.total_amount.toLocaleString('en-IN')}
+                        </p>
+                      )}
                       <p className="text-xs text-muted-foreground">
                         {settlement.notes}
                       </p>
