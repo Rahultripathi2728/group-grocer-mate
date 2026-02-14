@@ -30,21 +30,25 @@ import BudgetCard from '@/components/expenses/BudgetCard';
 import GroupExpensesBreakdown from '@/components/expenses/GroupExpensesBreakdown';
 import StatCard from '@/components/ui/stat-card';
 import ExpenseCard from '@/components/expenses/ExpenseCard';
+import DailySpendingChart from '@/components/expenses/DailySpendingChart';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
+interface ExpenseRow {
+  id: string;
+  description: string;
+  amount: number;
+  expense_date: string;
+  expense_type: string;
+  category?: string | null;
+}
+
 interface ExpenseSummary {
   totalPersonal: number;
   totalGroup: number;
-  recentExpenses: Array<{
-    id: string;
-    description: string;
-    amount: number;
-    expense_date: string;
-    expense_type: string;
-    category?: string | null;
-  }>;
+  recentExpenses: ExpenseRow[];
+  allExpenses: ExpenseRow[];
 }
 
 interface Group {
@@ -60,6 +64,7 @@ export default function ExpensesPage() {
     totalPersonal: 0,
     totalGroup: 0,
     recentExpenses: [],
+    allExpenses: [],
   });
   const [loading, setLoading] = useState(true);
   const [addExpenseOpen, setAddExpenseOpen] = useState(false);
@@ -91,13 +96,12 @@ export default function ExpensesPage() {
         .filter((e) => e.expense_type === 'group')
         .reduce((sum, e) => sum + Number(e.amount), 0);
 
+      const mapped = expenses.map((e) => ({ ...e, amount: Number(e.amount) }));
       setSummary({
         totalPersonal: personal,
         totalGroup: group,
-        recentExpenses: expenses.slice(0, 5).map((e) => ({
-          ...e,
-          amount: Number(e.amount),
-        })),
+        recentExpenses: mapped.slice(0, 5),
+        allExpenses: mapped,
       });
     }
 
@@ -282,6 +286,9 @@ export default function ExpensesPage() {
                 />
               </motion.div>
             </div>
+
+            {/* Daily Spending Chart */}
+            <DailySpendingChart expenses={summary.allExpenses} />
 
             {/* Recent Expenses */}
             <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
