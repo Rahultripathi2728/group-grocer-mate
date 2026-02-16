@@ -83,8 +83,8 @@ export default function DailySpendingChart({ expenses }: DailySpendingChartProps
                     <stop offset="100%" stopColor="hsl(162, 63%, 41%)" stopOpacity={0.05} />
                   </linearGradient>
                   <linearGradient id="fillGroup" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="hsl(168, 50%, 40%)" stopOpacity={0.3} />
-                    <stop offset="100%" stopColor="hsl(168, 50%, 40%)" stopOpacity={0.05} />
+                    <stop offset="0%" stopColor="hsl(262, 60%, 55%)" stopOpacity={0.4} />
+                    <stop offset="100%" stopColor="hsl(262, 60%, 55%)" stopOpacity={0.05} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
@@ -116,7 +116,7 @@ export default function DailySpendingChart({ expenses }: DailySpendingChartProps
                   type="monotone"
                   dataKey="group"
                   stackId="1"
-                  stroke="hsl(168, 50%, 40%)"
+                  stroke="hsl(262, 60%, 55%)"
                   fill="url(#fillGroup)"
                   strokeWidth={2}
                 />
@@ -129,7 +129,7 @@ export default function DailySpendingChart({ expenses }: DailySpendingChartProps
               Personal
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="h-2 w-2 rounded-full" style={{ backgroundColor: 'hsl(168, 50%, 40%)' }} />
+              <div className="h-2 w-2 rounded-full" style={{ backgroundColor: 'hsl(262, 60%, 55%)' }} />
               Group
             </div>
           </div>

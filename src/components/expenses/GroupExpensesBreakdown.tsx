@@ -138,30 +138,28 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
     const lastSettlementData = formattedSettlements[0] || null;
     setLastSettlement(lastSettlementData);
 
-    // Fetch unsettled group expenses
-    let query = supabase
+    // Fetch ALL group expenses (for totals display)
+    const { data: allExpenseData } = await supabase
       .from('expenses')
       .select('*')
       .eq('group_id', groupId)
       .eq('expense_type', 'group')
-      .eq('is_settled', false)
       .order('expense_date', { ascending: false });
 
-    if (lastSettlementData) {
-      query = query.gte('created_at', lastSettlementData.settled_at);
-    }
-
-    const { data: expenseData } = await query;
-    const expenseList = (expenseData || []).map((e) => ({
+    const allExpenseList = (allExpenseData || []).map((e) => ({
       ...e,
       amount: Number(e.amount),
     }));
 
-    setExpenses(expenseList);
+    // Unsettled expenses only (for balance calculations)
+    const unsettledExpenses = allExpenseList.filter((e) => !e.is_settled);
 
-    // Calculate member spending breakdown
-    calculateMemberSpending(memberList, expenseList);
-    calculateBalances(memberList, expenseList);
+    setExpenses(allExpenseList);
+
+    // Calculate member spending using ALL expenses for display
+    calculateMemberSpending(memberList, allExpenseList);
+    // Calculate balances using only UNSETTLED expenses
+    calculateBalances(memberList, unsettledExpenses);
 
     setLoading(false);
   };

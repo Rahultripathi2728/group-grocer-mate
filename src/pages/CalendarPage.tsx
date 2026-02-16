@@ -16,7 +16,7 @@ import {
   startOfWeek,
   endOfWeek,
 } from 'date-fns';
-import { ChevronLeft, ChevronRight, Plus, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Sparkles, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import AddExpenseDialog from '@/components/expenses/AddExpenseDialog';
 import ExpenseCard from '@/components/expenses/ExpenseCard';
@@ -25,6 +25,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface DayExpense {
   date: string;
   total: number;
+  hasSettled: boolean;
+  hasUnsettled: boolean;
   expenses: Array<{
     id: string;
     description: string;
@@ -63,9 +65,16 @@ export default function CalendarPage() {
         const existing = grouped.get(dateKey) || {
           date: dateKey,
           total: 0,
+          hasSettled: false,
+          hasUnsettled: false,
           expenses: [],
         };
         existing.total += Number(expense.amount);
+        if (expense.is_settled) {
+          existing.hasSettled = true;
+        } else {
+          existing.hasUnsettled = true;
+        }
         existing.expenses.push({
           id: expense.id,
           description: expense.description,
@@ -201,16 +210,23 @@ export default function CalendarPage() {
                         {format(day, 'd')}
                       </span>
                       {dayExpenses && isCurrentMonth && (
-                        <span
-                          className={cn(
-                            'absolute bottom-1 left-1/2 -translate-x-1/2 text-[9px] font-bold',
-                            isSelected ? 'text-primary-foreground' : 'text-primary'
+                        <>
+                          <span
+                            className={cn(
+                              'absolute bottom-1 left-1/2 -translate-x-1/2 text-[9px] font-bold',
+                              isSelected ? 'text-primary-foreground' : 'text-primary'
+                            )}
+                          >
+                            ₹{dayExpenses.total >= 1000
+                              ? `${(dayExpenses.total / 1000).toFixed(1)}k`
+                              : dayExpenses.total.toLocaleString('en-IN')}
+                          </span>
+                          {dayExpenses.hasSettled && !dayExpenses.hasUnsettled && (
+                            <span className="absolute top-1 right-1">
+                              <CheckCircle2 className={cn("h-2.5 w-2.5", isSelected ? "text-primary-foreground" : "text-success")} />
+                            </span>
                           )}
-                        >
-                          ₹{dayExpenses.total >= 1000
-                            ? `${(dayExpenses.total / 1000).toFixed(1)}k`
-                            : dayExpenses.total.toLocaleString('en-IN')}
-                        </span>
+                        </>
                       )}
                     </motion.button>
                   );
@@ -283,7 +299,7 @@ export default function CalendarPage() {
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: i * 0.05 }}
                         >
-                          <ExpenseCard {...expense} compact />
+                          <ExpenseCard {...expense} compact onDelete={fetchExpenses} />
                         </motion.div>
                       ))}
                     </div>

@@ -429,6 +429,21 @@ export default function ExpensesPage() {
             )}
           </TabsContent>
         </Tabs>
+
+        {/* Floating Add Button */}
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          className="fixed bottom-24 right-6 z-50"
+        >
+          <Button
+            size="lg"
+            className="h-14 w-14 rounded-full gradient-primary text-primary-foreground shadow-glow p-0 hover:scale-110 transition-transform"
+            onClick={() => setAddExpenseOpen(true)}
+          >
+            <Plus className="h-6 w-6" />
+          </Button>
+        </motion.div>
       </div>
 
       <AddExpenseDialog

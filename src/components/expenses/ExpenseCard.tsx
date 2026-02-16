@@ -1,7 +1,10 @@
-import { Wallet, Users, CheckCircle2 } from 'lucide-react';
+import { useState } from 'react';
+import { Wallet, Users, CheckCircle2, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getCategoryById } from '@/lib/categories';
 import { format } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface ExpenseCardProps {
   id: string;
@@ -13,9 +16,11 @@ interface ExpenseCardProps {
   is_settled?: boolean;
   showDate?: boolean;
   compact?: boolean;
+  onDelete?: () => void;
 }
 
 export default function ExpenseCard({
+  id,
   description,
   amount,
   expense_type,
@@ -24,14 +29,33 @@ export default function ExpenseCard({
   is_settled = false,
   showDate = false,
   compact = false,
+  onDelete,
 }: ExpenseCardProps) {
+  const [deleting, setDeleting] = useState(false);
   const categoryInfo = getCategoryById(category);
   const CategoryIcon = categoryInfo.icon;
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (is_settled) {
+      toast.error("Can't delete settled expenses");
+      return;
+    }
+    setDeleting(true);
+    const { error } = await supabase.from('expenses').delete().eq('id', id);
+    if (error) {
+      toast.error('Failed to delete expense');
+    } else {
+      toast.success('Expense deleted');
+      onDelete?.();
+    }
+    setDeleting(false);
+  };
 
   if (compact) {
     return (
       <div className={cn(
-        "flex items-center justify-between p-3 rounded-xl bg-card border border-border/50 hover:border-border hover:shadow-sm transition-all duration-200",
+        "flex items-center justify-between p-3 rounded-xl bg-card border border-border/50 hover:border-border hover:shadow-sm transition-all duration-200 group/card",
         is_settled && "opacity-60"
       )}>
         <div className="flex items-center gap-3">
@@ -66,20 +90,31 @@ export default function ExpenseCard({
             </div>
           </div>
         </div>
-        <p className="font-bold text-sm">₹{amount.toLocaleString('en-IN')}</p>
+        <div className="flex items-center gap-2">
+          <p className="font-bold text-sm">₹{amount.toLocaleString('en-IN')}</p>
+          {onDelete && !is_settled && (
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="opacity-0 group-hover/card:opacity-100 p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
       </div>
     );
   }
 
   return (
     <div className={cn(
-      "flex items-center justify-between p-4 rounded-2xl bg-card border border-border/50 hover:border-border hover:shadow-md transition-all duration-300 group",
+      "flex items-center justify-between p-4 rounded-2xl bg-card border border-border/50 hover:border-border hover:shadow-md transition-all duration-300 group/card",
       is_settled && "opacity-60"
     )}>
       <div className="flex items-center gap-4">
         <div
           className={cn(
-            'p-3 rounded-xl transition-transform duration-300 group-hover:scale-110',
+            'p-3 rounded-xl transition-transform duration-300 group-hover/card:scale-110',
             categoryInfo.bgColor
           )}
         >
@@ -118,9 +153,20 @@ export default function ExpenseCard({
           </div>
         </div>
       </div>
-      <div className="text-right">
-        <p className="text-xl font-bold">₹{amount.toLocaleString('en-IN')}</p>
-        <p className="text-xs text-muted-foreground mt-1">{categoryInfo.label}</p>
+      <div className="flex items-center gap-3">
+        <div className="text-right">
+          <p className="text-xl font-bold">₹{amount.toLocaleString('en-IN')}</p>
+          <p className="text-xs text-muted-foreground mt-1">{categoryInfo.label}</p>
+        </div>
+        {onDelete && !is_settled && (
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            className="opacity-0 group-hover/card:opacity-100 p-2 rounded-xl hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        )}
       </div>
     </div>
   );
