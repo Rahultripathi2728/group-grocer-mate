@@ -156,30 +156,38 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
 
     setExpenses(allExpenseList);
 
-    // Calculate member spending using ALL expenses for display
-    calculateMemberSpending(memberList, allExpenseList);
+    // Calculate member spending using UNSETTLED expenses for accurate net balance
+    calculateMemberSpending(memberList, allExpenseList, unsettledExpenses);
     // Calculate balances using only UNSETTLED expenses
     calculateBalances(memberList, unsettledExpenses);
 
     setLoading(false);
   };
 
-  const calculateMemberSpending = (memberList: Member[], expenseList: GroupExpense[]) => {
+  const calculateMemberSpending = (memberList: Member[], allExpenseList: GroupExpense[], unsettledExpenseList: GroupExpense[]) => {
     const memberCount = memberList.length;
-    const totalGroupExpense = expenseList.reduce((sum, e) => sum + e.amount, 0);
-    const sharePerPerson = memberCount > 0 ? totalGroupExpense / memberCount : 0;
+    // Use ALL expenses for total display
+    const totalGroupExpense = allExpenseList.reduce((sum, e) => sum + e.amount, 0);
+
+    // Use UNSETTLED expenses for net balance calculation
+    const totalUnsettled = unsettledExpenseList.reduce((sum, e) => sum + e.amount, 0);
+    const unsettledSharePerPerson = memberCount > 0 ? totalUnsettled / memberCount : 0;
 
     const spending: MemberSpending[] = memberList.map((member) => {
-      const memberExpenses = expenseList.filter((e) => e.user_id === member.user_id);
-      const totalPaid = memberExpenses.reduce((sum, e) => sum + e.amount, 0);
-      const netBalance = totalPaid - sharePerPerson;
+      const memberAllExpenses = allExpenseList.filter((e) => e.user_id === member.user_id);
+      const memberUnsettledPaid = unsettledExpenseList
+        .filter((e) => e.user_id === member.user_id)
+        .reduce((sum, e) => sum + e.amount, 0);
+      const totalPaid = memberAllExpenses.reduce((sum, e) => sum + e.amount, 0);
+      // Net balance based on unsettled only
+      const netBalance = memberUnsettledPaid - unsettledSharePerPerson;
 
       return {
         member,
         totalPaid,
-        totalOwed: sharePerPerson,
+        totalOwed: unsettledSharePerPerson,
         netBalance,
-        expenses: memberExpenses,
+        expenses: memberAllExpenses,
       };
     });
 
