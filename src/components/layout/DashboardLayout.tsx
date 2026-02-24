@@ -15,6 +15,7 @@ import {
   LogOut,
 } from 'lucide-react';
 import BottomNav from './BottomNav';
+import NotificationBell from '@/components/notifications/NotificationBell';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { user, signOut } = useAuth();
@@ -43,7 +44,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <span className="font-display font-bold text-base">ExpenseTrack</span>
           </Link>
 
-          <DropdownMenu>
+          <div className="flex items-center gap-1">
+            <NotificationBell />
+            <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="rounded-full">
                 <Avatar className="h-8 w-8">
@@ -63,7 +66,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 Sign Out
               </DropdownMenuItem>
             </DropdownMenuContent>
-          </DropdownMenu>
+            </DropdownMenu>
+          </div>
         </div>
       </header>
 
@@ -77,7 +81,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <span className="font-display font-bold text-xl">ExpenseTrack</span>
           </Link>
 
-          <DropdownMenu>
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-muted transition-colors">
                 <Avatar className="h-10 w-10">
@@ -99,7 +105,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 Sign Out
               </DropdownMenuItem>
             </DropdownMenuContent>
-          </DropdownMenu>
+            </DropdownMenu>
+          </div>
         </div>
       </header>
 
