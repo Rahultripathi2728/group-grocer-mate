@@ -19,7 +19,6 @@ import {
   TrendingDown,
   Wallet,
   Users,
-  Calendar,
   Plus,
   ArrowRight,
   CheckCircle2,
@@ -333,31 +332,6 @@ export default function ExpensesPage() {
               </CardContent>
             </Card>
 
-            {/* Quick Actions */}
-            <div className="grid grid-cols-2 gap-3">
-              <Link to="/calendar">
-                <Button
-                  variant="outline"
-                  className="w-full h-14 justify-start gap-3 border-border/50 hover:border-primary/30 hover:bg-primary/5"
-                >
-                  <div className="p-2 rounded-xl bg-primary/10">
-                    <Calendar className="h-4 w-4 text-primary" />
-                  </div>
-                  <span className="font-medium">Calendar</span>
-                </Button>
-              </Link>
-              <Link to="/groups">
-                <Button
-                  variant="outline"
-                  className="w-full h-14 justify-start gap-3 border-border/50 hover:border-primary/30 hover:bg-primary/5"
-                >
-                  <div className="p-2 rounded-xl bg-accent">
-                    <Users className="h-4 w-4 text-accent-foreground" />
-                  </div>
-                  <span className="font-medium">Groups</span>
-                </Button>
-              </Link>
-            </div>
           </TabsContent>
 
           {/* Settlement Tab */}
