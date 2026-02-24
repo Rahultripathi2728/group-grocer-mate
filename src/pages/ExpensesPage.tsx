@@ -143,25 +143,41 @@ export default function ExpensesPage() {
     setSettling(true);
 
     try {
-      // Calculate total amount being settled
+      // Fetch unsettled expense IDs and amounts atomically
       const { data: unsettledExpenses } = await supabase
         .from('expenses')
-        .select('amount')
+        .select('id, amount')
         .eq('group_id', selectedGroupId)
         .eq('is_settled', false);
 
-      const totalSettledAmount = (unsettledExpenses || []).reduce(
+      if (!unsettledExpenses || unsettledExpenses.length === 0) {
+        toast.info('No unsettled expenses to settle.');
+        setSettling(false);
+        return;
+      }
+
+      const unsettledIds = unsettledExpenses.map((e) => e.id);
+      const totalSettledAmount = unsettledExpenses.reduce(
         (sum, e) => sum + Number(e.amount), 0
       );
 
+      // Mark expenses as settled
       const { error: expenseError } = await supabase
         .from('expenses')
         .update({ is_settled: true, settled_at: new Date().toISOString() })
-        .eq('group_id', selectedGroupId)
-        .eq('is_settled', false);
+        .in('id', unsettledIds);
 
       if (expenseError) throw expenseError;
 
+      // Also mark all related expense_splits as paid
+      const { error: splitsError } = await supabase
+        .from('expense_splits')
+        .update({ is_paid: true, paid_at: new Date().toISOString() })
+        .in('expense_id', unsettledIds);
+
+      if (splitsError) console.error('Failed to update splits:', splitsError);
+
+      // Record settlement
       const { error: settlementError } = await supabase.from('settlements').insert({
         group_id: selectedGroupId,
         settled_by: user.id,
@@ -171,9 +187,9 @@ export default function ExpensesPage() {
 
       if (settlementError) throw settlementError;
 
-      toast.success('All expenses settled! The page will refresh to show updated data.');
+      toast.success('All expenses settled!');
       
-      // Force a re-render by changing the selected group and back
+      // Force a re-render
       const currentGroup = selectedGroupId;
       setSelectedGroupId('');
       setTimeout(() => setSelectedGroupId(currentGroup), 100);
