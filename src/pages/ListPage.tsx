@@ -292,7 +292,7 @@ export default function ListPage() {
               </motion.div>
               <h3 className="text-xl font-display font-semibold mb-2">No items yet</h3>
               <p className="text-muted-foreground mb-6">Tap + to add your first item</p>
-              <Button onClick={() => setAddDialogOpen(true)} className="gradient-primary text-primary-foreground">
+              <Button onClick={() => setAddDialogOpen(true)} className="bg-primary text-primary-foreground">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Item
               </Button>
