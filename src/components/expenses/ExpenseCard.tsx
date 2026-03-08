@@ -40,6 +40,7 @@ export default function ExpenseCard({
   is_settled = false,
   showDate = false,
   compact = false,
+  myShare,
   onDelete,
 }: ExpenseCardProps) {
   const [deleting, setDeleting] = useState(false);
