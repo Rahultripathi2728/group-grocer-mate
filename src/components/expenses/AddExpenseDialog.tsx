@@ -65,14 +65,28 @@ export default function AddExpenseDialog({
 
     setLoading(true);
     const formData = new FormData(e.currentTarget);
-    const description = formData.get('description') as string;
-    const amount = parseFloat(formData.get('amount') as string);
+    const description = (formData.get('description') as string || '').trim().slice(0, 500);
+    const amountRaw = parseFloat(formData.get('amount') as string);
     const date = formData.get('date') as string;
-    const category = formData.get('category') as string;
+    const category = (formData.get('category') as string || 'general').slice(0, 50);
+
+    if (!description || description.length === 0) {
+      toast.error('Description is required');
+      setLoading(false);
+      return;
+    }
+
+    if (isNaN(amountRaw) || amountRaw <= 0 || amountRaw > 99999999) {
+      toast.error('Amount must be between 0.01 and 99,999,999');
+      setLoading(false);
+      return;
+    }
+
+    const amount = Math.round(amountRaw * 100) / 100;
 
     const expenseData = {
       user_id: user.id,
-      description: description.trim(),
+      description,
       amount,
       expense_date: date,
       expense_type: expenseType,
