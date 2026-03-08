@@ -377,20 +377,29 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
                             )}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {ms.expenses.length} expense{ms.expenses.length !== 1 ? 's' : ''}
+                            Paid ₹{ms.totalPaid.toFixed(0)} • Share ₹{ms.totalOwed.toFixed(0)}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold">₹{ms.totalPaid.toFixed(0)}</p>
+                        <p className={cn(
+                          "font-bold text-lg",
+                          ms.netBalance > 0 ? "text-success" : ms.netBalance < 0 ? "text-destructive" : "text-muted-foreground"
+                        )}>
+                          {ms.netBalance > 0 
+                            ? `+₹${ms.netBalance.toFixed(0)}` 
+                            : ms.netBalance < 0 
+                              ? `-₹${Math.abs(ms.netBalance).toFixed(0)}`
+                              : '₹0'}
+                        </p>
                         <p className={cn(
                           "text-xs",
                           ms.netBalance > 0 ? "text-success" : ms.netBalance < 0 ? "text-destructive" : "text-muted-foreground"
                         )}>
                           {ms.netBalance > 0 
-                            ? `Gets back ₹${ms.netBalance.toFixed(0)}` 
+                            ? 'Gets back' 
                             : ms.netBalance < 0 
-                              ? `Owes ₹${Math.abs(ms.netBalance).toFixed(0)}`
+                              ? 'Needs to pay'
                               : 'Settled'}
                         </p>
                       </div>
