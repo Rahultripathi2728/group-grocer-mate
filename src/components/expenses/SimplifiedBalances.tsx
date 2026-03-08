@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, forwardRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
@@ -33,7 +33,7 @@ interface Props {
   settling: boolean;
 }
 
-export default function SimplifiedBalances({ balances, memberSpending, onSettle, settling }: Props) {
+const SimplifiedBalances = forwardRef<HTMLDivElement, Props>(function SimplifiedBalances({ balances, memberSpending, onSettle, settling }, ref) {
   const { user } = useAuth();
   const [upiMap, setUpiMap] = useState<Record<string, string>>({});
 
@@ -287,4 +287,6 @@ export default function SimplifiedBalances({ balances, memberSpending, onSettle,
       </CardContent>
     </Card>
   );
-}
+});
+
+export default SimplifiedBalances;

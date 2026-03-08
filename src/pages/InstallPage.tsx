@@ -47,7 +47,7 @@ export default function InstallPage() {
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === 'accepted') {
       setIsInstalled(true);
-      toast({ title: 'App install ho gayi! 🎉' });
+      toast({ title: 'App installed! 🎉' });
     }
     setDeferredPrompt(null);
   };
@@ -71,10 +71,10 @@ export default function InstallPage() {
 
         <div className="text-center space-y-2">
           <img src="/pwa-icon-192.png" alt="My Moolah" className="w-20 h-20 mx-auto rounded-2xl shadow-lg" />
-          <h1 className="text-2xl font-bold text-foreground">My Moolah Install Karein</h1>
-          <p className="text-muted-foreground text-sm">
-            Apne phone ke home screen par add karein — real app jaisi feel!
-          </p>
+           <h1 className="text-2xl font-bold text-foreground">Install Expense Manager</h1>
+           <p className="text-muted-foreground text-sm">
+             Add to your home screen for a native app-like experience!
+           </p>
         </div>
 
         {/* Install Card */}
@@ -85,8 +85,8 @@ export default function InstallPage() {
                 <Smartphone className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <h3 className="font-semibold text-sm">App Install Karein</h3>
-                <p className="text-xs text-muted-foreground">Home screen se directly open karein</p>
+                 <h3 className="font-semibold text-sm">Install App</h3>
+                 <p className="text-xs text-muted-foreground">Open directly from home screen</p>
               </div>
             </div>
 
@@ -110,7 +110,7 @@ export default function InstallPage() {
                   </li>
                   <li className="flex items-start gap-2">
                     <Download className="h-3.5 w-3.5 mt-0.5 shrink-0 text-primary" />
-                    <span><strong>"Add to Home Screen"</strong> select karein</span>
+                    <span>Select <strong>"Add to Home Screen"</strong></span>
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 shrink-0 text-primary" />
@@ -120,7 +120,7 @@ export default function InstallPage() {
               </div>
             ) : (
               <div className="text-xs text-muted-foreground">
-                Browser menu se "Add to Home Screen" ya "Install App" select karein
+                Select "Add to Home Screen" or "Install App" from browser menu
               </div>
             )}
           </CardContent>
