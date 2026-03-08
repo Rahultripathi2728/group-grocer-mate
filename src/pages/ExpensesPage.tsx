@@ -31,7 +31,7 @@ import {
   Sparkles,
   CalendarIcon,
 } from 'lucide-react';
-import AddExpenseDialog from '@/components/expenses/AddExpenseDialog';
+
 import BudgetCard from '@/components/expenses/BudgetCard';
 import GroupExpensesBreakdown from '@/components/expenses/GroupExpensesBreakdown';
 import StatCard from '@/components/ui/stat-card';
@@ -74,7 +74,7 @@ export default function ExpensesPage() {
     allExpenses: [],
   });
   const [loading, setLoading] = useState(true);
-  const [addExpenseOpen, setAddExpenseOpen] = useState(false);
+  
 
   // Date filter state - default: 1st of current month to today
   const [dateFrom, setDateFrom] = useState<Date>(startOfMonth(new Date()));
@@ -513,27 +513,7 @@ export default function ExpensesPage() {
           </TabsContent>
         </Tabs>
 
-        {/* Floating Add Button */}
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          className="fixed bottom-24 right-6 z-50"
-        >
-          <Button
-            size="lg"
-            className="h-14 w-14 rounded-xl bg-foreground text-background p-0 hover:bg-foreground/90 hover:scale-105 transition-transform shadow-lg"
-            onClick={() => setAddExpenseOpen(true)}
-          >
-            <Plus className="h-6 w-6" />
-          </Button>
-        </motion.div>
       </div>
-
-      <AddExpenseDialog
-        open={addExpenseOpen}
-        onOpenChange={setAddExpenseOpen}
-        onSuccess={fetchSummary}
-      />
     </DashboardLayout>
   );
 }
