@@ -26,6 +26,7 @@ interface ExpenseCardProps {
   is_settled?: boolean;
   showDate?: boolean;
   compact?: boolean;
+  myShare?: number;
   onDelete?: () => void;
 }
 
