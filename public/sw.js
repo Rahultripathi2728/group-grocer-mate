@@ -1,7 +1,11 @@
-// Service Worker for Push Notifications
+import { precacheAndRoute } from 'workbox-precaching';
 
+// Precache assets injected by vite-plugin-pwa
+precacheAndRoute(self.__WB_MANIFEST);
+
+// Push Notification Handler
 self.addEventListener('push', (event) => {
-  let data = { title: 'ExpenseTrack', body: 'You have a new notification' };
+  let data = { title: 'My Moolah', body: 'You have a new notification' };
   
   if (event.data) {
     try {
@@ -13,8 +17,8 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: data.body || data.message || 'New notification',
-    icon: '/favicon.ico',
-    badge: '/favicon.ico',
+    icon: '/pwa-icon-192.png',
+    badge: '/pwa-icon-192.png',
     vibrate: [100, 50, 100],
     data: {
       url: '/dashboard',
@@ -27,10 +31,11 @@ self.addEventListener('push', (event) => {
   };
 
   event.waitUntil(
-    self.registration.showNotification(data.title || 'ExpenseTrack', options)
+    self.registration.showNotification(data.title || 'My Moolah', options)
   );
 });
 
+// Notification Click Handler
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   
