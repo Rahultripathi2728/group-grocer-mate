@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import {
   User, Mail, Lock, Save, LogOut, Download, Bell, CheckCircle2,
-  Smartphone, ArrowRight, Eye, EyeOff
+  Smartphone, ArrowRight, Eye, EyeOff, ChevronLeft
 } from 'lucide-react';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 
