@@ -63,6 +63,10 @@ export default function GroupsPage() {
   const [joinDialogOpen, setJoinDialogOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
+  
+  // Confirmation states
+  const [createConfirm, setCreateConfirm] = useState<{ name: string; description: string } | null>(null);
+  const [joinConfirm, setJoinConfirm] = useState<{ inviteCode: string; groupId: string } | null>(null);
 
   const fetchGroups = async () => {
     if (!user) return;
