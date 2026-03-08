@@ -47,7 +47,7 @@ export default function InstallPage() {
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === 'accepted') {
       setIsInstalled(true);
-      toast({ title: 'App install ho gayi! 🎉' });
+      toast({ title: 'App installed! 🎉' });
     }
     setDeferredPrompt(null);
   };
