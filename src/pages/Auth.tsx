@@ -61,7 +61,7 @@ export default function Auth() {
             <div className="p-3 rounded-xl bg-background/10">
               <Layers className="h-8 w-8 text-background" />
             </div>
-            <h1 className="text-3xl font-display font-bold text-background">SplitSmart</h1>
+            <h1 className="text-3xl font-display font-bold text-background">Expense Manager</h1>
           </div>
           <p className="text-background/70 text-lg max-w-md">
             Smart expense management for individuals and groups
