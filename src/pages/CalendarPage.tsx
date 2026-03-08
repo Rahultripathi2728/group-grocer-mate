@@ -396,6 +396,7 @@ export default function CalendarPage() {
                                 </button>
                               )}
                             </div>
+                          </div>
                         </motion.div>
                       );
                     })}
