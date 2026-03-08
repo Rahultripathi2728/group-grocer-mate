@@ -311,7 +311,7 @@ export default function GroupsPage() {
 
             <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="gradient-primary text-primary-foreground shadow-glow-sm hover:shadow-glow">
+                <Button className="bg-foreground text-background hover:bg-foreground/90">
                   <Plus className="h-4 w-4 mr-2" />
                   Create Group
                 </Button>
