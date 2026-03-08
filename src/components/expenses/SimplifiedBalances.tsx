@@ -105,7 +105,7 @@ export default function SimplifiedBalances({ balances, memberSpending, onSettle,
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-success/10 border border-success/20">
               <ArrowDownLeft className="h-3.5 w-3.5 text-success" />
               <span className="text-xs font-semibold text-success">
-                ₹{totalOwedToMe.toFixed(0)} lena hai
+                ₹{totalOwedToMe.toFixed(0)} to receive
               </span>
             </div>
           )}
