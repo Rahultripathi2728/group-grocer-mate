@@ -101,7 +101,7 @@ export default function Auth() {
         </div>
 
         <p className="relative z-10 text-background/40 text-sm">
-          © 2024 SplitSmart. Manage your money wisely.
+          © 2024 Expense Manager. Manage your money wisely.
         </p>
       </div>
 
