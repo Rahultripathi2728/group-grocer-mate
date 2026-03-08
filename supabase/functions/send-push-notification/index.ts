@@ -6,7 +6,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Web Push utilities using Web Crypto API
+function base64UrlEncode(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (const b of bytes) binary += String.fromCharCode(b);
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
 function base64UrlDecode(str: string): Uint8Array {
   str = str.replace(/-/g, '+').replace(/_/g, '/');
   while (str.length % 4) str += '=';
@@ -16,14 +22,7 @@ function base64UrlDecode(str: string): Uint8Array {
   return bytes;
 }
 
-function base64UrlEncode(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
-  let binary = '';
-  for (const b of bytes) binary += String.fromCharCode(b);
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
-async function createJwt(audience: string, subject: string, privateKeyBase64: string): Promise<string> {
+async function createJwt(audience: string, subject: string, privateKeyData: { d: string; x: string; y: string }): Promise<string> {
   const header = { typ: "JWT", alg: "ES256" };
   const now = Math.floor(Date.now() / 1000);
   const payload = { aud: audience, exp: now + 86400, sub: subject };
@@ -32,30 +31,13 @@ async function createJwt(audience: string, subject: string, privateKeyBase64: st
   const payloadB64 = base64UrlEncode(new TextEncoder().encode(JSON.stringify(payload)));
   const unsignedToken = `${headerB64}.${payloadB64}`;
 
-  // Import private key
-  const privateKeyBytes = base64UrlDecode(privateKeyBase64);
   const key = await crypto.subtle.importKey(
     "jwk",
-    { kty: "EC", crv: "P-256", d: privateKeyBase64, x: "", y: "" },
+    { kty: "EC", crv: "P-256", d: privateKeyData.d, x: privateKeyData.x, y: privateKeyData.y },
     { name: "ECDSA", namedCurve: "P-256" },
     false,
     ["sign"]
-  ).catch(async () => {
-    // Fallback: import as raw PKCS8
-    const jwk = { kty: "EC", crv: "P-256", d: privateKeyBase64 } as JsonWebKey;
-    // We need x,y too - derive from the public key stored in env
-    const pubKeyBytes = base64UrlDecode(Deno.env.get("VAPID_PUBLIC_KEY")!);
-    // Uncompressed public key: 04 || x || y
-    const x = base64UrlEncode(pubKeyBytes.slice(1, 33));
-    const y = base64UrlEncode(pubKeyBytes.slice(33, 65));
-    return crypto.subtle.importKey(
-      "jwk",
-      { kty: "EC", crv: "P-256", d: privateKeyBase64, x, y },
-      { name: "ECDSA", namedCurve: "P-256" },
-      false,
-      ["sign"]
-    );
-  });
+  );
 
   const signature = await crypto.subtle.sign(
     { name: "ECDSA", hash: "SHA-256" },
@@ -63,26 +45,21 @@ async function createJwt(audience: string, subject: string, privateKeyBase64: st
     new TextEncoder().encode(unsignedToken)
   );
 
-  // Convert DER signature to raw r||s format if needed
   const sigBytes = new Uint8Array(signature);
-  let r: Uint8Array, s: Uint8Array;
-  
   if (sigBytes.length === 64) {
-    // Already raw format
     return `${unsignedToken}.${base64UrlEncode(signature)}`;
   }
-  
-  // DER format
+
+  // DER to raw conversion
   let offset = 2;
   const rLen = sigBytes[offset + 1];
   offset += 2;
-  r = sigBytes.slice(offset, offset + rLen);
+  let r = sigBytes.slice(offset, offset + rLen);
   offset += rLen;
   const sLen = sigBytes[offset + 1];
   offset += 2;
-  s = sigBytes.slice(offset, offset + sLen);
+  let s = sigBytes.slice(offset, offset + sLen);
 
-  // Pad/trim to 32 bytes
   if (r.length > 32) r = r.slice(r.length - 32);
   if (s.length > 32) s = s.slice(s.length - 32);
   if (r.length < 32) { const tmp = new Uint8Array(32); tmp.set(r, 32 - r.length); r = tmp; }
@@ -95,19 +72,16 @@ async function createJwt(audience: string, subject: string, privateKeyBase64: st
   return `${unsignedToken}.${base64UrlEncode(rawSig.buffer)}`;
 }
 
-async function sendWebPush(subscription: { endpoint: string; p256dh: string; auth: string }, payload: string) {
-  const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY")!;
-  const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY")!;
+async function sendWebPush(
+  subscription: { endpoint: string; p256dh: string; auth: string },
+  vapidPublicKey: string,
+  privateKeyData: { d: string; x: string; y: string }
+) {
   const vapidSubject = "mailto:push@expensetrack.app";
-
   const url = new URL(subscription.endpoint);
   const audience = `${url.protocol}//${url.hostname}`;
 
-  const jwt = await createJwt(audience, vapidSubject, vapidPrivateKey);
-
-  // Encrypt payload using Web Push encryption (simplified - send without encryption for now, browsers handle it)
-  // For proper encryption, we'd need ECDH + HKDF which is complex
-  // Instead, use a simpler approach: send the push with just VAPID auth and let the payload be in the JWT
+  const jwt = await createJwt(audience, vapidSubject, privateKeyData);
 
   const response = await fetch(subscription.endpoint, {
     method: "POST",
@@ -141,6 +115,21 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    // Get VAPID keys from database
+    const { data: vapidKeys } = await supabase
+      .from('vapid_keys')
+      .select('*')
+      .limit(1)
+      .single();
+
+    if (!vapidKeys) {
+      return new Response(JSON.stringify({ error: "VAPID keys not configured" }), {
+        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    const privateKeyData = JSON.parse(vapidKeys.private_key);
+
     // Get user's push subscriptions
     const { data: subscriptions } = await supabase
       .from("push_subscriptions")
@@ -158,11 +147,11 @@ serve(async (req) => {
       try {
         const res = await sendWebPush(
           { endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth },
-          JSON.stringify({ title, body: message, type })
+          vapidKeys.public_key,
+          privateKeyData
         );
         results.push({ endpoint: sub.endpoint, status: res.status });
-        
-        // Remove expired subscriptions
+
         if (res.status === 410) {
           await supabase.from("push_subscriptions").delete().eq("id", sub.id);
         }
