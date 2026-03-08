@@ -85,7 +85,8 @@ export default function ProfilePage() {
       // Update profiles table
       await supabase.from('profiles').update({
         full_name: fullName,
-      }).eq('id', user.id);
+        upi_id: upiId || null,
+      } as any).eq('id', user.id);
 
       toast({ title: 'Profile updated! ✅' });
     } catch (err: any) {
