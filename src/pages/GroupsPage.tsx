@@ -393,7 +393,7 @@ export default function GroupsPage() {
                       <CardContent className="pt-4 pb-4">
                         <div className="flex items-start justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5">
+                            <div className="p-2.5 rounded-xl bg-primary/10">
                               <Users className="h-5 w-5 text-primary" />
                             </div>
                             <div>
