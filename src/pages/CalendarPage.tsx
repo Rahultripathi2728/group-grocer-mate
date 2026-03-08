@@ -326,8 +326,10 @@ export default function CalendarPage() {
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: i * 0.05 }}
                         >
-                          <div className={cn(
-                            "flex items-center gap-3 p-3 rounded-xl border border-border transition-all hover:shadow-sm",
+                          <div
+                            onClick={() => setDetailExpense(expense)}
+                            className={cn(
+                            "flex items-center gap-3 p-3 rounded-xl border border-border transition-all hover:shadow-sm cursor-pointer active:scale-[0.98]",
                             expense.is_settled && "opacity-50"
                           )}>
                             {/* Category icon */}
