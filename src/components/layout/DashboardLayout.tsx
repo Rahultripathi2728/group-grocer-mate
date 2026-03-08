@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import BottomNav from './BottomNav';
 import NotificationBell from '@/components/notifications/NotificationBell';
+import PushNotificationPrompt from '@/components/notifications/PushNotificationPrompt';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { user, signOut } = useAuth();
@@ -112,6 +113,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
       {/* Main Content */}
       <main className="pt-14 lg:pt-16 pb-20 lg:pb-8 min-h-screen">
+        <PushNotificationPrompt />
         <div className="p-4 lg:p-8 max-w-7xl mx-auto">{children}</div>
       </main>
 
