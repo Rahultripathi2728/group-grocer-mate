@@ -16,18 +16,23 @@ interface ExpenseData {
   expense_date: string;
   expense_type: string;
   category?: string | null;
+  myShare?: number;
 }
 
 export function exportToCSV(expenses: ExpenseData[], filename: string = 'expenses') {
-  const headers = ['Date', 'Description', 'Category', 'Type', 'Amount (₹)'];
+  const headers = ['Date', 'Description', 'Category', 'Type', 'Total Amount (₹)', 'Your Share (₹)'];
   
-  const rows = expenses.map(expense => [
-    format(new Date(expense.expense_date), 'dd/MM/yyyy'),
-    expense.description.replace(/,/g, ';'), // Escape commas
-    expense.category || 'General',
-    expense.expense_type,
-    expense.amount.toFixed(2),
-  ]);
+  const rows = expenses.map(expense => {
+    const share = expense.myShare ?? expense.amount;
+    return [
+      format(new Date(expense.expense_date), 'dd/MM/yyyy'),
+      expense.description.replace(/,/g, ';'),
+      expense.category || 'General',
+      expense.expense_type,
+      expense.amount.toFixed(2),
+      share.toFixed(2),
+    ];
+  });
 
   const csvContent = [
     headers.join(','),
@@ -47,7 +52,7 @@ export function exportToCSV(expenses: ExpenseData[], filename: string = 'expense
 }
 
 export function exportToPDF(expenses: ExpenseData[], filename: string = 'expenses') {
-  const total = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const totalShare = expenses.reduce((sum, e) => sum + (e.myShare ?? e.amount), 0);
   
   // Create printable HTML
   const htmlContent = `
@@ -87,21 +92,25 @@ export function exportToPDF(expenses: ExpenseData[], filename: string = 'expense
             <th>Category</th>
             <th>Type</th>
             <th class="amount">Amount</th>
+            <th class="amount">Your Share</th>
           </tr>
         </thead>
         <tbody>
-          ${expenses.map(expense => `
+          ${expenses.map(expense => {
+            const share = expense.myShare ?? expense.amount;
+            return `
             <tr>
               <td>${escapeHtml(format(new Date(expense.expense_date), 'dd MMM yyyy'))}</td>
               <td>${escapeHtml(expense.description)}</td>
               <td><span class="category">${escapeHtml(expense.category || 'General')}</span></td>
               <td>${escapeHtml(expense.expense_type)}</td>
               <td class="amount">₹${expense.amount.toLocaleString('en-IN')}</td>
+              <td class="amount">₹${share.toLocaleString('en-IN')}</td>
             </tr>
-          `).join('')}
+          `}).join('')}
           <tr class="total-row">
-            <td colspan="4"><strong>Total</strong></td>
-            <td class="amount"><strong>₹${total.toLocaleString('en-IN')}</strong></td>
+            <td colspan="5"><strong>Total (Your Share)</strong></td>
+            <td class="amount"><strong>₹${totalShare.toLocaleString('en-IN')}</strong></td>
           </tr>
         </tbody>
       </table>
