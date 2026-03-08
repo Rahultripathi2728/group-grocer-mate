@@ -48,6 +48,7 @@ interface ExpenseRow {
   expense_date: string;
   expense_type: string;
   category?: string | null;
+  myShare?: number;
 }
 
 interface ExpenseSummary {
