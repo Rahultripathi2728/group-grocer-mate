@@ -55,7 +55,7 @@ export default function SimplifiedBalances({ balances, memberSpending, onSettle,
               : 'bg-gradient-to-br from-primary/10 to-primary/5'
         )}
       >
-        <p className="text-sm text-muted-foreground mb-1">Tera Balance</p>
+        <p className="text-sm text-muted-foreground mb-1">Your Balance</p>
         <div className="flex items-baseline gap-2">
           <span
             className={cn(
