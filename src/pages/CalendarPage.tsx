@@ -392,6 +392,76 @@ export default function CalendarPage() {
         onSuccess={fetchExpenses}
         selectedDate={selectedDate || undefined}
       />
+
+      {/* Expense Detail Dialog */}
+      <Dialog open={!!detailExpense} onOpenChange={(open) => !open && setDetailExpense(null)}>
+        <DialogContent className="sm:max-w-md">
+          {detailExpense && (() => {
+            const catInfo = getCategoryById(detailExpense.category);
+            const CatIcon = catInfo.icon;
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="font-display text-xl">Expense Details</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 pt-2">
+                  {/* Icon + Name */}
+                  <div className="flex items-center gap-4">
+                    <div className={cn('p-3 rounded-xl', catInfo.bgColor)}>
+                      <CatIcon className={cn('h-6 w-6', catInfo.color)} />
+                    </div>
+                    <div>
+                      <p className="font-bold text-lg break-words">{detailExpense.description}</p>
+                      <p className="text-sm text-muted-foreground">{catInfo.label}</p>
+                    </div>
+                  </div>
+
+                  {/* Details grid */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 rounded-xl bg-muted/50">
+                      <p className="text-xs text-muted-foreground">Amount</p>
+                      <p className="font-bold text-lg">₹{detailExpense.amount.toLocaleString('en-IN')}</p>
+                    </div>
+                    {detailExpense.expense_type === 'group' && detailExpense.myShare !== undefined && (
+                      <div className="p-3 rounded-xl bg-muted/50">
+                        <p className="text-xs text-muted-foreground">Your Share</p>
+                        <p className="font-bold text-lg">₹{detailExpense.myShare.toLocaleString('en-IN')}</p>
+                      </div>
+                    )}
+                    <div className="p-3 rounded-xl bg-muted/50">
+                      <p className="text-xs text-muted-foreground">Type</p>
+                      <p className="font-semibold text-sm flex items-center gap-1.5 mt-0.5">
+                        {detailExpense.expense_type === 'personal'
+                          ? <><Wallet className="h-3.5 w-3.5" /> Personal</>
+                          : <><Users className="h-3.5 w-3.5" /> Group</>
+                        }
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-xl bg-muted/50">
+                      <p className="text-xs text-muted-foreground">Status</p>
+                      <p className={cn(
+                        "font-semibold text-sm flex items-center gap-1.5 mt-0.5",
+                        detailExpense.is_settled ? "text-success" : "text-foreground"
+                      )}>
+                        {detailExpense.is_settled
+                          ? <><CheckCircle2 className="h-3.5 w-3.5" /> Settled</>
+                          : 'Unsettled'
+                        }
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-xl bg-muted/50">
+                      <p className="text-xs text-muted-foreground">Date</p>
+                      <p className="font-semibold text-sm mt-0.5">
+                        {selectedDate ? format(selectedDate, 'dd MMM yyyy') : ''}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
