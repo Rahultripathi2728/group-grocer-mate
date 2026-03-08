@@ -39,9 +39,9 @@ export default function PushNotificationPrompt() {
           <BellRing className="h-5 w-5 text-primary" />
         </div>
         <div className="flex-1">
-          <h4 className="font-semibold text-sm">Push Notifications Enable Karein</h4>
-          <p className="text-xs text-muted-foreground mt-1">
-            App band hone par bhi expense aur group updates ki notification milegi
+           <h4 className="font-semibold text-sm">Enable Push Notifications</h4>
+           <p className="text-xs text-muted-foreground mt-1">
+             Get notified about expense and group updates even when the app is closed
           </p>
           <Button 
             size="sm" 

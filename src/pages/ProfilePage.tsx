@@ -280,7 +280,7 @@ export default function ProfilePage() {
                   <Download className="h-5 w-5 text-primary" />
                   <div>
                     <p className="text-sm font-medium">Install App</p>
-                    <p className="text-xs text-muted-foreground">Home screen par add karein</p>
+                    <p className="text-xs text-muted-foreground">Add to home screen</p>
                   </div>
                 </div>
                 {deferredPrompt ? (

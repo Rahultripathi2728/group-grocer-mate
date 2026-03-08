@@ -120,7 +120,7 @@ export default function InstallPage() {
               </div>
             ) : (
               <div className="text-xs text-muted-foreground">
-                Browser menu se "Add to Home Screen" ya "Install App" select karein
+                Select "Add to Home Screen" or "Install App" from browser menu
               </div>
             )}
           </CardContent>
