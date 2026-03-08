@@ -68,6 +68,7 @@ export default function CalendarPage() {
   const [loading, setLoading] = useState(true);
   const [addExpenseOpen, setAddExpenseOpen] = useState(false);
   const [detailExpense, setDetailExpense] = useState<DayExpense['expenses'][0] | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   const userName = user?.user_metadata?.full_name || 'User';
 
