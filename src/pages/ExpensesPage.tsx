@@ -31,7 +31,7 @@ import {
   Sparkles,
   CalendarIcon,
 } from 'lucide-react';
-import AddExpenseDialog from '@/components/expenses/AddExpenseDialog';
+
 import BudgetCard from '@/components/expenses/BudgetCard';
 import GroupExpensesBreakdown from '@/components/expenses/GroupExpensesBreakdown';
 import StatCard from '@/components/ui/stat-card';
