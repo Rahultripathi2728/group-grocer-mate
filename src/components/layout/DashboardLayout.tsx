@@ -76,27 +76,16 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <header className="hidden lg:flex fixed top-0 left-0 right-0 z-50 bg-background border-b border-border">
         <div className="flex items-center justify-between px-8 h-16 w-full max-w-7xl mx-auto">
           <Link to="/dashboard" className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-foreground">
-              <Layers className="h-5 w-5 text-background" />
-            </div>
-            <div className="flex flex-col">
-              <span className="font-display font-bold text-lg leading-tight">SplitSmart</span>
-              <span className="text-[10px] font-semibold text-primary leading-tight">● PREMIUM</span>
-            </div>
+            <img src="/app-logo.png" alt="SplitSmart" className="h-9 w-9 rounded-xl grayscale" />
+            <span className="font-display font-bold text-lg leading-tight">SplitSmart</span>
           </Link>
 
           <div className="flex items-center gap-2">
             <NotificationBell />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-3 px-4 py-2 rounded-full border border-border hover:bg-muted transition-colors">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-muted text-muted-foreground text-sm">
-                      {userInitials}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="font-medium text-sm">{userName}</span>
-                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                <button className="p-2.5 rounded-full border border-border hover:bg-muted transition-colors">
+                  <User className="h-5 w-5 text-foreground" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
