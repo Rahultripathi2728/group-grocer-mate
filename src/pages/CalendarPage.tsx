@@ -477,6 +477,18 @@ export default function CalendarPage() {
                       </p>
                     </div>
                   </div>
+
+                  {/* Delete button for unsettled */}
+                  {!detailExpense.is_settled && (
+                    <Button
+                      variant="outline"
+                      className="w-full mt-2 text-destructive border-destructive/30 hover:bg-destructive/10"
+                      onClick={() => handleDeleteExpense(detailExpense.id)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete Expense
+                    </Button>
+                  )}
                 </div>
               </>
             );
