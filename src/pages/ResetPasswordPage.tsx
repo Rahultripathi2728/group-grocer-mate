@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Layers, Lock, Eye, EyeOff, Loader2, CheckCircle2 } from 'lucide-react';
+import { Lock, Eye, EyeOff, Loader2, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function ResetPasswordPage() {
@@ -65,9 +65,7 @@ export default function ResetPasswordPage() {
         <Card className="w-full max-w-md border border-border shadow-sm">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
-              <div className="p-3 rounded-xl bg-foreground">
-                <Layers className="h-8 w-8 text-background" />
-              </div>
+              <img src="/app-logo.png" alt="Expense Manager" className="h-12 w-12 rounded-xl" />
             </div>
             <CardTitle className="text-xl">Invalid Reset Link</CardTitle>
             <CardDescription>
@@ -106,9 +104,7 @@ export default function ResetPasswordPage() {
     <div className="min-h-screen flex items-center justify-center bg-background p-8">
       <div className="w-full max-w-md animate-fade-in">
         <div className="flex items-center gap-3 mb-8 justify-center">
-          <div className="p-3 rounded-xl bg-foreground">
-            <Layers className="h-8 w-8 text-background" />
-          </div>
+          <img src="/app-logo.png" alt="Expense Manager" className="h-10 w-10 rounded-xl" />
           <h1 className="text-2xl font-display font-bold text-foreground">Expense Manager</h1>
         </div>
         <Card className="border border-border shadow-sm">

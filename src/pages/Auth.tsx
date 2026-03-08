@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Layers, TrendingUp, Users, ShoppingCart, ChevronLeft, Loader2, Mail, CheckCircle2 } from 'lucide-react';
+import { TrendingUp, Users, ShoppingCart, ChevronLeft, Loader2, Mail, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 type AuthView = 'main' | 'forgot-email' | 'forgot-sent' | 'signup-sent';
@@ -27,7 +27,7 @@ export default function Auth() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-pulse-soft">
-          <Layers className="h-12 w-12 text-foreground" />
+          <img src="/app-logo.png" alt="Expense Manager" className="h-12 w-12" />
         </div>
       </div>
     );
@@ -101,8 +101,8 @@ export default function Auth() {
     <div className="hidden lg:flex lg:w-1/2 bg-foreground p-12 flex-col justify-between relative overflow-hidden">
       <div className="relative z-10">
         <div className="flex items-center gap-3 mb-4">
-          <div className="p-3 rounded-xl bg-background/10">
-            <Layers className="h-8 w-8 text-background" />
+          <div className="p-2 rounded-xl bg-background/10">
+            <img src="/app-logo.png" alt="Expense Manager" className="h-10 w-10" />
           </div>
           <h1 className="text-3xl font-display font-bold text-background">Expense Manager</h1>
         </div>
@@ -145,7 +145,7 @@ export default function Auth() {
         <div className="flex-1 flex items-center justify-center p-8 bg-background">
           <div className="w-full max-w-md animate-fade-in">
             <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
-              <div className="p-3 rounded-xl bg-foreground"><Layers className="h-8 w-8 text-background" /></div>
+              <img src="/app-logo.png" alt="Expense Manager" className="h-10 w-10 rounded-xl" />
               <h1 className="text-2xl font-display font-bold text-foreground">Expense Manager</h1>
             </div>
             <Card className="border border-border shadow-sm">
@@ -180,7 +180,7 @@ export default function Auth() {
         <div className="flex-1 flex items-center justify-center p-8 bg-background">
           <div className="w-full max-w-md animate-fade-in">
             <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
-              <div className="p-3 rounded-xl bg-foreground"><Layers className="h-8 w-8 text-background" /></div>
+              <img src="/app-logo.png" alt="Expense Manager" className="h-10 w-10 rounded-xl" />
               <h1 className="text-2xl font-display font-bold text-foreground">Expense Manager</h1>
             </div>
             <Card className="border border-border shadow-sm">
@@ -220,7 +220,7 @@ export default function Auth() {
         <div className="flex-1 flex items-center justify-center p-8 bg-background">
           <div className="w-full max-w-md animate-fade-in">
             <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
-              <div className="p-3 rounded-xl bg-foreground"><Layers className="h-8 w-8 text-background" /></div>
+              <img src="/app-logo.png" alt="Expense Manager" className="h-10 w-10 rounded-xl" />
               <h1 className="text-2xl font-display font-bold text-foreground">Expense Manager</h1>
             </div>
             <Card className="border border-border shadow-sm">
@@ -256,9 +256,7 @@ export default function Auth() {
       <div className="flex-1 flex items-center justify-center p-8 bg-background">
         <div className="w-full max-w-md animate-fade-in">
           <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
-            <div className="p-3 rounded-xl bg-foreground">
-              <Layers className="h-8 w-8 text-background" />
-            </div>
+            <img src="/app-logo.png" alt="Expense Manager" className="h-10 w-10 rounded-xl" />
             <h1 className="text-2xl font-display font-bold text-foreground">Expense Manager</h1>
           </div>
 
