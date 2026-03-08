@@ -33,7 +33,7 @@ interface Props {
   settling: boolean;
 }
 
-export default function SimplifiedBalances({ balances, memberSpending, onSettle, settling }: Props) {
+const SimplifiedBalances = forwardRef<HTMLDivElement, Props>(function SimplifiedBalances({ balances, memberSpending, onSettle, settling }, ref) {
   const { user } = useAuth();
   const [upiMap, setUpiMap] = useState<Record<string, string>>({});
 
