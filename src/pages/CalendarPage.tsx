@@ -265,15 +265,15 @@ export default function CalendarPage() {
 
                     {/* Dots for expense types + settled checkmark */}
                     {dayExpenses && isCurrentMonth && (
-                      <div className="flex items-center gap-0.5 mt-0.5">
+                      <div className="flex items-center gap-[3px] mt-0.5">
                         {dayExpenses.hasPersonal && (
-                          <span className="h-2 w-2 rounded-full bg-primary" />
+                          <span className="h-[5px] w-[5px] rounded-full bg-blue-500 ring-1 ring-blue-500/30" />
                         )}
                         {dayExpenses.hasGroup && dayExpenses.allSettled && (
-                          <CheckCircle2 className="h-2.5 w-2.5 text-success" />
+                          <span className="h-[5px] w-[5px] rounded-full bg-emerald-500 ring-1 ring-emerald-500/30" />
                         )}
                         {dayExpenses.hasGroup && !dayExpenses.allSettled && (
-                          <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground" />
+                          <span className="h-[5px] w-[5px] rounded-full bg-amber-500 ring-1 ring-amber-500/30" />
                         )}
                       </div>
                     )}
