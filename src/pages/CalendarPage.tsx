@@ -265,21 +265,37 @@ export default function CalendarPage() {
 
                     {/* Dots for expense types + settled checkmark */}
                     {dayExpenses && isCurrentMonth && (
-                      <div className="flex items-center gap-0.5 mt-0.5">
+                      <div className="flex items-center gap-[3px] mt-0.5">
                         {dayExpenses.hasPersonal && (
-                          <span className="h-2 w-2 rounded-full bg-primary" />
+                          <span className="h-[5px] w-[5px] rounded-full bg-blue-500 ring-1 ring-blue-500/30" />
                         )}
                         {dayExpenses.hasGroup && dayExpenses.allSettled && (
-                          <CheckCircle2 className="h-2.5 w-2.5 text-success" />
+                          <span className="h-[5px] w-[5px] rounded-full bg-emerald-500 ring-1 ring-emerald-500/30" />
                         )}
                         {dayExpenses.hasGroup && !dayExpenses.allSettled && (
-                          <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground" />
+                          <span className="h-[5px] w-[5px] rounded-full bg-amber-500 ring-1 ring-amber-500/30" />
                         )}
                       </div>
                     )}
                   </button>
                 );
               })}
+            </div>
+
+            {/* Legend */}
+            <div className="flex items-center justify-center gap-4 mt-3 pt-3 border-t border-border/50">
+              <div className="flex items-center gap-1.5">
+                <span className="h-[6px] w-[6px] rounded-full bg-blue-500" />
+                <span className="text-[10px] text-muted-foreground">Personal</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="h-[6px] w-[6px] rounded-full bg-amber-500" />
+                <span className="text-[10px] text-muted-foreground">Group</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="h-[6px] w-[6px] rounded-full bg-emerald-500" />
+                <span className="text-[10px] text-muted-foreground">Settled</span>
+              </div>
             </div>
           </CardContent>
         </Card>
