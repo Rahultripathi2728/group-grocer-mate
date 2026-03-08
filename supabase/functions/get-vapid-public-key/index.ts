@@ -7,7 +7,6 @@ const corsHeaders = {
 };
 
 async function getOrCreateVapidKeys(supabase: any) {
-  // Check if keys exist
   const { data: existing } = await supabase
     .from('vapid_keys')
     .select('*')
@@ -16,7 +15,6 @@ async function getOrCreateVapidKeys(supabase: any) {
 
   if (existing) return existing;
 
-  // Generate new VAPID keys
   const keyPair = await crypto.subtle.generateKey(
     { name: "ECDSA", namedCurve: "P-256" },
     true,
@@ -30,7 +28,6 @@ async function getOrCreateVapidKeys(supabase: any) {
   const privateKeyJwk = await crypto.subtle.exportKey("jwk", keyPair.privateKey);
   const publicKeyJwk = await crypto.subtle.exportKey("jwk", keyPair.publicKey);
 
-  // Store d (private), x, y for full key reconstruction
   const privateKey = JSON.stringify({
     d: privateKeyJwk.d,
     x: publicKeyJwk.x,
@@ -53,6 +50,27 @@ serve(async (req) => {
   }
 
   try {
+    // Authenticate the caller
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    const supabaseAuth = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -64,7 +82,8 @@ serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error('Internal error:', error);
+    return new Response(JSON.stringify({ error: 'An internal error occurred' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });

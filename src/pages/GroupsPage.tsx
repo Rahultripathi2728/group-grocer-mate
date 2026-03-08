@@ -140,12 +140,17 @@ export default function GroupsPage() {
     if (!user) return;
 
     const formData = new FormData(e.currentTarget);
-    const name = formData.get('name') as string;
-    const description = formData.get('description') as string;
+    const name = (formData.get('name') as string || '').trim().slice(0, 100);
+    const description = (formData.get('description') as string || '').trim().slice(0, 500);
+
+    if (!name || name.length === 0) {
+      toast.error('Group name is required');
+      return;
+    }
 
     const { error } = await supabase.from('groups').insert({
-      name: name.trim(),
-      description: description.trim() || null,
+      name,
+      description: description || null,
       owner_id: user.id,
     });
 
@@ -163,7 +168,12 @@ export default function GroupsPage() {
     if (!user) return;
 
     const formData = new FormData(e.currentTarget);
-    const inviteCode = (formData.get('inviteCode') as string).trim();
+    const inviteCode = (formData.get('inviteCode') as string || '').trim().slice(0, 50);
+
+    if (!inviteCode || !/^[a-f0-9]+$/i.test(inviteCode)) {
+      toast.error('Invalid invite code format');
+      return;
+    }
 
     const { data: groupId, error: groupError } = await supabase
       .rpc('get_group_id_by_invite_code', { p_invite_code: inviteCode });
