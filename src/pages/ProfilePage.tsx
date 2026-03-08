@@ -24,6 +24,7 @@ export default function ProfilePage() {
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
+  const [upiId, setUpiId] = useState('');
   const [saving, setSaving] = useState(false);
 
   const [currentPassword, setCurrentPassword] = useState('');
@@ -42,6 +43,10 @@ export default function ProfilePage() {
     if (user) {
       setFullName(user.user_metadata?.full_name || '');
       setEmail(user.email || '');
+      // Fetch UPI ID from profiles
+      supabase.from('profiles').select('upi_id').eq('id', user.id).single().then(({ data }) => {
+        if (data?.upi_id) setUpiId(data.upi_id);
+      });
     }
   }, [user]);
 
@@ -80,7 +85,8 @@ export default function ProfilePage() {
       // Update profiles table
       await supabase.from('profiles').update({
         full_name: fullName,
-      }).eq('id', user.id);
+        upi_id: upiId || null,
+      } as any).eq('id', user.id);
 
       toast({ title: 'Profile updated! ✅' });
     } catch (err: any) {
@@ -92,18 +98,18 @@ export default function ProfilePage() {
 
   const handleChangePassword = async () => {
     if (newPassword !== confirmPassword) {
-      toast({ title: 'Passwords match nahi kar rahe', variant: 'destructive' });
+      toast({ title: 'Passwords do not match', variant: 'destructive' });
       return;
     }
     if (newPassword.length < 6) {
-      toast({ title: 'Password kam se kam 6 characters hona chahiye', variant: 'destructive' });
+      toast({ title: 'Password must be at least 6 characters', variant: 'destructive' });
       return;
     }
     setChangingPassword(true);
     try {
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
-      toast({ title: 'Password change ho gaya! 🔒' });
+      toast({ title: 'Password changed successfully! 🔒' });
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
@@ -120,7 +126,7 @@ export default function ProfilePage() {
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === 'accepted') {
       setIsInstalled(true);
-      toast({ title: 'App install ho gayi! 🎉' });
+      toast({ title: 'App installed! 🎉' });
     }
     setDeferredPrompt(null);
   };
@@ -128,7 +134,7 @@ export default function ProfilePage() {
   const handleTogglePush = async () => {
     if (isSubscribed) {
       await unsubscribe();
-      toast({ title: 'Notifications off kar diye' });
+      toast({ title: 'Notifications turned off' });
     } else {
       const success = await subscribe();
       if (success) toast({ title: 'Notifications enabled! 🔔' });
@@ -172,7 +178,16 @@ export default function ProfilePage() {
                 id="fullName"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                placeholder="Aapka naam"
+                placeholder="Your name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="upiId" className="text-xs">UPI ID</Label>
+              <Input
+                id="upiId"
+                value={upiId}
+                onChange={(e) => setUpiId(e.target.value)}
+                placeholder="e.g. yourname@upi"
               />
             </div>
             <div className="space-y-2">

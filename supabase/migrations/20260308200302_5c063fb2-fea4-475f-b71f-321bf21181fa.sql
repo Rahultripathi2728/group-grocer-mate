@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN upi_id text DEFAULT NULL;
