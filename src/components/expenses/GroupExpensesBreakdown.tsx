@@ -296,26 +296,36 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
             <div>
               <h2 className="text-xl font-display font-bold">{groupName}</h2>
               <p className="text-sm text-muted-foreground">
-                {members.length} members • {expenses.length} expenses
+                {members.length} members • {expenses.length} expenses since last settlement
               </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-4">
+          {lastSettlement && (
+            <div className="mb-4 p-3 rounded-xl bg-success/10 border border-success/20 flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-success flex-shrink-0" />
+              <p className="text-sm">
+                <span className="font-medium text-success">Last Settlement:</span>{' '}
+                <span className="text-foreground font-semibold">
+                  {format(new Date(lastSettlement.settled_at), 'dd MMM yyyy, hh:mm a')}
+                </span>
+                {' '}by {lastSettlement.settled_by_name}
+                {lastSettlement.total_amount > 0 && (
+                  <span className="text-muted-foreground"> • ₹{lastSettlement.total_amount.toLocaleString('en-IN')}</span>
+                )}
+              </p>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-4">
             <div className="p-4 rounded-xl bg-background/50 backdrop-blur-sm">
-              <p className="text-xs text-muted-foreground mb-1">Total Expenses</p>
+              <p className="text-xs text-muted-foreground mb-1">Total Since Settlement</p>
               <p className="text-2xl font-display font-bold">₹{totalExpenses.toLocaleString('en-IN')}</p>
             </div>
             <div className="p-4 rounded-xl bg-background/50 backdrop-blur-sm">
               <p className="text-xs text-muted-foreground mb-1">Per Person Share</p>
               <p className="text-2xl font-display font-bold">₹{perPersonShare.toFixed(0)}</p>
             </div>
-            {lastSettlement && (
-              <div className="p-4 rounded-xl bg-background/50 backdrop-blur-sm col-span-2 sm:col-span-1">
-                <p className="text-xs text-muted-foreground mb-1">Last Settled</p>
-                <p className="text-lg font-semibold">{format(new Date(lastSettlement.settled_at), 'dd MMM yyyy')}</p>
-              </div>
-            )}
           </div>
         </CardContent>
       </Card>
