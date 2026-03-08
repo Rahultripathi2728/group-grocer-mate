@@ -112,7 +112,7 @@ export default function Auth() {
             <div className="p-3 rounded-xl bg-foreground">
               <Layers className="h-8 w-8 text-background" />
             </div>
-            <h1 className="text-2xl font-display font-bold text-foreground">SplitSmart</h1>
+            <h1 className="text-2xl font-display font-bold text-foreground">Expense Manager</h1>
           </div>
 
           <Tabs defaultValue="signin" className="w-full">
