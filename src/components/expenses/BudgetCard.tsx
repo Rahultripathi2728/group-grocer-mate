@@ -174,7 +174,7 @@ export default function BudgetCard({ totalSpent, onBudgetChange }: BudgetCardPro
           {/* Edit Budget Link */}
           <button
             onClick={() => { setNewAmount(budget.amount.toString()); setDialogOpen(true); }}
-            className="flex items-center gap-1 mt-4 text-primary text-sm font-semibold hover:underline"
+            className="flex items-center gap-1 mt-4 text-background/70 text-sm font-semibold hover:text-background hover:underline"
           >
             Edit Budget <ChevronRight className="h-4 w-4" />
           </button>
