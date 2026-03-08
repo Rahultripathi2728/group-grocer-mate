@@ -1,9 +1,12 @@
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
-import { ArrowRight, ArrowDownLeft, ArrowUpRight, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, ArrowDownLeft, ArrowUpRight, CheckCircle2, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface Member {
   user_id: string;
@@ -32,6 +35,29 @@ interface Props {
 
 export default function SimplifiedBalances({ balances, memberSpending, onSettle, settling }: Props) {
   const { user } = useAuth();
+  const [upiMap, setUpiMap] = useState<Record<string, string>>({});
+
+  // Fetch UPI IDs for all members in balances
+  useEffect(() => {
+    const userIds = new Set<string>();
+    balances.forEach((b) => {
+      userIds.add(b.from_user.user_id);
+      userIds.add(b.to_user.user_id);
+    });
+    if (userIds.size === 0) return;
+
+    supabase
+      .from('profiles')
+      .select('id, upi_id')
+      .in('id', Array.from(userIds))
+      .then(({ data }) => {
+        const map: Record<string, string> = {};
+        data?.forEach((p: any) => {
+          if (p.upi_id) map[p.id] = p.upi_id;
+        });
+        setUpiMap(map);
+      });
+  }, [balances]);
 
   const mySpending = memberSpending.find((ms) => ms.member.user_id === user?.id);
   const myNetBalance = mySpending?.netBalance || 0;
@@ -41,6 +67,11 @@ export default function SimplifiedBalances({ balances, memberSpending, onSettle,
 
   const totalIOwe = iOwe.reduce((sum, b) => sum + b.amount, 0);
   const totalOwedToMe = owedToMe.reduce((sum, b) => sum + b.amount, 0);
+
+  const handleUpiPay = (receiverUpiId: string, amount: number, receiverName: string) => {
+    const upiUrl = `upi://pay?pa=${encodeURIComponent(receiverUpiId)}&pn=${encodeURIComponent(receiverName)}&am=${amount.toFixed(2)}&cu=INR&tn=${encodeURIComponent('Group expense settlement')}`;
+    window.open(upiUrl, '_blank');
+  };
 
   return (
     <Card className="border-0 shadow-lg overflow-hidden">
