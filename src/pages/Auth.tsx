@@ -7,11 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
-import { Layers, TrendingUp, Users, ShoppingCart, Eye, EyeOff, ChevronLeft, Loader2, ShieldCheck, Lock, CheckCircle2, Mail } from 'lucide-react';
+import { Layers, TrendingUp, Users, ShoppingCart, ChevronLeft, Loader2, Mail, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-type AuthView = 'main' | 'forgot-email' | 'forgot-otp' | 'forgot-newpass' | 'signup-otp';
+type AuthView = 'main' | 'forgot-email' | 'forgot-sent' | 'signup-sent';
 
 export default function Auth() {
   const { user, signIn, signUp, loading } = useAuth();
@@ -20,15 +19,9 @@ export default function Auth() {
 
   // Forgot password state
   const [forgotEmail, setForgotEmail] = useState('');
-  const [forgotOtp, setForgotOtp] = useState('');
-  const [forgotNewPassword, setForgotNewPassword] = useState('');
-  const [forgotConfirmPassword, setForgotConfirmPassword] = useState('');
-  const [showForgotNew, setShowForgotNew] = useState(false);
-  const [showForgotConfirm, setShowForgotConfirm] = useState(false);
 
-  // Signup OTP state
+  // Signup confirmation state
   const [signupEmail, setSignupEmail] = useState('');
-  const [signupOtp, setSignupOtp] = useState('');
 
   if (loading) {
     return (
@@ -53,7 +46,7 @@ export default function Auth() {
     const { error } = await signIn(email, password);
     if (error) {
       if (error.message?.includes('Email not confirmed')) {
-        toast.error('Please verify your email first. Check your inbox for the verification code.');
+        toast.error('Pehle apni email verify karein. Apna inbox check karein.');
       } else {
         toast.error(error.message);
       }
@@ -75,96 +68,32 @@ export default function Auth() {
       toast.error(error.message);
     } else {
       setSignupEmail(email);
-      setAuthView('signup-otp');
-      toast.success('Verification code sent to your email!');
+      setAuthView('signup-sent');
+      toast.success('Confirmation email sent!');
     }
     setIsLoading(false);
   };
 
-  // Forgot Password - Send OTP
-  const handleForgotSendOtp = async () => {
+  // Forgot Password - Send reset link
+  const handleForgotSendLink = async () => {
     if (!forgotEmail) { toast.error('Please enter your email'); return; }
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOtp({ email: forgotEmail });
-      if (error) throw error;
-      setAuthView('forgot-otp');
-      toast.success('OTP sent to your email!');
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to send OTP');
-    } finally { setIsLoading(false); }
-  };
-
-  // Forgot Password - Verify OTP
-  const handleForgotVerifyOtp = async () => {
-    if (forgotOtp.length !== 6) return;
-    setIsLoading(true);
-    try {
-      const { error } = await supabase.auth.verifyOtp({
-        email: forgotEmail,
-        token: forgotOtp,
-        type: 'email',
+      const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
       });
-      if (error) throw new Error('Invalid OTP code');
-      setAuthView('forgot-newpass');
-      toast.success('OTP verified!');
-    } catch (err: any) {
-      toast.error(err.message);
-    } finally { setIsLoading(false); }
-  };
-
-  // Forgot Password - Set new password
-  const handleForgotSetPassword = async () => {
-    if (forgotNewPassword !== forgotConfirmPassword) { toast.error('Passwords do not match'); return; }
-    if (forgotNewPassword.length < 6) { toast.error('Password must be at least 6 characters'); return; }
-    setIsLoading(true);
-    try {
-      const { error } = await supabase.auth.updateUser({ password: forgotNewPassword });
       if (error) throw error;
-      toast.success('Password updated! You are now logged in.');
-      // User is now logged in after verifyOtp + updateUser, redirect will happen
+      setAuthView('forgot-sent');
+      toast.success('Password reset link sent to your email!');
     } catch (err: any) {
-      toast.error(err.message);
-    } finally { setIsLoading(false); }
-  };
-
-  // Signup OTP verification
-  const handleSignupVerifyOtp = async () => {
-    if (signupOtp.length !== 6) return;
-    setIsLoading(true);
-    try {
-      const { error } = await supabase.auth.verifyOtp({
-        email: signupEmail,
-        token: signupOtp,
-        type: 'signup',
-      });
-      if (error) throw new Error('Invalid verification code');
-      toast.success('Email verified! Welcome to Expense Manager! 🎉');
-      // User is now signed in after successful verification
-    } catch (err: any) {
-      toast.error(err.message);
-    } finally { setIsLoading(false); }
-  };
-
-  // Resend signup OTP
-  const handleResendSignupOtp = async () => {
-    setIsLoading(true);
-    try {
-      const { error } = await supabase.auth.resend({ type: 'signup', email: signupEmail });
-      if (error) throw error;
-      toast.success('Verification code resent!');
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to resend code');
+      toast.error(err.message || 'Failed to send reset link');
     } finally { setIsLoading(false); }
   };
 
   const resetToMain = () => {
     setAuthView('main');
     setForgotEmail('');
-    setForgotOtp('');
-    setForgotNewPassword('');
-    setForgotConfirmPassword('');
-    setSignupOtp('');
+    setSignupEmail('');
   };
 
   // Hero section (shared)
@@ -225,15 +154,15 @@ export default function Auth() {
                   <ChevronLeft className="h-4 w-4" />Back to login
                 </button>
                 <CardTitle className="text-2xl font-display">Forgot Password</CardTitle>
-                <CardDescription>Enter your registered email to receive a verification code</CardDescription>
+                <CardDescription>Enter your registered email. We'll send a password reset link.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label>Email</Label>
                   <Input type="email" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} placeholder="you@example.com" className="h-11" />
                 </div>
-                <Button onClick={handleForgotSendOtp} disabled={isLoading || !forgotEmail} className="w-full h-11 bg-foreground text-background hover:bg-foreground/90">
-                  {isLoading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Sending...</> : <><Mail className="h-4 w-4 mr-2" />Send Verification Code</>}
+                <Button onClick={handleForgotSendLink} disabled={isLoading || !forgotEmail} className="w-full h-11 bg-foreground text-background hover:bg-foreground/90">
+                  {isLoading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Sending...</> : <><Mail className="h-4 w-4 mr-2" />Send Reset Link</>}
                 </Button>
               </CardContent>
             </Card>
@@ -243,8 +172,8 @@ export default function Auth() {
     );
   }
 
-  // Forgot Password - OTP verification
-  if (authView === 'forgot-otp') {
+  // Forgot Password - Link sent confirmation
+  if (authView === 'forgot-sent') {
     return (
       <div className="min-h-screen flex">
         {heroSection}
@@ -255,139 +184,63 @@ export default function Auth() {
               <h1 className="text-2xl font-display font-bold text-foreground">Expense Manager</h1>
             </div>
             <Card className="border border-border shadow-sm">
-              <CardHeader className="space-y-1 pb-4">
-                <button onClick={() => setAuthView('forgot-email')} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mb-2 w-fit">
-                  <ChevronLeft className="h-4 w-4" />Back
-                </button>
-                <CardTitle className="text-2xl font-display">Verify Email</CardTitle>
-                <CardDescription>Enter the 6-digit code sent to <strong>{forgotEmail}</strong></CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-center py-2">
-                  <InputOTP maxLength={6} value={forgotOtp} onChange={setForgotOtp}>
-                    <InputOTPGroup>
-                      <InputOTPSlot index={0} />
-                      <InputOTPSlot index={1} />
-                      <InputOTPSlot index={2} />
-                      <InputOTPSlot index={3} />
-                      <InputOTPSlot index={4} />
-                      <InputOTPSlot index={5} />
-                    </InputOTPGroup>
-                  </InputOTP>
-                </div>
-                <Button onClick={handleForgotVerifyOtp} disabled={isLoading || forgotOtp.length !== 6} className="w-full h-11 bg-foreground text-background hover:bg-foreground/90">
-                  {isLoading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Verifying...</> : <><ShieldCheck className="h-4 w-4 mr-2" />Verify Code</>}
-                </Button>
-                <button onClick={handleForgotSendOtp} disabled={isLoading} className="text-xs text-muted-foreground hover:text-foreground text-center w-full underline">
-                  Resend code
-                </button>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Forgot Password - Set new password
-  if (authView === 'forgot-newpass') {
-    return (
-      <div className="min-h-screen flex">
-        {heroSection}
-        <div className="flex-1 flex items-center justify-center p-8 bg-background">
-          <div className="w-full max-w-md animate-fade-in">
-            <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
-              <div className="p-3 rounded-xl bg-foreground"><Layers className="h-8 w-8 text-background" /></div>
-              <h1 className="text-2xl font-display font-bold text-foreground">Expense Manager</h1>
-            </div>
-            <Card className="border border-border shadow-sm">
-              <CardHeader className="space-y-1 pb-4">
-                <div className="flex items-center gap-2 p-2 rounded-lg bg-success/10 mb-2">
-                  <CheckCircle2 className="h-4 w-4 text-success" />
-                  <span className="text-sm text-success font-medium">Email verified!</span>
-                </div>
-                <CardTitle className="text-2xl font-display">Set New Password</CardTitle>
-                <CardDescription>Create a new password for your account</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>New Password</Label>
-                  <div className="relative">
-                    <Input type={showForgotNew ? 'text' : 'password'} value={forgotNewPassword} onChange={(e) => setForgotNewPassword(e.target.value)} placeholder="New password" className="h-11" />
-                    <button type="button" onClick={() => setShowForgotNew(!showForgotNew)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                      {showForgotNew ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
+              <CardHeader className="space-y-1 pb-4 text-center">
+                <div className="flex justify-center mb-4">
+                  <div className="p-4 rounded-full bg-success/10">
+                    <Mail className="h-8 w-8 text-success" />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Confirm Password</Label>
-                  <div className="relative">
-                    <Input type={showForgotConfirm ? 'text' : 'password'} value={forgotConfirmPassword} onChange={(e) => setForgotConfirmPassword(e.target.value)} placeholder="Confirm password" className="h-11" />
-                    <button type="button" onClick={() => setShowForgotConfirm(!showForgotConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                      {showForgotConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                </div>
-                <Button onClick={handleForgotSetPassword} disabled={isLoading || !forgotNewPassword || !forgotConfirmPassword} className="w-full h-11 bg-foreground text-background hover:bg-foreground/90">
-                  {isLoading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving...</> : <><Lock className="h-4 w-4 mr-2" />Set Password</>}
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Signup OTP verification
-  if (authView === 'signup-otp') {
-    return (
-      <div className="min-h-screen flex">
-        {heroSection}
-        <div className="flex-1 flex items-center justify-center p-8 bg-background">
-          <div className="w-full max-w-md animate-fade-in">
-            <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
-              <div className="p-3 rounded-xl bg-foreground"><Layers className="h-8 w-8 text-background" /></div>
-              <h1 className="text-2xl font-display font-bold text-foreground">Expense Manager</h1>
-            </div>
-            <Card className="border border-border shadow-sm">
-              <CardHeader className="space-y-1 pb-4">
-                <div className="flex items-center justify-center mb-4">
-                  <div className="p-4 rounded-full bg-muted">
-                    <Mail className="h-8 w-8 text-foreground" />
-                  </div>
-                </div>
-                <CardTitle className="text-2xl font-display text-center">Verify Your Email</CardTitle>
-                <CardDescription className="text-center">
-                  We've sent a 6-digit verification code to<br />
-                  <strong className="text-foreground">{signupEmail}</strong>
+                <CardTitle className="text-2xl font-display">Check Your Email</CardTitle>
+                <CardDescription>
+                  Password reset link bhej diya gaya hai<br />
+                  <strong className="text-foreground">{forgotEmail}</strong><br />
+                  Email mein link pe click karke naya password set karein.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-center py-2">
-                  <InputOTP maxLength={6} value={signupOtp} onChange={setSignupOtp}>
-                    <InputOTPGroup>
-                      <InputOTPSlot index={0} />
-                      <InputOTPSlot index={1} />
-                      <InputOTPSlot index={2} />
-                      <InputOTPSlot index={3} />
-                      <InputOTPSlot index={4} />
-                      <InputOTPSlot index={5} />
-                    </InputOTPGroup>
-                  </InputOTP>
-                </div>
-                <Button onClick={handleSignupVerifyOtp} disabled={isLoading || signupOtp.length !== 6} className="w-full h-11 bg-foreground text-background hover:bg-foreground/90">
-                  {isLoading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Verifying...</> : <><CheckCircle2 className="h-4 w-4 mr-2" />Verify & Continue</>}
+              <CardContent className="space-y-3">
+                <Button onClick={handleForgotSendLink} disabled={isLoading} variant="outline" className="w-full">
+                  {isLoading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Sending...</> : 'Resend Link'}
                 </Button>
-                <div className="text-center space-y-2">
-                  <button onClick={handleResendSignupOtp} disabled={isLoading} className="text-xs text-muted-foreground hover:text-foreground underline">
-                    Resend verification code
-                  </button>
-                  <br />
-                  <button onClick={resetToMain} className="text-xs text-muted-foreground hover:text-foreground">
-                    ← Back to login
-                  </button>
+                <button onClick={resetToMain} className="text-sm text-muted-foreground hover:text-foreground underline w-full text-center block">
+                  ← Back to login
+                </button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Signup - Confirmation email sent
+  if (authView === 'signup-sent') {
+    return (
+      <div className="min-h-screen flex">
+        {heroSection}
+        <div className="flex-1 flex items-center justify-center p-8 bg-background">
+          <div className="w-full max-w-md animate-fade-in">
+            <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
+              <div className="p-3 rounded-xl bg-foreground"><Layers className="h-8 w-8 text-background" /></div>
+              <h1 className="text-2xl font-display font-bold text-foreground">Expense Manager</h1>
+            </div>
+            <Card className="border border-border shadow-sm">
+              <CardHeader className="space-y-1 pb-4 text-center">
+                <div className="flex justify-center mb-4">
+                  <div className="p-4 rounded-full bg-success/10">
+                    <CheckCircle2 className="h-8 w-8 text-success" />
+                  </div>
                 </div>
+                <CardTitle className="text-2xl font-display">Verify Your Email</CardTitle>
+                <CardDescription>
+                  Confirmation link bhej diya gaya hai<br />
+                  <strong className="text-foreground">{signupEmail}</strong><br />
+                  Email mein link pe click karke apna account verify karein, fir login karein.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button onClick={resetToMain} className="w-full h-11 bg-foreground text-background hover:bg-foreground/90">
+                  Back to Login
+                </Button>
               </CardContent>
             </Card>
           </div>

@@ -14,6 +14,7 @@ import ListPage from "./pages/ListPage";
 import InstallPage from "./pages/InstallPage";
 import ProfilePage from "./pages/ProfilePage";
 import NotificationsPage from "./pages/NotificationsPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
@@ -93,6 +94,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/install" element={<InstallPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

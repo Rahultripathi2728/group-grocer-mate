@@ -12,12 +12,11 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import {
   User, Mail, Lock, Save, LogOut, Download, Bell, CheckCircle2,
-  Smartphone, ArrowRight, Eye, EyeOff, ChevronLeft, ShieldCheck, Loader2, KeyRound
+  Smartphone, ArrowRight, Eye, EyeOff, ChevronLeft, Loader2, KeyRound, ShieldCheck
 } from 'lucide-react';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
-import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 
-type PasswordMode = 'idle' | 'change' | 'forgot-send' | 'forgot-otp' | 'forgot-newpass';
+type PasswordMode = 'idle' | 'change' | 'forgot-sent';
 
 export default function ProfilePage() {
   const { user, signOut } = useAuth();
@@ -35,7 +34,6 @@ export default function ProfilePage() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [otpCode, setOtpCode] = useState('');
   const [processing, setProcessing] = useState(false);
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
@@ -84,7 +82,6 @@ export default function ProfilePage() {
     setCurrentPassword('');
     setNewPassword('');
     setConfirmPassword('');
-    setOtpCode('');
     setShowCurrent(false);
     setShowNew(false);
     setShowConfirm(false);
@@ -98,14 +95,12 @@ export default function ProfilePage() {
 
     setProcessing(true);
     try {
-      // Verify current password by re-signing in
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: user.email,
         password: currentPassword,
       });
       if (signInError) throw new Error('Current password is incorrect');
 
-      // Update to new password
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
 
@@ -116,52 +111,19 @@ export default function ProfilePage() {
     } finally { setProcessing(false); }
   };
 
-  // Forgot Password - Send OTP
-  const handleSendForgotOtp = async () => {
+  // Forgot Password - Send reset link via email
+  const handleSendResetLink = async () => {
     if (!user?.email) return;
-    setPasswordMode('forgot-send');
-    try {
-      const { error } = await supabase.auth.signInWithOtp({ email: user.email });
-      if (error) throw error;
-      setPasswordMode('forgot-otp');
-      toast({ title: 'OTP sent to your email 📧', description: 'Check your inbox for the 6-digit code' });
-    } catch (err: any) {
-      toast({ title: 'Failed to send OTP', description: err.message, variant: 'destructive' });
-      setPasswordMode('idle');
-    }
-  };
-
-  // Forgot Password - Verify OTP
-  const handleVerifyForgotOtp = async () => {
-    if (!user?.email || otpCode.length !== 6) return;
     setProcessing(true);
     try {
-      const { error } = await supabase.auth.verifyOtp({
-        email: user.email,
-        token: otpCode,
-        type: 'email',
+      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+        redirectTo: `${window.location.origin}/reset-password`,
       });
-      if (error) throw new Error('Invalid OTP code. Please try again.');
-      setPasswordMode('forgot-newpass');
-      toast({ title: 'OTP verified! ✅', description: 'Now set your new password' });
-    } catch (err: any) {
-      toast({ title: 'Error', description: err.message, variant: 'destructive' });
-    } finally { setProcessing(false); }
-  };
-
-  // Forgot Password - Set new password after OTP
-  const handleSetNewPasswordAfterOtp = async () => {
-    if (newPassword !== confirmPassword) { toast({ title: 'Passwords do not match', variant: 'destructive' }); return; }
-    if (newPassword.length < 6) { toast({ title: 'Password must be at least 6 characters', variant: 'destructive' }); return; }
-
-    setProcessing(true);
-    try {
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
-      toast({ title: 'Password changed successfully! 🔒' });
-      resetPasswordFlow();
+      setPasswordMode('forgot-sent');
+      toast({ title: 'Reset link sent! 📧', description: 'Check your email for the password reset link' });
     } catch (err: any) {
-      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+      toast({ title: 'Failed to send reset link', description: err.message, variant: 'destructive' });
     } finally { setProcessing(false); }
   };
 
@@ -183,7 +145,6 @@ export default function ProfilePage() {
   return (
     <DashboardLayout>
       <div className="max-w-lg mx-auto space-y-5">
-        {/* Back Button */}
         <button
           onClick={() => navigate(-1)}
           className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors -mb-2"
@@ -249,10 +210,10 @@ export default function ProfilePage() {
                   Change Password
                   <span className="ml-auto text-[11px] text-muted-foreground">I know my password</span>
                 </Button>
-                <Button onClick={handleSendForgotOtp} size="sm" variant="outline" className="w-full justify-start">
+                <Button onClick={handleSendResetLink} disabled={processing} size="sm" variant="outline" className="w-full justify-start">
                   <ShieldCheck className="h-4 w-4 mr-2" />
                   Forgot Password
-                  <span className="ml-auto text-[11px] text-muted-foreground">Verify via email</span>
+                  <span className="ml-auto text-[11px] text-muted-foreground">Reset via email link</span>
                 </Button>
               </div>
             )}
@@ -296,75 +257,21 @@ export default function ProfilePage() {
               </div>
             )}
 
-            {/* Forgot Password - Sending OTP */}
-            {passwordMode === 'forgot-send' && (
-              <div className="flex items-center justify-center py-6 gap-2 text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span className="text-sm">Sending OTP to {email}...</span>
-              </div>
-            )}
-
-            {/* Forgot Password - Enter OTP */}
-            {passwordMode === 'forgot-otp' && (
+            {/* Forgot Password - Link sent confirmation */}
+            {passwordMode === 'forgot-sent' && (
               <div className="space-y-4">
-                <div className="p-3 rounded-lg bg-muted/50 border border-border">
-                  <p className="text-xs text-muted-foreground text-center">
-                    Enter the 6-digit code sent to <strong className="text-foreground">{email}</strong>
+                <div className="p-4 rounded-lg bg-success/10 border border-success/20 text-center">
+                  <Mail className="h-6 w-6 text-success mx-auto mb-2" />
+                  <p className="text-sm font-medium text-success">Reset link sent!</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    <strong>{email}</strong> pe password reset link bheja gaya hai.<br />
+                    Email mein link pe click karke naya password set karein.
                   </p>
                 </div>
-                <div className="flex justify-center">
-                  <InputOTP maxLength={6} value={otpCode} onChange={setOtpCode}>
-                    <InputOTPGroup>
-                      <InputOTPSlot index={0} />
-                      <InputOTPSlot index={1} />
-                      <InputOTPSlot index={2} />
-                      <InputOTPSlot index={3} />
-                      <InputOTPSlot index={4} />
-                      <InputOTPSlot index={5} />
-                    </InputOTPGroup>
-                  </InputOTP>
-                </div>
                 <div className="flex gap-2">
-                  <Button onClick={resetPasswordFlow} size="sm" variant="ghost" className="flex-1">Cancel</Button>
-                  <Button onClick={handleVerifyForgotOtp} disabled={processing || otpCode.length !== 6} size="sm" className="flex-1">
-                    {processing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Verifying...</> : <><ShieldCheck className="h-4 w-4 mr-2" />Verify OTP</>}
-                  </Button>
-                </div>
-                <button onClick={handleSendForgotOtp} className="text-xs text-muted-foreground hover:text-foreground text-center w-full underline">
-                  Resend code
-                </button>
-              </div>
-            )}
-
-            {/* Forgot Password - Set New Password after OTP verified */}
-            {passwordMode === 'forgot-newpass' && (
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 p-3 rounded-lg bg-success/10 border border-success/20">
-                  <CheckCircle2 className="h-4 w-4 text-success" />
-                  <span className="text-sm text-success font-medium">Email verified! Set your new password.</span>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs">New Password</Label>
-                  <div className="relative">
-                    <Input type={showNew ? 'text' : 'password'} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="New password" />
-                    <button type="button" onClick={() => setShowNew(!showNew)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                      {showNew ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs">Confirm New Password</Label>
-                  <div className="relative">
-                    <Input type={showConfirm ? 'text' : 'password'} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm new password" />
-                    <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                      {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button onClick={resetPasswordFlow} size="sm" variant="ghost" className="flex-1">Cancel</Button>
-                  <Button onClick={handleSetNewPasswordAfterOtp} disabled={processing || !newPassword || !confirmPassword} size="sm" className="flex-1">
-                    {processing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving...</> : <><Lock className="h-4 w-4 mr-2" />Set Password</>}
+                  <Button onClick={resetPasswordFlow} size="sm" variant="ghost" className="flex-1">Close</Button>
+                  <Button onClick={handleSendResetLink} disabled={processing} size="sm" variant="outline" className="flex-1">
+                    {processing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Sending...</> : 'Resend Link'}
                   </Button>
                 </div>
               </div>
