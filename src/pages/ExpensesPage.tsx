@@ -25,7 +25,6 @@ import {
   TrendingDown,
   Wallet,
   Users,
-  Plus,
   ArrowRight,
   CheckCircle2,
   Sparkles,
