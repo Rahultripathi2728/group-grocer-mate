@@ -28,8 +28,8 @@ export default defineConfig(({ mode }) => ({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
       },
       manifest: {
-        name: 'My Moolah - Expense Tracker',
-        short_name: 'My Moolah',
+        name: 'Expense Manager - Smart Expense Tracker',
+        short_name: 'Expense Manager',
         description: 'Track expenses, split bills, manage budgets smartly',
         theme_color: '#2eb88a',
         background_color: '#0f0f23',
@@ -40,17 +40,12 @@ export default defineConfig(({ mode }) => ({
         categories: ['finance', 'utilities'],
         icons: [
           {
-            src: '/pwa-icon-192.png',
-            sizes: '192x192',
-            type: 'image/png',
-          },
-          {
-            src: '/pwa-icon-512.png',
+            src: '/app-icon.png',
             sizes: '512x512',
             type: 'image/png',
           },
           {
-            src: '/pwa-icon-512.png',
+            src: '/app-icon.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable',
