@@ -13,6 +13,8 @@ import {
 import {
   Wallet,
   LogOut,
+  User,
+  Settings,
 } from 'lucide-react';
 import BottomNav from './BottomNav';
 import NotificationBell from '@/components/notifications/NotificationBell';
