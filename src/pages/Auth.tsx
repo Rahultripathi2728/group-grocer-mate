@@ -101,8 +101,8 @@ export default function Auth() {
     <div className="hidden lg:flex lg:w-1/2 bg-foreground p-12 flex-col justify-between relative overflow-hidden">
       <div className="relative z-10">
         <div className="flex items-center gap-3 mb-4">
-          <div className="p-3 rounded-xl bg-background/10">
-            <Layers className="h-8 w-8 text-background" />
+          <div className="p-2 rounded-xl bg-background/10">
+            <img src="/app-logo.png" alt="Expense Manager" className="h-10 w-10" />
           </div>
           <h1 className="text-3xl font-display font-bold text-background">Expense Manager</h1>
         </div>
