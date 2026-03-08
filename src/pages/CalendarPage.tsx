@@ -61,6 +61,17 @@ export default function CalendarPage() {
 
   const userName = user?.user_metadata?.full_name || 'User';
 
+  const handleDeleteExpense = async (expenseId: string) => {
+    const { error } = await supabase.from('expenses').delete().eq('id', expenseId);
+    if (error) {
+      toast.error('Failed to delete expense');
+    } else {
+      toast.success('Expense deleted');
+      setDetailExpense(null);
+      fetchExpenses();
+    }
+  };
+
   const fetchExpenses = async () => {
     if (!user) return;
     const startDate = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
