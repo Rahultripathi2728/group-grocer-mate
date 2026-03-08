@@ -409,7 +409,7 @@ export default function ListPage() {
               value={newItemName}
               onChange={(e) => setNewItemName(e.target.value)}
               placeholder="Item name"
-              className="bg-muted/50 border-0"
+              className="bg-muted border-0"
               autoFocus
               onKeyDown={(e) => { if (e.key === 'Enter' && newItemName.trim()) addItem(); }}
             />
