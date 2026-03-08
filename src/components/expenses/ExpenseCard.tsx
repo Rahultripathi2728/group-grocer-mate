@@ -70,7 +70,8 @@ export default function ExpenseCard({
 
   if (compact) {
     return (
-      <div className={cn(
+      <>
+        <div className={cn(
         "flex items-center justify-between p-3 rounded-xl bg-card border border-border/50 hover:border-border hover:shadow-sm transition-all duration-200 group/card",
         is_settled && "opacity-60"
       )}>
