@@ -160,7 +160,11 @@ export default function ExpenseCard({
         <div className="flex items-center gap-3">
           <div className="text-right">
             <p className="text-xl font-bold">₹{amount.toLocaleString('en-IN')}</p>
-            <p className="text-xs text-muted-foreground mt-1">{categoryInfo.label}</p>
+            {expense_type === 'group' && myShare !== undefined && myShare !== amount ? (
+              <p className="text-xs text-muted-foreground mt-1">Your share: ₹{myShare.toLocaleString('en-IN')}</p>
+            ) : (
+              <p className="text-xs text-muted-foreground mt-1">{categoryInfo.label}</p>
+            )}
           </div>
           {onDelete && !is_settled && (
             <button onClick={handleDeleteClick} disabled={deleting} className="opacity-0 group-hover/card:opacity-100 p-2 rounded-xl hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all">
