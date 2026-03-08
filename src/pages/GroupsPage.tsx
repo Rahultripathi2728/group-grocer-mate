@@ -470,7 +470,7 @@ export default function GroupsPage() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
                 >
-                  <CardHeader className="border-b border-border/50">
+                  <CardHeader className="border-b border-border">
                     <div className="flex items-center justify-between">
                       <div>
                         <CardTitle className="font-display flex items-center gap-2">
