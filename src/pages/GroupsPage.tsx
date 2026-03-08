@@ -335,7 +335,7 @@ export default function GroupsPage() {
                   </div>
                   <Button
                     type="submit"
-                    className="w-full gradient-primary text-primary-foreground"
+                    className="w-full bg-primary text-primary-foreground"
                   >
                     Create Group
                   </Button>
