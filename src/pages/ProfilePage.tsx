@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import {
   User, Mail, Lock, Save, LogOut, Download, Bell, CheckCircle2,
-  Smartphone, ArrowRight, Eye, EyeOff
+  Smartphone, ArrowRight, Eye, EyeOff, ChevronLeft
 } from 'lucide-react';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 
@@ -103,6 +103,15 @@ export default function ProfilePage() {
   return (
     <DashboardLayout>
       <div className="max-w-lg mx-auto space-y-5">
+        {/* Back Button */}
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors -mb-2"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Back
+        </button>
+
         <div className="flex flex-col items-center gap-3 py-4">
           <Avatar className="h-20 w-20 border border-border">
             <AvatarFallback className="bg-foreground text-background text-2xl font-bold">{userInitials}</AvatarFallback>
