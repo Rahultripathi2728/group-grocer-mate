@@ -178,7 +178,16 @@ export default function ProfilePage() {
                 id="fullName"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                placeholder="Aapka naam"
+                placeholder="Your name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="upiId" className="text-xs">UPI ID</Label>
+              <Input
+                id="upiId"
+                value={upiId}
+                onChange={(e) => setUpiId(e.target.value)}
+                placeholder="e.g. yourname@upi"
               />
             </div>
             <div className="space-y-2">
