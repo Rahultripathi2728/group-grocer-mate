@@ -16,7 +16,7 @@ import {
   startOfWeek,
   endOfWeek,
 } from 'date-fns';
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import AddExpenseDialog from '@/components/expenses/AddExpenseDialog';
 import ExpenseCard from '@/components/expenses/ExpenseCard';
@@ -25,10 +25,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface DayExpense {
   date: string;
   total: number;
+  myShare: number;
   hasSettled: boolean;
   hasUnsettled: boolean;
   hasPersonal: boolean;
   hasGroup: boolean;
+  allSettled: boolean;
   expenses: Array<{
     id: string;
     description: string;
@@ -36,6 +38,7 @@ interface DayExpense {
     expense_type: string;
     category?: string | null;
     is_settled: boolean;
+    myShare?: number;
   }>;
 }
 
@@ -46,6 +49,8 @@ export default function CalendarPage() {
   const [expensesByDate, setExpensesByDate] = useState<Map<string, DayExpense>>(new Map());
   const [loading, setLoading] = useState(true);
   const [addExpenseOpen, setAddExpenseOpen] = useState(false);
+
+  const userName = user?.user_metadata?.full_name || 'User';
 
   const fetchExpenses = async () => {
     if (!user) return;
@@ -60,21 +65,50 @@ export default function CalendarPage() {
       .order('created_at', { ascending: false });
 
     if (expenses) {
+      // Fetch user's splits for group expenses
+      const groupExpenseIds = expenses
+        .filter((e) => e.expense_type === 'group')
+        .map((e) => e.id);
+
+      let splitsMap = new Map<string, number>();
+      if (groupExpenseIds.length > 0) {
+        const { data: splits } = await supabase
+          .from('expense_splits')
+          .select('expense_id, amount_owed')
+          .eq('user_id', user.id)
+          .in('expense_id', groupExpenseIds);
+
+        (splits || []).forEach((s) => {
+          splitsMap.set(s.expense_id, Number(s.amount_owed));
+        });
+      }
+
       const grouped = new Map<string, DayExpense>();
       expenses.forEach((expense) => {
         const dateKey = expense.expense_date;
         const existing = grouped.get(dateKey) || {
           date: dateKey,
           total: 0,
+          myShare: 0,
           hasSettled: false,
           hasUnsettled: false,
           hasPersonal: false,
           hasGroup: false,
+          allSettled: true,
           expenses: [],
         };
+
+        const myShare = expense.expense_type === 'group'
+          ? (splitsMap.get(expense.id) || 0)
+          : Number(expense.amount);
+
         existing.total += Number(expense.amount);
+        existing.myShare += myShare;
         if (expense.is_settled) existing.hasSettled = true;
-        else existing.hasUnsettled = true;
+        else {
+          existing.hasUnsettled = true;
+          existing.allSettled = false;
+        }
         if (expense.expense_type === 'personal') existing.hasPersonal = true;
         else existing.hasGroup = true;
         existing.expenses.push({
@@ -84,6 +118,7 @@ export default function CalendarPage() {
           expense_type: expense.expense_type,
           category: expense.category,
           is_settled: expense.is_settled,
+          myShare,
         });
         grouped.set(dateKey, existing);
       });
@@ -109,10 +144,10 @@ export default function CalendarPage() {
   return (
     <DashboardLayout>
       <div className="space-y-5 animate-fade-in pb-20">
-        {/* Header */}
+        {/* Header - Welcome User */}
         <div>
           <h1 className="text-3xl font-display font-bold">
-            {format(currentMonth, 'MMMM yyyy')}
+            Welcome, {userName.split(' ')[0]}
           </h1>
           <p className="text-muted-foreground mt-1">Track your daily spending</p>
         </div>
@@ -130,17 +165,9 @@ export default function CalendarPage() {
               >
                 <ChevronLeft className="h-5 w-5" />
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setCurrentMonth(new Date());
-                  setSelectedDate(new Date());
-                }}
-                className="font-display font-semibold text-base"
-              >
-                Today
-              </Button>
+              <span className="font-display font-semibold text-base">
+                {format(currentMonth, 'MMMM yyyy')}
+              </span>
               <Button
                 variant="ghost"
                 size="icon"
@@ -192,25 +219,27 @@ export default function CalendarPage() {
                       {format(day, 'd')}
                     </span>
 
-                    {/* Amount */}
+                    {/* Amount (show user's share) */}
                     {dayExpenses && isCurrentMonth && (
                       <span className={cn(
-                        'text-[9px] font-bold mt-0.5',
-                        isSelected ? 'text-primary' : 'text-primary'
+                        'text-[9px] font-bold mt-0.5 text-primary'
                       )}>
-                        ₹{dayExpenses.total >= 1000
-                          ? `${(dayExpenses.total / 1000).toFixed(1)}k`
-                          : dayExpenses.total.toLocaleString('en-IN')}
+                        ₹{dayExpenses.myShare >= 1000
+                          ? `${(dayExpenses.myShare / 1000).toFixed(1)}k`
+                          : dayExpenses.myShare.toLocaleString('en-IN')}
                       </span>
                     )}
 
-                    {/* Dots for expense types */}
+                    {/* Dots for expense types + settled checkmark */}
                     {dayExpenses && isCurrentMonth && (
                       <div className="flex items-center gap-0.5 mt-0.5">
-                        {dayExpenses.hasGroup && (
-                          <span className="h-1.5 w-1.5 rounded-full bg-[hsl(280,60%,60%)]" />
+                        {dayExpenses.allSettled && dayExpenses.hasSettled && (
+                          <CheckCircle2 className="h-2.5 w-2.5 text-success" />
                         )}
-                        {dayExpenses.hasPersonal && (
+                        {dayExpenses.hasGroup && !dayExpenses.allSettled && (
+                          <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground" />
+                        )}
+                        {dayExpenses.hasPersonal && !dayExpenses.allSettled && (
                           <span className="h-1.5 w-1.5 rounded-full bg-primary" />
                         )}
                       </div>
@@ -238,7 +267,7 @@ export default function CalendarPage() {
                       {selectedDate ? format(selectedDate, 'dd-MM-yyyy') : 'Select a date'}
                     </p>
                     <p className="text-muted-foreground text-sm">
-                      Total spent: ₹{selectedDateExpenses?.total.toLocaleString('en-IN') || '0'}
+                      Your share: ₹{selectedDateExpenses?.myShare.toLocaleString('en-IN') || '0'}
                     </p>
                   </div>
                   <Button
@@ -260,7 +289,34 @@ export default function CalendarPage() {
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: i * 0.05 }}
                       >
-                        <ExpenseCard {...expense} compact onDelete={fetchExpenses} />
+                        <div className="flex items-center justify-between p-3 rounded-xl bg-card border border-border">
+                          <div className="min-w-0 flex-1">
+                            <p className={cn("font-medium text-sm truncate", expense.is_settled && "line-through opacity-60")}>
+                              {expense.description}
+                            </p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className={cn(
+                                'text-xs px-1.5 py-0.5 rounded-full',
+                                expense.expense_type === 'personal'
+                                  ? 'bg-primary/10 text-primary'
+                                  : 'bg-accent text-accent-foreground'
+                              )}>
+                                {expense.expense_type === 'personal' ? 'Personal' : 'Group'}
+                              </span>
+                              {expense.is_settled && (
+                                <span className="text-xs px-1.5 py-0.5 rounded-full bg-success/10 text-success flex items-center gap-1">
+                                  <CheckCircle2 className="h-3 w-3" />Settled
+                                </span>
+                              )}
+                              {expense.expense_type === 'group' && (
+                                <span className="text-xs text-muted-foreground">
+                                  Your share: ₹{expense.myShare?.toLocaleString('en-IN')}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <p className="font-bold text-sm ml-3">₹{expense.amount.toLocaleString('en-IN')}</p>
+                        </div>
                       </motion.div>
                     ))}
                   </div>
