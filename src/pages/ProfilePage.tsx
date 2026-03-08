@@ -12,10 +12,12 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import {
   User, Mail, Lock, Save, LogOut, Download, Bell, CheckCircle2,
-  Smartphone, ArrowRight, Eye, EyeOff, ChevronLeft, ShieldCheck, Loader2
+  Smartphone, ArrowRight, Eye, EyeOff, ChevronLeft, ShieldCheck, Loader2, KeyRound
 } from 'lucide-react';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
+
+type PasswordMode = 'idle' | 'change' | 'forgot-send' | 'forgot-otp' | 'forgot-newpass';
 
 export default function ProfilePage() {
   const { user, signOut } = useAuth();
@@ -28,15 +30,16 @@ export default function ProfilePage() {
   const [upiId, setUpiId] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // Password state
+  const [passwordMode, setPasswordMode] = useState<PasswordMode>('idle');
+  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [changingPassword, setChangingPassword] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [processing, setProcessing] = useState(false);
+  const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-
-  // OTP verification state
-  const [otpStep, setOtpStep] = useState<'idle' | 'sending' | 'verify' | 'verified'>('idle');
-  const [otpCode, setOtpCode] = useState('');
 
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isInstalled, setIsInstalled] = useState(false);
@@ -76,51 +79,90 @@ export default function ProfilePage() {
     } finally { setSaving(false); }
   };
 
-  const handleSendOtp = async () => {
-    if (!user?.email) return;
-    setOtpStep('sending');
-    try {
-      const { error } = await supabase.auth.signInWithOtp({ email: user.email });
-      if (error) throw error;
-      setOtpStep('verify');
-      toast({ title: 'OTP sent to your email 📧', description: 'Check your inbox for the 6-digit code' });
-    } catch (err: any) {
-      toast({ title: 'Failed to send OTP', description: err.message, variant: 'destructive' });
-      setOtpStep('idle');
-    }
+  const resetPasswordFlow = () => {
+    setPasswordMode('idle');
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setOtpCode('');
+    setShowCurrent(false);
+    setShowNew(false);
+    setShowConfirm(false);
   };
 
-  const handleVerifyOtpAndChangePassword = async () => {
-    if (!user?.email || otpCode.length !== 6) return;
+  // Change Password with current password
+  const handleChangeWithCurrentPassword = async () => {
+    if (!user?.email) return;
     if (newPassword !== confirmPassword) { toast({ title: 'Passwords do not match', variant: 'destructive' }); return; }
     if (newPassword.length < 6) { toast({ title: 'Password must be at least 6 characters', variant: 'destructive' }); return; }
 
-    setChangingPassword(true);
+    setProcessing(true);
     try {
-      // Verify OTP
-      const { error: otpError } = await supabase.auth.verifyOtp({
+      // Verify current password by re-signing in
+      const { error: signInError } = await supabase.auth.signInWithPassword({
         email: user.email,
-        token: otpCode,
-        type: 'email',
+        password: currentPassword,
       });
-      if (otpError) throw new Error('Invalid OTP code. Please try again.');
+      if (signInError) throw new Error('Current password is incorrect');
 
-      // OTP verified, now change password
+      // Update to new password
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
 
       toast({ title: 'Password changed successfully! 🔒' });
-      setNewPassword(''); setConfirmPassword(''); setOtpCode(''); setOtpStep('idle');
+      resetPasswordFlow();
     } catch (err: any) {
       toast({ title: 'Error', description: err.message, variant: 'destructive' });
-    } finally { setChangingPassword(false); }
+    } finally { setProcessing(false); }
   };
 
-  const resetPasswordFlow = () => {
-    setOtpStep('idle');
-    setOtpCode('');
-    setNewPassword('');
-    setConfirmPassword('');
+  // Forgot Password - Send OTP
+  const handleSendForgotOtp = async () => {
+    if (!user?.email) return;
+    setPasswordMode('forgot-send');
+    try {
+      const { error } = await supabase.auth.signInWithOtp({ email: user.email });
+      if (error) throw error;
+      setPasswordMode('forgot-otp');
+      toast({ title: 'OTP sent to your email 📧', description: 'Check your inbox for the 6-digit code' });
+    } catch (err: any) {
+      toast({ title: 'Failed to send OTP', description: err.message, variant: 'destructive' });
+      setPasswordMode('idle');
+    }
+  };
+
+  // Forgot Password - Verify OTP
+  const handleVerifyForgotOtp = async () => {
+    if (!user?.email || otpCode.length !== 6) return;
+    setProcessing(true);
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        email: user.email,
+        token: otpCode,
+        type: 'email',
+      });
+      if (error) throw new Error('Invalid OTP code. Please try again.');
+      setPasswordMode('forgot-newpass');
+      toast({ title: 'OTP verified! ✅', description: 'Now set your new password' });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally { setProcessing(false); }
+  };
+
+  // Forgot Password - Set new password after OTP
+  const handleSetNewPasswordAfterOtp = async () => {
+    if (newPassword !== confirmPassword) { toast({ title: 'Passwords do not match', variant: 'destructive' }); return; }
+    if (newPassword.length < 6) { toast({ title: 'Password must be at least 6 characters', variant: 'destructive' }); return; }
+
+    setProcessing(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      toast({ title: 'Password changed successfully! 🔒' });
+      resetPasswordFlow();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally { setProcessing(false); }
   };
 
   const handleInstall = async () => {
@@ -160,6 +202,7 @@ export default function ProfilePage() {
           </div>
         </div>
 
+        {/* Profile Details */}
         <Card className="border border-border shadow-sm">
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
@@ -189,100 +232,147 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
 
+        {/* Password Section */}
         <Card className="border border-border shadow-sm">
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <Lock className="h-4 w-4 text-muted-foreground" />
-              Change Password
+              Password
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {otpStep === 'idle' && (
-              <>
-                <p className="text-xs text-muted-foreground">
-                  For security, we'll send a verification code to your email before changing your password.
-                </p>
-                <Button onClick={handleSendOtp} size="sm" variant="outline" className="w-full">
-                  <ShieldCheck className="h-4 w-4 mr-2" />
-                  Send Verification Code
+            {/* Idle - show two options */}
+            {passwordMode === 'idle' && (
+              <div className="space-y-3">
+                <Button onClick={() => setPasswordMode('change')} size="sm" variant="outline" className="w-full justify-start">
+                  <KeyRound className="h-4 w-4 mr-2" />
+                  Change Password
+                  <span className="ml-auto text-[11px] text-muted-foreground">I know my password</span>
                 </Button>
-              </>
-            )}
-
-            {otpStep === 'sending' && (
-              <div className="flex items-center justify-center py-6 gap-2 text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span className="text-sm">Sending OTP to {email}...</span>
+                <Button onClick={handleSendForgotOtp} size="sm" variant="outline" className="w-full justify-start">
+                  <ShieldCheck className="h-4 w-4 mr-2" />
+                  Forgot Password
+                  <span className="ml-auto text-[11px] text-muted-foreground">Verify via email</span>
+                </Button>
               </div>
             )}
 
-            {otpStep === 'verify' && (
-              <>
-                <div className="space-y-3">
-                  <div className="p-3 rounded-lg bg-muted/50 border border-border">
-                    <p className="text-xs text-muted-foreground text-center">
-                      Enter the 6-digit code sent to <strong className="text-foreground">{email}</strong>
-                    </p>
-                  </div>
-                  <div className="flex justify-center">
-                    <InputOTP maxLength={6} value={otpCode} onChange={setOtpCode}>
-                      <InputOTPGroup>
-                        <InputOTPSlot index={0} />
-                        <InputOTPSlot index={1} />
-                        <InputOTPSlot index={2} />
-                        <InputOTPSlot index={3} />
-                        <InputOTPSlot index={4} />
-                        <InputOTPSlot index={5} />
-                      </InputOTPGroup>
-                    </InputOTP>
+            {/* Change Password - current password method */}
+            {passwordMode === 'change' && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-xs">Current Password</Label>
+                  <div className="relative">
+                    <Input type={showCurrent ? 'text' : 'password'} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="Enter current password" />
+                    <button type="button" onClick={() => setShowCurrent(!showCurrent)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                      {showCurrent ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
                   </div>
                 </div>
-
                 <div className="space-y-2">
-                  <Label htmlFor="newPassword" className="text-xs">New Password</Label>
+                  <Label className="text-xs">New Password</Label>
                   <div className="relative">
-                    <Input id="newPassword" type={showNew ? 'text' : 'password'} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="New password" />
+                    <Input type={showNew ? 'text' : 'password'} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="New password" />
                     <button type="button" onClick={() => setShowNew(!showNew)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                       {showNew ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="confirmPassword" className="text-xs">Confirm Password</Label>
+                  <Label className="text-xs">Confirm New Password</Label>
                   <div className="relative">
-                    <Input id="confirmPassword" type={showConfirm ? 'text' : 'password'} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm password" />
+                    <Input type={showConfirm ? 'text' : 'password'} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm new password" />
                     <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                       {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
                 </div>
-
                 <div className="flex gap-2">
-                  <Button onClick={resetPasswordFlow} size="sm" variant="ghost" className="flex-1">
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleVerifyOtpAndChangePassword}
-                    disabled={changingPassword || otpCode.length !== 6 || !newPassword || !confirmPassword}
-                    size="sm"
-                    className="flex-1"
-                  >
-                    {changingPassword ? (
-                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Verifying...</>
-                    ) : (
-                      <><ShieldCheck className="h-4 w-4 mr-2" />Verify & Change</>
-                    )}
+                  <Button onClick={resetPasswordFlow} size="sm" variant="ghost" className="flex-1">Cancel</Button>
+                  <Button onClick={handleChangeWithCurrentPassword} disabled={processing || !currentPassword || !newPassword || !confirmPassword} size="sm" className="flex-1">
+                    {processing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Changing...</> : <><Lock className="h-4 w-4 mr-2" />Change Password</>}
                   </Button>
                 </div>
+              </div>
+            )}
 
-                <button onClick={handleSendOtp} className="text-xs text-muted-foreground hover:text-foreground text-center w-full underline">
+            {/* Forgot Password - Sending OTP */}
+            {passwordMode === 'forgot-send' && (
+              <div className="flex items-center justify-center py-6 gap-2 text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="text-sm">Sending OTP to {email}...</span>
+              </div>
+            )}
+
+            {/* Forgot Password - Enter OTP */}
+            {passwordMode === 'forgot-otp' && (
+              <div className="space-y-4">
+                <div className="p-3 rounded-lg bg-muted/50 border border-border">
+                  <p className="text-xs text-muted-foreground text-center">
+                    Enter the 6-digit code sent to <strong className="text-foreground">{email}</strong>
+                  </p>
+                </div>
+                <div className="flex justify-center">
+                  <InputOTP maxLength={6} value={otpCode} onChange={setOtpCode}>
+                    <InputOTPGroup>
+                      <InputOTPSlot index={0} />
+                      <InputOTPSlot index={1} />
+                      <InputOTPSlot index={2} />
+                      <InputOTPSlot index={3} />
+                      <InputOTPSlot index={4} />
+                      <InputOTPSlot index={5} />
+                    </InputOTPGroup>
+                  </InputOTP>
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={resetPasswordFlow} size="sm" variant="ghost" className="flex-1">Cancel</Button>
+                  <Button onClick={handleVerifyForgotOtp} disabled={processing || otpCode.length !== 6} size="sm" className="flex-1">
+                    {processing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Verifying...</> : <><ShieldCheck className="h-4 w-4 mr-2" />Verify OTP</>}
+                  </Button>
+                </div>
+                <button onClick={handleSendForgotOtp} className="text-xs text-muted-foreground hover:text-foreground text-center w-full underline">
                   Resend code
                 </button>
-              </>
+              </div>
+            )}
+
+            {/* Forgot Password - Set New Password after OTP verified */}
+            {passwordMode === 'forgot-newpass' && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-success/10 border border-success/20">
+                  <CheckCircle2 className="h-4 w-4 text-success" />
+                  <span className="text-sm text-success font-medium">Email verified! Set your new password.</span>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs">New Password</Label>
+                  <div className="relative">
+                    <Input type={showNew ? 'text' : 'password'} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="New password" />
+                    <button type="button" onClick={() => setShowNew(!showNew)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                      {showNew ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs">Confirm New Password</Label>
+                  <div className="relative">
+                    <Input type={showConfirm ? 'text' : 'password'} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm new password" />
+                    <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                      {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={resetPasswordFlow} size="sm" variant="ghost" className="flex-1">Cancel</Button>
+                  <Button onClick={handleSetNewPasswordAfterOtp} disabled={processing || !newPassword || !confirmPassword} size="sm" className="flex-1">
+                    {processing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving...</> : <><Lock className="h-4 w-4 mr-2" />Set Password</>}
+                  </Button>
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>
 
+        {/* App & Notifications */}
         <Card className="border border-border shadow-sm">
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
