@@ -46,7 +46,7 @@ interface Props {
 const SimplifiedBalances = forwardRef<HTMLDivElement, Props>(function SimplifiedBalances({ balances, memberSpending, onSettle, settling }, ref) {
   const { user } = useAuth();
   const [upiMap, setUpiMap] = useState<Record<string, string>>({});
-
+  const [showSettleConfirm, setShowSettleConfirm] = useState(false);
   // Fetch UPI IDs for all members in balances
   useEffect(() => {
     const userIds = new Set<string>();
