@@ -125,7 +125,7 @@ export default function DailySpendingChart({ expenses }: DailySpendingChartProps
           </div>
           <div className="flex items-center justify-center gap-4 mt-2 text-xs text-muted-foreground">
             <div className="flex items-center gap-1.5">
-              <div className="h-2 w-2 rounded-full bg-primary" />
+              <div className="h-2 w-2 rounded-full bg-foreground" />
               Personal
             </div>
             <div className="flex items-center gap-1.5">
