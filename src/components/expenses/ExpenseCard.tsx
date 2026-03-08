@@ -26,6 +26,7 @@ interface ExpenseCardProps {
   is_settled?: boolean;
   showDate?: boolean;
   compact?: boolean;
+  myShare?: number;
   onDelete?: () => void;
 }
 
@@ -39,6 +40,7 @@ export default function ExpenseCard({
   is_settled = false,
   showDate = false,
   compact = false,
+  myShare,
   onDelete,
 }: ExpenseCardProps) {
   const [deleting, setDeleting] = useState(false);
@@ -115,7 +117,12 @@ export default function ExpenseCard({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <p className="font-bold text-sm">₹{amount.toLocaleString('en-IN')}</p>
+            <div className="text-right">
+              <p className="font-bold text-sm">₹{amount.toLocaleString('en-IN')}</p>
+              {expense_type === 'group' && myShare !== undefined && myShare !== amount && (
+                <p className="text-[10px] text-muted-foreground">Share: ₹{myShare.toLocaleString('en-IN')}</p>
+              )}
+            </div>
             {onDelete && !is_settled && (
               <button onClick={handleDeleteClick} disabled={deleting} className="opacity-0 group-hover/card:opacity-100 p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all">
                 <Trash2 className="h-3.5 w-3.5" />
@@ -153,7 +160,11 @@ export default function ExpenseCard({
         <div className="flex items-center gap-3">
           <div className="text-right">
             <p className="text-xl font-bold">₹{amount.toLocaleString('en-IN')}</p>
-            <p className="text-xs text-muted-foreground mt-1">{categoryInfo.label}</p>
+            {expense_type === 'group' && myShare !== undefined && myShare !== amount ? (
+              <p className="text-xs text-muted-foreground mt-1">Your share: ₹{myShare.toLocaleString('en-IN')}</p>
+            ) : (
+              <p className="text-xs text-muted-foreground mt-1">{categoryInfo.label}</p>
+            )}
           </div>
           {onDelete && !is_settled && (
             <button onClick={handleDeleteClick} disabled={deleting} className="opacity-0 group-hover/card:opacity-100 p-2 rounded-xl hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all">

@@ -48,6 +48,7 @@ interface ExpenseRow {
   expense_date: string;
   expense_type: string;
   category?: string | null;
+  myShare?: number;
 }
 
 interface ExpenseSummary {
@@ -110,17 +111,27 @@ export default function ExpensesPage() {
         .map((e) => e.id);
 
       let myGroupShare = 0;
+      let splitsMap = new Map<string, number>();
       if (groupExpenseIds.length > 0) {
         const { data: splits } = await supabase
           .from('expense_splits')
-          .select('amount_owed')
+          .select('expense_id, amount_owed')
           .eq('user_id', user.id)
           .in('expense_id', groupExpenseIds);
 
+        (splits || []).forEach((s) => {
+          splitsMap.set(s.expense_id, Number(s.amount_owed));
+        });
         myGroupShare = (splits || []).reduce((sum, s) => sum + Number(s.amount_owed), 0);
       }
 
-      const mapped = expenses.map((e) => ({ ...e, amount: Number(e.amount) }));
+      const mapped = expenses.map((e) => ({
+        ...e,
+        amount: Number(e.amount),
+        myShare: e.expense_type === 'group'
+          ? (splitsMap.get(e.id) || 0)
+          : Number(e.amount),
+      }));
       setSummary({
         totalPersonal: personal,
         totalGroup: myGroupShare,
