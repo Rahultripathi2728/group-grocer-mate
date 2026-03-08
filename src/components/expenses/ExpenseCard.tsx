@@ -95,7 +95,7 @@ export default function ExpenseCard({
   if (compact) {
     return (
       <>
-        <div className={cn("flex items-center justify-between p-3 rounded-xl bg-card border border-border/50 hover:border-border hover:shadow-sm transition-all duration-200 group/card", is_settled && "opacity-60")}>
+        <div className={cn("flex items-center justify-between p-3 rounded-xl bg-card border border-border hover:shadow-sm transition-all duration-200 group/card", is_settled && "opacity-60")}>
           <div className="flex items-center gap-3">
             <div className={cn('p-2 rounded-lg', categoryInfo.bgColor)}>
               <CategoryIcon className={cn('h-4 w-4', categoryInfo.color)} />
