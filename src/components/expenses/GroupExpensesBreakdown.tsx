@@ -617,45 +617,159 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {settlements.map((settlement, index) => (
-                <motion.div
-                  key={settlement.id}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="flex items-center justify-between p-4 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-success/10">
-                      <CheckCircle2 className="h-4 w-4 text-success" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">
-                        Settled by {settlement.settled_by_name}
-                        {settlement.settled_by === user?.id && (
-                          <span className="text-muted-foreground ml-1">(You)</span>
-                        )}
-                      </p>
-                      {settlement.total_amount > 0 && (
-                        <p className="text-sm font-bold text-success">
-                          ₹{settlement.total_amount.toLocaleString('en-IN')}
-                        </p>
+              {settlements.map((settlement, index) => {
+                const isExpanded = expandedSettlement === settlement.id;
+                const detailExpenses = settlementExpenses[settlement.id] || [];
+                const isLoadingDetail = loadingSettlementDetail === settlement.id;
+                const memberCount = members.length;
+                const settlementTotal = detailExpenses.reduce((sum, e) => sum + e.amount, 0);
+                const sharePerPerson = memberCount > 0 ? settlementTotal / memberCount : 0;
+
+                return (
+                  <div key={settlement.id}>
+                    <motion.div
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className={cn(
+                        "flex items-center justify-between p-4 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer",
+                        isExpanded && "bg-muted/50 rounded-b-none"
                       )}
-                      <p className="text-xs text-muted-foreground">
-                        {settlement.notes}
-                      </p>
-                    </div>
+                      onClick={() => fetchSettlementDetail(settlement.id, index)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-success/10">
+                          <CheckCircle2 className="h-4 w-4 text-success" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">
+                            Settled by {settlement.settled_by_name}
+                            {settlement.settled_by === user?.id && (
+                              <span className="text-muted-foreground ml-1">(You)</span>
+                            )}
+                          </p>
+                          {settlement.total_amount > 0 && (
+                            <p className="text-sm font-bold text-success">
+                              ₹{settlement.total_amount.toLocaleString('en-IN')}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-semibold">
+                          {format(new Date(settlement.settled_at), 'dd MMM yyyy')}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {isExpanded ? 'Tap to close' : 'Tap for details'}
+                        </p>
+                      </div>
+                    </motion.div>
+
+                    {/* Expanded Detail */}
+                    <AnimatePresence>
+                      {isExpanded && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="overflow-hidden rounded-b-xl border border-t-0 border-muted/50 bg-background/50"
+                        >
+                          <div className="p-4 space-y-4">
+                            {isLoadingDetail ? (
+                              <div className="space-y-2">
+                                {[1, 2, 3].map((i) => (
+                                  <div key={i} className="h-10 bg-muted/50 rounded-lg animate-pulse" />
+                                ))}
+                              </div>
+                            ) : detailExpenses.length === 0 ? (
+                              <p className="text-sm text-muted-foreground text-center py-4">No expense details found</p>
+                            ) : (
+                              <>
+                                {/* Summary */}
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div className="p-3 rounded-lg bg-muted/30">
+                                    <p className="text-xs text-muted-foreground">Total Expenses</p>
+                                    <p className="text-lg font-bold">₹{settlementTotal.toLocaleString('en-IN')}</p>
+                                  </div>
+                                  <div className="p-3 rounded-lg bg-muted/30">
+                                    <p className="text-xs text-muted-foreground">Per Person Share</p>
+                                    <p className="text-lg font-bold">₹{sharePerPerson.toFixed(0)}</p>
+                                  </div>
+                                </div>
+
+                                {/* Member Contributions */}
+                                <div>
+                                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                                    Who Paid How Much
+                                  </p>
+                                  <div className="space-y-2">
+                                    {members.map((member) => {
+                                      const memberPaid = detailExpenses
+                                        .filter((e) => e.user_id === member.user_id)
+                                        .reduce((sum, e) => sum + e.amount, 0);
+                                      const net = memberPaid - sharePerPerson;
+                                      return (
+                                        <div key={member.user_id} className="flex items-center justify-between p-2 rounded-lg bg-muted/20">
+                                          <div className="flex items-center gap-2">
+                                            <div className={cn(
+                                              "h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold",
+                                              net > 0.01 ? "bg-success/20 text-success" : net < -0.01 ? "bg-destructive/20 text-destructive" : "bg-muted text-muted-foreground"
+                                            )}>
+                                              {member.full_name[0]?.toUpperCase()}
+                                            </div>
+                                            <div>
+                                              <p className="text-sm font-medium">
+                                                {member.full_name}
+                                                {member.user_id === user?.id && <span className="text-muted-foreground text-xs ml-1">(You)</span>}
+                                              </p>
+                                              <p className="text-xs text-muted-foreground">
+                                                Paid ₹{memberPaid.toFixed(0)} • Share ₹{sharePerPerson.toFixed(0)}
+                                              </p>
+                                            </div>
+                                          </div>
+                                          <p className={cn(
+                                            "text-sm font-bold",
+                                            net > 0.01 ? "text-success" : net < -0.01 ? "text-destructive" : "text-muted-foreground"
+                                          )}>
+                                            {net > 0.01 ? `+₹${net.toFixed(0)}` : net < -0.01 ? `-₹${Math.abs(net).toFixed(0)}` : '₹0'}
+                                          </p>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+
+                                {/* Expense List */}
+                                <div>
+                                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                                    Expenses ({detailExpenses.length})
+                                  </p>
+                                  <div className="space-y-1.5 max-h-64 overflow-y-auto">
+                                    {detailExpenses.map((expense) => {
+                                      const payer = members.find((m) => m.user_id === expense.user_id);
+                                      return (
+                                        <div key={expense.id} className="flex items-center justify-between p-2.5 rounded-lg bg-muted/20">
+                                          <div>
+                                            <p className="text-sm font-medium">{expense.description}</p>
+                                            <p className="text-xs text-muted-foreground">
+                                              {format(new Date(expense.expense_date), 'dd MMM yyyy')} • by {payer?.full_name || 'Unknown'}
+                                            </p>
+                                          </div>
+                                          <p className="text-sm font-semibold">₹{expense.amount.toFixed(0)}</p>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-semibold">
-                      {format(new Date(settlement.settled_at), 'dd MMM yyyy')}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {format(new Date(settlement.settled_at), 'HH:mm')}
-                    </p>
-                  </div>
-                </motion.div>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>
