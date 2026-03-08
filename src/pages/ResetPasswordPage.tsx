@@ -105,6 +105,7 @@ export default function ResetPasswordPage() {
       <div className="w-full max-w-md animate-fade-in">
         <div className="flex items-center gap-3 mb-8 justify-center">
           <img src="/app-logo.png" alt="Expense Manager" className="h-10 w-10 rounded-xl" />
+          <h1 className="text-2xl font-display font-bold text-foreground">Expense Manager</h1>
         </div>
         <Card className="border border-border shadow-sm">
           <CardHeader className="space-y-1 pb-4">
