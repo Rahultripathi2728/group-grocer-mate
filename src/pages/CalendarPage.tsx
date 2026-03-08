@@ -267,7 +267,7 @@ export default function CalendarPage() {
                     {dayExpenses && isCurrentMonth && (
                       <div className="flex items-center gap-0.5 mt-0.5">
                         {dayExpenses.hasPersonal && (
-                          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                          <span className="h-2 w-2 rounded-full bg-primary" />
                         )}
                         {dayExpenses.hasGroup && dayExpenses.allSettled && (
                           <CheckCircle2 className="h-2.5 w-2.5 text-success" />
