@@ -135,10 +135,12 @@ export default function CalendarPage() {
 
         existing.total += Number(expense.amount);
         existing.myShare += myShare;
-        if (expense.is_settled) existing.hasSettled = true;
-        else {
-          existing.hasUnsettled = true;
-          existing.allSettled = false;
+        if (expense.expense_type === 'group') {
+          if (expense.is_settled) existing.hasSettled = true;
+          else {
+            existing.hasUnsettled = true;
+            existing.allSettled = false;
+          }
         }
         if (expense.expense_type === 'personal') existing.hasPersonal = true;
         else existing.hasGroup = true;
@@ -264,14 +266,14 @@ export default function CalendarPage() {
                     {/* Dots for expense types + settled checkmark */}
                     {dayExpenses && isCurrentMonth && (
                       <div className="flex items-center gap-0.5 mt-0.5">
-                        {dayExpenses.allSettled && dayExpenses.hasSettled && (
+                        {dayExpenses.hasPersonal && (
+                          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                        )}
+                        {dayExpenses.hasGroup && dayExpenses.allSettled && (
                           <CheckCircle2 className="h-2.5 w-2.5 text-success" />
                         )}
                         {dayExpenses.hasGroup && !dayExpenses.allSettled && (
                           <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground" />
-                        )}
-                        {dayExpenses.hasPersonal && !dayExpenses.allSettled && (
-                          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
                         )}
                       </div>
                     )}
