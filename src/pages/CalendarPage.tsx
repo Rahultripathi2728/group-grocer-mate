@@ -253,7 +253,7 @@ export default function CalendarPage() {
         </Card>
 
         {/* Selected Date Details */}
-        <Card className="border border-border shadow-sm">
+        <Card className="border border-border shadow-sm overflow-hidden">
           <CardContent className="pt-5 pb-5">
             <AnimatePresence mode="wait">
               <motion.div
@@ -262,64 +262,113 @@ export default function CalendarPage() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -5 }}
               >
-                <div className="flex items-center justify-between">
+                {/* Date header with summary */}
+                <div className="flex items-center justify-between mb-1">
                   <div>
                     <p className="text-lg font-display font-bold">
-                      {selectedDate ? format(selectedDate, 'dd-MM-yyyy') : 'Select a date'}
+                      {selectedDate ? format(selectedDate, 'EEEE') : 'Select a date'}
                     </p>
-                    <p className="text-muted-foreground text-sm">
-                      Your share: ₹{selectedDateExpenses?.myShare.toLocaleString('en-IN') || '0'}
+                    <p className="text-xs text-muted-foreground">
+                      {selectedDate && format(selectedDate, 'dd MMMM yyyy')}
                     </p>
                   </div>
                   <Button
                     size="icon"
-                    className="h-12 w-12 rounded-xl bg-foreground text-background hover:bg-foreground/90"
+                    className="h-11 w-11 rounded-xl bg-foreground text-background hover:bg-foreground/90"
                     onClick={() => setAddExpenseOpen(true)}
                   >
                     <Plus className="h-5 w-5" />
                   </Button>
                 </div>
 
-                {/* Expense list for selected date */}
+                {/* Summary chips */}
+                {selectedDateExpenses && (
+                  <div className="flex items-center gap-3 mt-3 mb-4">
+                    <div className="flex-1 p-3 rounded-xl bg-muted/50 text-center">
+                      <p className="text-xs text-muted-foreground">Total</p>
+                      <p className="text-sm font-bold">₹{selectedDateExpenses.total.toLocaleString('en-IN')}</p>
+                    </div>
+                    <div className="flex-1 p-3 rounded-xl bg-muted/50 text-center">
+                      <p className="text-xs text-muted-foreground">Your Share</p>
+                      <p className="text-sm font-bold">₹{selectedDateExpenses.myShare.toLocaleString('en-IN')}</p>
+                    </div>
+                    <div className="flex-1 p-3 rounded-xl bg-muted/50 text-center">
+                      <p className="text-xs text-muted-foreground">Items</p>
+                      <p className="text-sm font-bold">{selectedDateExpenses.expenses.length}</p>
+                    </div>
+                  </div>
+                )}
+
+                {!selectedDateExpenses && (
+                  <div className="text-center py-6 mt-3">
+                    <p className="text-sm text-muted-foreground">No expenses on this day</p>
+                    <p className="text-xs text-muted-foreground mt-1">Tap + to add one</p>
+                  </div>
+                )}
+
+                {/* Expense list */}
                 {selectedDateExpenses && selectedDateExpenses.expenses.length > 0 && (
-                  <div className="space-y-2 mt-4 max-h-64 overflow-y-auto">
-                    {selectedDateExpenses.expenses.map((expense, i) => (
-                      <motion.div
-                        key={expense.id}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: i * 0.05 }}
-                      >
-                        <div className="flex items-center justify-between p-3 rounded-xl bg-card border border-border">
-                          <div className="min-w-0 flex-1">
-                            <p className={cn("font-medium text-sm truncate", expense.is_settled && "line-through opacity-60")}>
-                              {expense.description}
-                            </p>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <span className={cn(
-                                'text-xs px-1.5 py-0.5 rounded-full',
-                                expense.expense_type === 'personal'
-                                  ? 'bg-primary/10 text-primary'
-                                  : 'bg-accent text-accent-foreground'
+                  <div className="space-y-2 max-h-72 overflow-y-auto">
+                    {selectedDateExpenses.expenses.map((expense, i) => {
+                      const categoryInfo = getCategoryById(expense.category);
+                      const CategoryIcon = categoryInfo.icon;
+                      return (
+                        <motion.div
+                          key={expense.id}
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: i * 0.05 }}
+                        >
+                          <div className={cn(
+                            "flex items-center gap-3 p-3 rounded-xl border border-border transition-all hover:shadow-sm",
+                            expense.is_settled && "opacity-50"
+                          )}>
+                            {/* Category icon */}
+                            <div className={cn('p-2.5 rounded-xl shrink-0', categoryInfo.bgColor)}>
+                              <CategoryIcon className={cn('h-4 w-4', categoryInfo.color)} />
+                            </div>
+
+                            {/* Details */}
+                            <div className="min-w-0 flex-1">
+                              <p className={cn(
+                                "font-semibold text-sm truncate",
+                                expense.is_settled && "line-through"
                               )}>
-                                {expense.expense_type === 'personal' ? 'Personal' : 'Group'}
-                              </span>
-                              {expense.is_settled && (
-                                <span className="text-xs px-1.5 py-0.5 rounded-full bg-success/10 text-success flex items-center gap-1">
-                                  <CheckCircle2 className="h-3 w-3" />Settled
+                                {expense.description}
+                              </p>
+                              <div className="flex items-center gap-1.5 mt-1">
+                                <span className={cn(
+                                  'inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-md',
+                                  expense.expense_type === 'personal'
+                                    ? 'bg-primary/10 text-primary'
+                                    : 'bg-accent text-accent-foreground'
+                                )}>
+                                  {expense.expense_type === 'personal'
+                                    ? <><Wallet className="h-2.5 w-2.5" /> Personal</>
+                                    : <><Users className="h-2.5 w-2.5" /> Group</>
+                                  }
                                 </span>
-                              )}
-                              {expense.expense_type === 'group' && (
-                                <span className="text-xs text-muted-foreground">
-                                  Your share: ₹{expense.myShare?.toLocaleString('en-IN')}
-                                </span>
+                                {expense.is_settled && (
+                                  <span className="inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-success/10 text-success">
+                                    <CheckCircle2 className="h-2.5 w-2.5" />Settled
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Amount */}
+                            <div className="text-right shrink-0">
+                              <p className="font-bold text-sm">₹{expense.amount.toLocaleString('en-IN')}</p>
+                              {expense.expense_type === 'group' && expense.myShare !== undefined && (
+                                <p className="text-[10px] text-muted-foreground mt-0.5">
+                                  Share: ₹{expense.myShare.toLocaleString('en-IN')}
+                                </p>
                               )}
                             </div>
                           </div>
-                          <p className="font-bold text-sm ml-3">₹{expense.amount.toLocaleString('en-IN')}</p>
-                        </div>
-                      </motion.div>
-                    ))}
+                        </motion.div>
+                      );
+                    })}
                   </div>
                 )}
               </motion.div>
