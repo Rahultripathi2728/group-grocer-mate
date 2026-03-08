@@ -27,7 +27,7 @@ export default function Auth() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-pulse-soft">
-          <Layers className="h-12 w-12 text-foreground" />
+          <img src="/app-logo.png" alt="Expense Manager" className="h-12 w-12" />
         </div>
       </div>
     );
