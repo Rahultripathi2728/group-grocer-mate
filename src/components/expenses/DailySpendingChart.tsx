@@ -69,7 +69,7 @@ export default function DailySpendingChart({ expenses }: DailySpendingChartProps
       <Card className="border border-border shadow-sm">
         <CardHeader className="flex flex-row items-center gap-2 pb-2">
           <div className="p-2 rounded-xl bg-muted">
-            <BarChart3 className="h-4 w-4 text-primary" />
+            <BarChart3 className="h-4 w-4 text-foreground" />
           </div>
           <CardTitle className="font-display text-base">Daily Spending</CardTitle>
         </CardHeader>
