@@ -116,7 +116,7 @@ export default function DailySpendingChart({ expenses }: DailySpendingChartProps
                   type="monotone"
                   dataKey="group"
                   stackId="1"
-                  stroke="hsl(262, 60%, 55%)"
+                  stroke="hsl(0, 0%, 50%)"
                   fill="url(#fillGroup)"
                   strokeWidth={2}
                 />
