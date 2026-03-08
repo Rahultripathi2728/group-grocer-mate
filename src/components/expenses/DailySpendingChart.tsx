@@ -66,7 +66,7 @@ export default function DailySpendingChart({ expenses }: DailySpendingChartProps
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
-      <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
+      <Card className="border border-border shadow-sm">
         <CardHeader className="flex flex-row items-center gap-2 pb-2">
           <div className="p-2 rounded-xl bg-primary/10">
             <BarChart3 className="h-4 w-4 text-primary" />
