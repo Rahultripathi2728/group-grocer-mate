@@ -102,9 +102,36 @@ serve(async (req) => {
   }
 
   try {
+    // Authenticate the caller
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    const supabaseAuth = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    const callerId = claimsData.claims.sub;
+
     const { user_id, title, message, type } = await req.json();
 
-    if (!user_id) {
+    // Default to caller's own ID if not specified
+    const targetUserId = user_id || callerId;
+
+    if (!targetUserId) {
       return new Response(JSON.stringify({ error: "user_id required" }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
@@ -114,6 +141,50 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
+
+    // If targeting another user, verify they share a group
+    if (targetUserId !== callerId) {
+      const { data: sharedGroups } = await supabase.rpc('is_group_member', { p_group_id: '' }).select();
+      // Check via direct query: caller and target share at least one group
+      const { data: callerGroups } = await supabase
+        .from('group_memberships')
+        .select('group_id')
+        .eq('user_id', callerId);
+      const { data: callerOwnedGroups } = await supabase
+        .from('groups')
+        .select('id')
+        .eq('owner_id', callerId);
+
+      const callerGroupIds = [
+        ...(callerGroups || []).map(g => g.group_id),
+        ...(callerOwnedGroups || []).map(g => g.id)
+      ];
+
+      if (callerGroupIds.length === 0) {
+        return new Response(JSON.stringify({ error: 'Forbidden: no shared group' }), {
+          status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      const { data: targetInGroup } = await supabase
+        .from('group_memberships')
+        .select('id')
+        .eq('user_id', targetUserId)
+        .in('group_id', callerGroupIds)
+        .limit(1);
+      const { data: targetOwnsGroup } = await supabase
+        .from('groups')
+        .select('id')
+        .eq('owner_id', targetUserId)
+        .in('id', callerGroupIds)
+        .limit(1);
+
+      if ((!targetInGroup || targetInGroup.length === 0) && (!targetOwnsGroup || targetOwnsGroup.length === 0)) {
+        return new Response(JSON.stringify({ error: 'Forbidden: no shared group with target user' }), {
+          status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+    }
 
     // Get VAPID keys from database
     const { data: vapidKeys } = await supabase
