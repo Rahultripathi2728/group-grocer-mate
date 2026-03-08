@@ -363,11 +363,11 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
           )}
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="p-4 rounded-xl bg-background/50 backdrop-blur-sm">
+            <div className="p-4 rounded-xl bg-muted">
               <p className="text-xs text-muted-foreground mb-1">Total Since Settlement</p>
               <p className="text-2xl font-display font-bold">₹{totalExpenses.toLocaleString('en-IN')}</p>
             </div>
-            <div className="p-4 rounded-xl bg-background/50 backdrop-blur-sm">
+            <div className="p-4 rounded-xl bg-muted">
               <p className="text-xs text-muted-foreground mb-1">Per Person Share</p>
               <p className="text-2xl font-display font-bold">₹{perPersonShare.toFixed(0)}</p>
             </div>
