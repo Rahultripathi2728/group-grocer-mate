@@ -76,18 +76,51 @@ export default function ProfilePage() {
     } finally { setSaving(false); }
   };
 
-  const handleChangePassword = async () => {
+  const handleSendOtp = async () => {
+    if (!user?.email) return;
+    setOtpStep('sending');
+    try {
+      const { error } = await supabase.auth.signInWithOtp({ email: user.email });
+      if (error) throw error;
+      setOtpStep('verify');
+      toast({ title: 'OTP sent to your email 📧', description: 'Check your inbox for the 6-digit code' });
+    } catch (err: any) {
+      toast({ title: 'Failed to send OTP', description: err.message, variant: 'destructive' });
+      setOtpStep('idle');
+    }
+  };
+
+  const handleVerifyOtpAndChangePassword = async () => {
+    if (!user?.email || otpCode.length !== 6) return;
     if (newPassword !== confirmPassword) { toast({ title: 'Passwords do not match', variant: 'destructive' }); return; }
     if (newPassword.length < 6) { toast({ title: 'Password must be at least 6 characters', variant: 'destructive' }); return; }
+
     setChangingPassword(true);
     try {
+      // Verify OTP
+      const { error: otpError } = await supabase.auth.verifyOtp({
+        email: user.email,
+        token: otpCode,
+        type: 'email',
+      });
+      if (otpError) throw new Error('Invalid OTP code. Please try again.');
+
+      // OTP verified, now change password
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
+
       toast({ title: 'Password changed successfully! 🔒' });
-      setNewPassword(''); setConfirmPassword('');
+      setNewPassword(''); setConfirmPassword(''); setOtpCode(''); setOtpStep('idle');
     } catch (err: any) {
-      toast({ title: 'Error changing password', description: err.message, variant: 'destructive' });
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
     } finally { setChangingPassword(false); }
+  };
+
+  const resetPasswordFlow = () => {
+    setOtpStep('idle');
+    setOtpCode('');
+    setNewPassword('');
+    setConfirmPassword('');
   };
 
   const handleInstall = async () => {
