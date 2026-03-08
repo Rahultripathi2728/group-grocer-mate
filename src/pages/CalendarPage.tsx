@@ -135,10 +135,12 @@ export default function CalendarPage() {
 
         existing.total += Number(expense.amount);
         existing.myShare += myShare;
-        if (expense.is_settled) existing.hasSettled = true;
-        else {
-          existing.hasUnsettled = true;
-          existing.allSettled = false;
+        if (expense.expense_type === 'group') {
+          if (expense.is_settled) existing.hasSettled = true;
+          else {
+            existing.hasUnsettled = true;
+            existing.allSettled = false;
+          }
         }
         if (expense.expense_type === 'personal') existing.hasPersonal = true;
         else existing.hasGroup = true;
