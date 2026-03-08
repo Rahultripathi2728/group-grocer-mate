@@ -510,7 +510,7 @@ export default function ExpensesPage() {
         >
           <Button
             size="lg"
-            className="h-14 w-14 rounded-full gradient-primary text-primary-foreground shadow-glow p-0 hover:scale-110 transition-transform"
+            className="h-14 w-14 rounded-xl bg-foreground text-background p-0 hover:bg-foreground/90 hover:scale-105 transition-transform shadow-lg"
             onClick={() => setAddExpenseOpen(true)}
           >
             <Plus className="h-6 w-6" />
