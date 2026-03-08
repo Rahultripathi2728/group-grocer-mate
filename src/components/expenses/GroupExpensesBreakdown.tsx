@@ -402,10 +402,10 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
                         <div className={cn(
                           "h-10 w-10 rounded-full flex items-center justify-center",
                           ms.netBalance > 0 
-                            ? "bg-gradient-to-br from-success/30 to-success/10" 
+                            ? "bg-success/10" 
                             : ms.netBalance < 0 
-                              ? "bg-gradient-to-br from-destructive/30 to-destructive/10"
-                              : "bg-gradient-to-br from-muted to-muted/50"
+                              ? "bg-destructive/10"
+                              : "bg-muted"
                         )}>
                           <span className={cn(
                             "text-sm font-bold",
