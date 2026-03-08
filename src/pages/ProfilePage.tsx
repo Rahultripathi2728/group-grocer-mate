@@ -109,7 +109,7 @@ export default function ProfilePage() {
     try {
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
-      toast({ title: 'Password change ho gaya! 🔒' });
+      toast({ title: 'Password changed successfully! 🔒' });
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
