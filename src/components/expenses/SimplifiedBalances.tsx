@@ -127,8 +127,8 @@ export default function SimplifiedBalances({ balances, memberSpending, onSettle,
             <div className="inline-flex p-3 rounded-full bg-success/10 mb-3">
               <CheckCircle2 className="h-8 w-8 text-success" />
             </div>
-            <p className="text-lg font-display font-semibold text-success">Sab settle hai!</p>
-            <p className="text-sm text-muted-foreground">Kisi ko kuch nahi dena</p>
+            <p className="text-lg font-display font-semibold text-success">All Settled Up!</p>
+            <p className="text-sm text-muted-foreground">No outstanding balances</p>
           </motion.div>
         ) : (
           <div className="space-y-2.5">
