@@ -4,8 +4,8 @@ import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 
 const navItems = [
-  { href: '/calendar', label: 'Calendar', icon: Calendar },
-  { href: '/dashboard', label: 'Expenses', icon: Wallet },
+  { href: '/dashboard', label: 'Calendar', icon: Calendar },
+  { href: '/expenses', label: 'Expenses', icon: Wallet },
   { href: '/list', label: 'List', icon: ClipboardList },
   { href: '/groups', label: 'Groups', icon: Users },
 ];

@@ -30,7 +30,7 @@ const App = () => (
               path="/dashboard"
               element={
                 <ProtectedRoute>
-                  <ExpensesPage />
+                  <CalendarPage />
                 </ProtectedRoute>
               }
             />
@@ -39,6 +39,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <CalendarPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/expenses"
+              element={
+                <ProtectedRoute>
+                  <ExpensesPage />
                 </ProtectedRoute>
               }
             />
