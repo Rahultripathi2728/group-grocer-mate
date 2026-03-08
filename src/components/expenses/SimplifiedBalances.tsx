@@ -84,10 +84,10 @@ export default function SimplifiedBalances({ balances, memberSpending, onSettle,
             )}
           >
             {myNetBalance > 0.01
-              ? 'tujhe milne hain'
+              ? 'you are owed'
               : myNetBalance < -0.01
-                ? 'tujhe dene hain'
-                : 'sab barabar hai!'}
+                ? 'you owe'
+                : 'all settled up!'}
           </span>
         </div>
 
