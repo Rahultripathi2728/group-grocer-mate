@@ -362,7 +362,7 @@ export default function ExpensesPage() {
                 transition={{ delay: 0.2 }}
               >
                 <StatCard
-                  title="Group"
+                  title="My Share (Group)"
                   value={`₹${summary.totalGroup.toLocaleString('en-IN')}`}
                   icon={Users}
                   iconColor="text-accent-foreground"
