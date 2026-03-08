@@ -11,10 +11,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
-  Layers,
   LogOut,
   User,
-  ChevronDown,
 } from 'lucide-react';
 import BottomNav from './BottomNav';
 import NotificationBell from '@/components/notifications/NotificationBell';
