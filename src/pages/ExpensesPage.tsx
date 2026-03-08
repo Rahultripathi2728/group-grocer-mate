@@ -104,14 +104,26 @@ export default function ExpensesPage() {
         .filter((e) => e.expense_type === 'personal')
         .reduce((sum, e) => sum + Number(e.amount), 0);
 
-      const group = expenses
+      // Get user's share from expense_splits for group expenses in this date range
+      const groupExpenseIds = expenses
         .filter((e) => e.expense_type === 'group')
-        .reduce((sum, e) => sum + Number(e.amount), 0);
+        .map((e) => e.id);
+
+      let myGroupShare = 0;
+      if (groupExpenseIds.length > 0) {
+        const { data: splits } = await supabase
+          .from('expense_splits')
+          .select('amount_owed')
+          .eq('user_id', user.id)
+          .in('expense_id', groupExpenseIds);
+
+        myGroupShare = (splits || []).reduce((sum, s) => sum + Number(s.amount_owed), 0);
+      }
 
       const mapped = expenses.map((e) => ({ ...e, amount: Number(e.amount) }));
       setSummary({
         totalPersonal: personal,
-        totalGroup: group,
+        totalGroup: myGroupShare,
         recentExpenses: mapped.slice(0, 5),
         allExpenses: mapped,
       });
