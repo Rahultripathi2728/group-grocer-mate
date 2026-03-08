@@ -110,7 +110,7 @@ export default function ExpenseCard({
           <p className="font-bold text-sm">₹{amount.toLocaleString('en-IN')}</p>
           {onDelete && !is_settled && (
             <button
-              onClick={handleDelete}
+              onClick={handleDeleteClick}
               disabled={deleting}
               className="opacity-0 group-hover/card:opacity-100 p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
             >
