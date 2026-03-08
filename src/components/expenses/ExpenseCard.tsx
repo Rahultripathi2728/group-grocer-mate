@@ -1,10 +1,20 @@
 import { useState } from 'react';
-import { Wallet, Users, CheckCircle2, Trash2 } from 'lucide-react';
+import { Wallet, Users, CheckCircle2, Trash2, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getCategoryById } from '@/lib/categories';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface ExpenseCardProps {
   id: string;
