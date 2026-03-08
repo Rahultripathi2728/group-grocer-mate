@@ -25,6 +25,8 @@ interface MemberSpending {
 interface Props {
   balances: Balance[];
   memberSpending: MemberSpending[];
+  onSettle: () => void;
+  settling: boolean;
 }
 
 export default function SimplifiedBalances({ balances, memberSpending }: Props) {
