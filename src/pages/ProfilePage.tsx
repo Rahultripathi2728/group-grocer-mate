@@ -197,27 +197,89 @@ export default function ProfilePage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="newPassword" className="text-xs">New Password</Label>
-              <div className="relative">
-                <Input id="newPassword" type={showNew ? 'text' : 'password'} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="New password" />
-                <button type="button" onClick={() => setShowNew(!showNew)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                  {showNew ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
+            {otpStep === 'idle' && (
+              <>
+                <p className="text-xs text-muted-foreground">
+                  For security, we'll send a verification code to your email before changing your password.
+                </p>
+                <Button onClick={handleSendOtp} size="sm" variant="outline" className="w-full">
+                  <ShieldCheck className="h-4 w-4 mr-2" />
+                  Send Verification Code
+                </Button>
+              </>
+            )}
+
+            {otpStep === 'sending' && (
+              <div className="flex items-center justify-center py-6 gap-2 text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="text-sm">Sending OTP to {email}...</span>
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword" className="text-xs">Confirm Password</Label>
-              <div className="relative">
-                <Input id="confirmPassword" type={showConfirm ? 'text' : 'password'} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm password" />
-                <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                  {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            )}
+
+            {otpStep === 'verify' && (
+              <>
+                <div className="space-y-3">
+                  <div className="p-3 rounded-lg bg-muted/50 border border-border">
+                    <p className="text-xs text-muted-foreground text-center">
+                      Enter the 6-digit code sent to <strong className="text-foreground">{email}</strong>
+                    </p>
+                  </div>
+                  <div className="flex justify-center">
+                    <InputOTP maxLength={6} value={otpCode} onChange={setOtpCode}>
+                      <InputOTPGroup>
+                        <InputOTPSlot index={0} />
+                        <InputOTPSlot index={1} />
+                        <InputOTPSlot index={2} />
+                        <InputOTPSlot index={3} />
+                        <InputOTPSlot index={4} />
+                        <InputOTPSlot index={5} />
+                      </InputOTPGroup>
+                    </InputOTP>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="newPassword" className="text-xs">New Password</Label>
+                  <div className="relative">
+                    <Input id="newPassword" type={showNew ? 'text' : 'password'} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="New password" />
+                    <button type="button" onClick={() => setShowNew(!showNew)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                      {showNew ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword" className="text-xs">Confirm Password</Label>
+                  <div className="relative">
+                    <Input id="confirmPassword" type={showConfirm ? 'text' : 'password'} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm password" />
+                    <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                      {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button onClick={resetPasswordFlow} size="sm" variant="ghost" className="flex-1">
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleVerifyOtpAndChangePassword}
+                    disabled={changingPassword || otpCode.length !== 6 || !newPassword || !confirmPassword}
+                    size="sm"
+                    className="flex-1"
+                  >
+                    {changingPassword ? (
+                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Verifying...</>
+                    ) : (
+                      <><ShieldCheck className="h-4 w-4 mr-2" />Verify & Change</>
+                    )}
+                  </Button>
+                </div>
+
+                <button onClick={handleSendOtp} className="text-xs text-muted-foreground hover:text-foreground text-center w-full underline">
+                  Resend code
                 </button>
-              </div>
-            </div>
-            <Button onClick={handleChangePassword} disabled={changingPassword || !newPassword || !confirmPassword} size="sm" variant="outline" className="w-full">
-              <Lock className="h-4 w-4 mr-2" />{changingPassword ? 'Changing...' : 'Change Password'}
-            </Button>
+              </>
+            )}
           </CardContent>
         </Card>
 
