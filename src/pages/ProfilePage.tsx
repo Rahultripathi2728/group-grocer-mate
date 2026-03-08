@@ -221,7 +221,7 @@ export default function ProfilePage() {
                   type={showNew ? 'text' : 'password'}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Naya password"
+                  placeholder="New password"
                 />
                 <button
                   type="button"
