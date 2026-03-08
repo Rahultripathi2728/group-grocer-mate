@@ -279,7 +279,7 @@ export default function GroupsPage() {
           <div className="flex gap-2">
             <Dialog open={joinDialogOpen} onOpenChange={setJoinDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" className="border-primary/30 hover:bg-primary/5">
+                <Button variant="outline" className="border-border hover:bg-muted">
                   <UserPlus className="h-4 w-4 mr-2" />
                   Join Group
                 </Button>
