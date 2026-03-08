@@ -113,7 +113,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
       {/* Main Content */}
       <main className="pt-14 lg:pt-16 pb-20 lg:pb-8 min-h-screen">
+        <PushNotificationPrompt />
         <div className="p-4 lg:p-8 max-w-7xl mx-auto">{children}</div>
+      </main>
       </main>
 
       {/* Bottom Navigation (Mobile) */}
