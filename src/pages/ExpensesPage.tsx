@@ -89,8 +89,8 @@ export default function ExpensesPage() {
   const fetchSummary = async () => {
     if (!user) return;
 
-    const startDate = format(startOfMonth(new Date()), 'yyyy-MM-dd');
-    const endDate = format(endOfMonth(new Date()), 'yyyy-MM-dd');
+    const startDate = format(dateFrom, 'yyyy-MM-dd');
+    const endDate = format(dateTo, 'yyyy-MM-dd');
 
     const { data: expenses } = await supabase
       .from('expenses')
