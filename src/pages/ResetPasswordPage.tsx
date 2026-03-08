@@ -65,9 +65,7 @@ export default function ResetPasswordPage() {
         <Card className="w-full max-w-md border border-border shadow-sm">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
-              <div className="p-3 rounded-xl bg-foreground">
-                <Layers className="h-8 w-8 text-background" />
-              </div>
+              <img src="/app-logo.png" alt="Expense Manager" className="h-12 w-12 rounded-xl" />
             </div>
             <CardTitle className="text-xl">Invalid Reset Link</CardTitle>
             <CardDescription>
