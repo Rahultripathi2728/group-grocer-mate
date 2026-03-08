@@ -254,7 +254,7 @@ export default function ExpensesPage() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'personal' | 'settlement')}>
-          <TabsList className="grid w-full grid-cols-2 bg-muted/50 p-1 rounded-xl">
+          <TabsList className="grid w-full grid-cols-2 bg-muted p-1 rounded-xl border border-border">
             <TabsTrigger 
               value="personal" 
               className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm flex items-center gap-2"
