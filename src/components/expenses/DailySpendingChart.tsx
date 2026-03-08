@@ -10,18 +10,22 @@ interface Expense {
   amount: number;
   expense_date: string;
   expense_type: string;
+  myShare?: number;
 }
 
 interface DailySpendingChartProps {
   expenses: Expense[];
+  dateFrom?: Date;
+  dateTo?: Date;
 }
 
-export default function DailySpendingChart({ expenses }: DailySpendingChartProps) {
+export default function DailySpendingChart({ expenses, dateFrom, dateTo }: DailySpendingChartProps) {
   const chartData = useMemo(() => {
-    const now = new Date();
+    const start = dateFrom || startOfMonth(new Date());
+    const end = dateTo || new Date();
     const days = eachDayOfInterval({
-      start: startOfMonth(now),
-      end: now > endOfMonth(now) ? endOfMonth(now) : now,
+      start,
+      end: end > endOfMonth(start) ? endOfMonth(start) : end,
     });
 
     return days.map((day) => {
@@ -33,7 +37,7 @@ export default function DailySpendingChart({ expenses }: DailySpendingChartProps
         .reduce((s, e) => s + e.amount, 0);
       const group = dayExpenses
         .filter((e) => e.expense_type === 'group')
-        .reduce((s, e) => s + e.amount, 0);
+        .reduce((s, e) => s + (e.myShare ?? e.amount), 0);
 
       return {
         date: format(day, 'dd'),

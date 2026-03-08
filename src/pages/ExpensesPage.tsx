@@ -396,7 +396,7 @@ export default function ExpensesPage() {
             </div>
 
             {/* Daily Spending Chart */}
-            <DailySpendingChart expenses={summary.allExpenses} />
+            <DailySpendingChart expenses={summary.allExpenses} dateFrom={dateFrom} dateTo={dateTo} />
 
             {/* Recent Expenses */}
             <Card className="border border-border shadow-sm">

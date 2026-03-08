@@ -53,10 +53,27 @@ export default function AddExpenseDialog({
   }, [open, user]);
 
   const fetchGroups = async () => {
-    const { data } = await supabase.from('groups').select('id, name');
-    if (data) {
-      setGroups(data);
-    }
+    if (!user) return;
+
+    const { data: ownedGroups } = await supabase
+      .from('groups')
+      .select('id, name')
+      .eq('owner_id', user.id);
+
+    const { data: memberships } = await supabase
+      .from('group_memberships')
+      .select('group_id, groups(id, name)')
+      .eq('user_id', user.id);
+
+    const memberGroups = (memberships || [])
+      .map((m) => m.groups)
+      .filter(Boolean) as { id: string; name: string }[];
+
+    const allGroups = [...(ownedGroups || []), ...memberGroups];
+    const uniqueGroups = allGroups.filter(
+      (group, index, self) => index === self.findIndex((g) => g.id === group.id)
+    );
+    setGroups(uniqueGroups);
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
