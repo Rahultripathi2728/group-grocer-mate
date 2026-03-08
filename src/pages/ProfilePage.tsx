@@ -12,9 +12,10 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import {
   User, Mail, Lock, Save, LogOut, Download, Bell, CheckCircle2,
-  Smartphone, ArrowRight, Eye, EyeOff, ChevronLeft
+  Smartphone, ArrowRight, Eye, EyeOff, ChevronLeft, ShieldCheck, Loader2
 } from 'lucide-react';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 
 export default function ProfilePage() {
   const { user, signOut } = useAuth();
@@ -32,6 +33,10 @@ export default function ProfilePage() {
   const [changingPassword, setChangingPassword] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+
+  // OTP verification state
+  const [otpStep, setOtpStep] = useState<'idle' | 'sending' | 'verify' | 'verified'>('idle');
+  const [otpCode, setOtpCode] = useState('');
 
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isInstalled, setIsInstalled] = useState(false);
@@ -71,18 +76,51 @@ export default function ProfilePage() {
     } finally { setSaving(false); }
   };
 
-  const handleChangePassword = async () => {
+  const handleSendOtp = async () => {
+    if (!user?.email) return;
+    setOtpStep('sending');
+    try {
+      const { error } = await supabase.auth.signInWithOtp({ email: user.email });
+      if (error) throw error;
+      setOtpStep('verify');
+      toast({ title: 'OTP sent to your email 📧', description: 'Check your inbox for the 6-digit code' });
+    } catch (err: any) {
+      toast({ title: 'Failed to send OTP', description: err.message, variant: 'destructive' });
+      setOtpStep('idle');
+    }
+  };
+
+  const handleVerifyOtpAndChangePassword = async () => {
+    if (!user?.email || otpCode.length !== 6) return;
     if (newPassword !== confirmPassword) { toast({ title: 'Passwords do not match', variant: 'destructive' }); return; }
     if (newPassword.length < 6) { toast({ title: 'Password must be at least 6 characters', variant: 'destructive' }); return; }
+
     setChangingPassword(true);
     try {
+      // Verify OTP
+      const { error: otpError } = await supabase.auth.verifyOtp({
+        email: user.email,
+        token: otpCode,
+        type: 'email',
+      });
+      if (otpError) throw new Error('Invalid OTP code. Please try again.');
+
+      // OTP verified, now change password
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
+
       toast({ title: 'Password changed successfully! 🔒' });
-      setNewPassword(''); setConfirmPassword('');
+      setNewPassword(''); setConfirmPassword(''); setOtpCode(''); setOtpStep('idle');
     } catch (err: any) {
-      toast({ title: 'Error changing password', description: err.message, variant: 'destructive' });
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
     } finally { setChangingPassword(false); }
+  };
+
+  const resetPasswordFlow = () => {
+    setOtpStep('idle');
+    setOtpCode('');
+    setNewPassword('');
+    setConfirmPassword('');
   };
 
   const handleInstall = async () => {
@@ -159,27 +197,89 @@ export default function ProfilePage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="newPassword" className="text-xs">New Password</Label>
-              <div className="relative">
-                <Input id="newPassword" type={showNew ? 'text' : 'password'} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="New password" />
-                <button type="button" onClick={() => setShowNew(!showNew)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                  {showNew ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
+            {otpStep === 'idle' && (
+              <>
+                <p className="text-xs text-muted-foreground">
+                  For security, we'll send a verification code to your email before changing your password.
+                </p>
+                <Button onClick={handleSendOtp} size="sm" variant="outline" className="w-full">
+                  <ShieldCheck className="h-4 w-4 mr-2" />
+                  Send Verification Code
+                </Button>
+              </>
+            )}
+
+            {otpStep === 'sending' && (
+              <div className="flex items-center justify-center py-6 gap-2 text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="text-sm">Sending OTP to {email}...</span>
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword" className="text-xs">Confirm Password</Label>
-              <div className="relative">
-                <Input id="confirmPassword" type={showConfirm ? 'text' : 'password'} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm password" />
-                <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                  {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            )}
+
+            {otpStep === 'verify' && (
+              <>
+                <div className="space-y-3">
+                  <div className="p-3 rounded-lg bg-muted/50 border border-border">
+                    <p className="text-xs text-muted-foreground text-center">
+                      Enter the 6-digit code sent to <strong className="text-foreground">{email}</strong>
+                    </p>
+                  </div>
+                  <div className="flex justify-center">
+                    <InputOTP maxLength={6} value={otpCode} onChange={setOtpCode}>
+                      <InputOTPGroup>
+                        <InputOTPSlot index={0} />
+                        <InputOTPSlot index={1} />
+                        <InputOTPSlot index={2} />
+                        <InputOTPSlot index={3} />
+                        <InputOTPSlot index={4} />
+                        <InputOTPSlot index={5} />
+                      </InputOTPGroup>
+                    </InputOTP>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="newPassword" className="text-xs">New Password</Label>
+                  <div className="relative">
+                    <Input id="newPassword" type={showNew ? 'text' : 'password'} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="New password" />
+                    <button type="button" onClick={() => setShowNew(!showNew)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                      {showNew ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword" className="text-xs">Confirm Password</Label>
+                  <div className="relative">
+                    <Input id="confirmPassword" type={showConfirm ? 'text' : 'password'} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm password" />
+                    <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                      {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button onClick={resetPasswordFlow} size="sm" variant="ghost" className="flex-1">
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleVerifyOtpAndChangePassword}
+                    disabled={changingPassword || otpCode.length !== 6 || !newPassword || !confirmPassword}
+                    size="sm"
+                    className="flex-1"
+                  >
+                    {changingPassword ? (
+                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Verifying...</>
+                    ) : (
+                      <><ShieldCheck className="h-4 w-4 mr-2" />Verify & Change</>
+                    )}
+                  </Button>
+                </div>
+
+                <button onClick={handleSendOtp} className="text-xs text-muted-foreground hover:text-foreground text-center w-full underline">
+                  Resend code
                 </button>
-              </div>
-            </div>
-            <Button onClick={handleChangePassword} disabled={changingPassword || !newPassword || !confirmPassword} size="sm" variant="outline" className="w-full">
-              <Lock className="h-4 w-4 mr-2" />{changingPassword ? 'Changing...' : 'Change Password'}
-            </Button>
+              </>
+            )}
           </CardContent>
         </Card>
 
