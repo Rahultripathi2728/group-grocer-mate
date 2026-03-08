@@ -18,6 +18,7 @@ interface Expense {
   expense_date: string;
   expense_type: string;
   category?: string | null;
+  myShare?: number;
 }
 
 export default function AllExpensesPage() {
@@ -44,10 +45,30 @@ export default function AllExpensesPage() {
       .order('expense_date', { ascending: false });
 
     if (data) {
+      const groupExpenseIds = data
+        .filter((e) => e.expense_type === 'group')
+        .map((e) => e.id);
+
+      let splitsMap = new Map<string, number>();
+      if (groupExpenseIds.length > 0) {
+        const { data: splits } = await supabase
+          .from('expense_splits')
+          .select('expense_id, amount_owed')
+          .eq('user_id', user.id)
+          .in('expense_id', groupExpenseIds);
+
+        (splits || []).forEach((s) => {
+          splitsMap.set(s.expense_id, Number(s.amount_owed));
+        });
+      }
+
       setExpenses(
         data.map((e) => ({
           ...e,
           amount: Number(e.amount),
+          myShare: e.expense_type === 'group'
+            ? (splitsMap.get(e.id) || 0)
+            : Number(e.amount),
         }))
       );
     }
