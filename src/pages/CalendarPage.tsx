@@ -388,23 +388,13 @@ export default function CalendarPage() {
                               </div>
                             </div>
 
-                            {/* Amount + Delete */}
-                            <div className="flex items-center gap-2 shrink-0">
-                              <div className="text-right">
-                                <p className="font-bold text-sm">₹{expense.amount.toLocaleString('en-IN')}</p>
-                                {expense.expense_type === 'group' && expense.myShare !== undefined && (
-                                  <p className="text-[10px] text-muted-foreground mt-0.5">
-                                    Share: ₹{expense.myShare.toLocaleString('en-IN')}
-                                  </p>
-                                )}
-                              </div>
-                              {!expense.is_settled && (
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); handleDeleteExpense(expense.id); }}
-                                  className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </button>
+                            {/* Amount */}
+                            <div className="text-right shrink-0">
+                              <p className="font-bold text-sm">₹{expense.amount.toLocaleString('en-IN')}</p>
+                              {expense.expense_type === 'group' && expense.myShare !== undefined && (
+                                <p className="text-[10px] text-muted-foreground mt-0.5">
+                                  Share: ₹{expense.myShare.toLocaleString('en-IN')}
+                                </p>
                               )}
                             </div>
                           </div>
