@@ -43,7 +43,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <img src="/app-logo.png" alt="Expense Manager" className="h-8 w-8 rounded-lg grayscale" />
             <span className="font-display font-bold text-sm leading-tight">Expense Manager</span>
           </Link>
-          </Link>
 
           <div className="flex items-center gap-1">
             <NotificationBell />
