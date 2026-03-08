@@ -385,8 +385,8 @@ export default function GroupsPage() {
                   >
                     <Card
                       className={cn(
-                        'border-0 shadow-lg bg-card/80 backdrop-blur-sm cursor-pointer transition-all duration-300 hover:shadow-xl',
-                        selectedGroup?.id === group.id && 'ring-2 ring-primary shadow-glow-sm'
+                        'border border-border shadow-sm cursor-pointer transition-all duration-300 hover:shadow-md',
+                        selectedGroup?.id === group.id && 'ring-2 ring-primary'
                       )}
                       onClick={() => setSelectedGroup(group)}
                     >
