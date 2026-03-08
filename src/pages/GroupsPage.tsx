@@ -603,7 +603,7 @@ export default function GroupsPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmJoinGroup} className="gradient-primary text-primary-foreground">
+            <AlertDialogAction onClick={confirmJoinGroup} className="bg-primary text-primary-foreground">
               Join Group
             </AlertDialogAction>
           </AlertDialogFooter>

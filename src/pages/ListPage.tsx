@@ -446,7 +446,7 @@ export default function ListPage() {
               <Button
                 onClick={addItem}
                 disabled={!newItemName.trim()}
-                className="flex-1 gradient-primary text-primary-foreground"
+                className="flex-1 bg-primary text-primary-foreground"
               >
                 <Check className="h-4 w-4 mr-2" />
                 Add
