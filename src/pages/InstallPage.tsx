@@ -71,10 +71,10 @@ export default function InstallPage() {
 
         <div className="text-center space-y-2">
           <img src="/pwa-icon-192.png" alt="My Moolah" className="w-20 h-20 mx-auto rounded-2xl shadow-lg" />
-          <h1 className="text-2xl font-bold text-foreground">My Moolah Install Karein</h1>
-          <p className="text-muted-foreground text-sm">
-            Apne phone ke home screen par add karein — real app jaisi feel!
-          </p>
+           <h1 className="text-2xl font-bold text-foreground">Install Expense Manager</h1>
+           <p className="text-muted-foreground text-sm">
+             Add to your home screen for a native app-like experience!
+           </p>
         </div>
 
         {/* Install Card */}
