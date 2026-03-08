@@ -221,6 +221,25 @@ export default function SimplifiedBalances({ balances, memberSpending, onSettle,
             })}
           </div>
         )}
+
+        {/* Settle button - only for users who owe money */}
+        {iOwe.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-5 flex justify-center"
+          >
+            <Button
+              size="lg"
+              className="gradient-primary text-primary-foreground shadow-glow px-8 py-5 text-base hover:scale-105 transition-transform w-full"
+              onClick={onSettle}
+              disabled={settling}
+            >
+              <CheckCircle2 className="h-5 w-5 mr-2" />
+              {settling ? 'Settling...' : 'Mark All as Settled'}
+            </Button>
+          </motion.div>
+        )}
       </CardContent>
     </Card>
   );
