@@ -12,6 +12,7 @@ import CalendarPage from "./pages/CalendarPage";
 import GroupsPage from "./pages/GroupsPage";
 import ListPage from "./pages/ListPage";
 import InstallPage from "./pages/InstallPage";
+import ProfilePage from "./pages/ProfilePage";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
