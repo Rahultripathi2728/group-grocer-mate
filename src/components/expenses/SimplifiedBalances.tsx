@@ -97,7 +97,7 @@ export default function SimplifiedBalances({ balances, memberSpending, onSettle,
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-destructive/10 border border-destructive/20">
               <ArrowUpRight className="h-3.5 w-3.5 text-destructive" />
               <span className="text-xs font-semibold text-destructive">
-                ₹{totalIOwe.toFixed(0)} dena hai
+                ₹{totalIOwe.toFixed(0)} to pay
               </span>
             </div>
           )}
