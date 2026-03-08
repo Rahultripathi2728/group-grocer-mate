@@ -236,7 +236,7 @@ export default function ExpensesPage() {
             transition={{ delay: 0.1 }}
             className="text-muted-foreground mt-1"
           >
-            {format(new Date(), 'MMMM yyyy')} Overview
+            {format(dateFrom, 'dd MMM')} – {format(dateTo, 'dd MMM yyyy')} Overview
           </motion.p>
         </div>
 
