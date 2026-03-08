@@ -92,21 +92,25 @@ export function exportToPDF(expenses: ExpenseData[], filename: string = 'expense
             <th>Category</th>
             <th>Type</th>
             <th class="amount">Amount</th>
+            <th class="amount">Your Share</th>
           </tr>
         </thead>
         <tbody>
-          ${expenses.map(expense => `
+          ${expenses.map(expense => {
+            const share = expense.myShare ?? expense.amount;
+            return `
             <tr>
               <td>${escapeHtml(format(new Date(expense.expense_date), 'dd MMM yyyy'))}</td>
               <td>${escapeHtml(expense.description)}</td>
               <td><span class="category">${escapeHtml(expense.category || 'General')}</span></td>
               <td>${escapeHtml(expense.expense_type)}</td>
               <td class="amount">₹${expense.amount.toLocaleString('en-IN')}</td>
+              <td class="amount">₹${share.toLocaleString('en-IN')}</td>
             </tr>
-          `).join('')}
+          `}).join('')}
           <tr class="total-row">
-            <td colspan="4"><strong>Total</strong></td>
-            <td class="amount"><strong>₹${total.toLocaleString('en-IN')}</strong></td>
+            <td colspan="5"><strong>Total (Your Share)</strong></td>
+            <td class="amount"><strong>₹${totalShare.toLocaleString('en-IN')}</strong></td>
           </tr>
         </tbody>
       </table>
