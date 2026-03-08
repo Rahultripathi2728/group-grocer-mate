@@ -31,7 +31,7 @@ self.addEventListener('push', (event) => {
   };
 
   event.waitUntil(
-    self.registration.showNotification(data.title || 'My Moolah', options)
+    self.registration.showNotification(data.title || 'Expense Manager', options)
   );
 });
 
