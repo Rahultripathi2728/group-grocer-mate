@@ -281,7 +281,7 @@ export default function ListPage() {
             ))}
           </div>
         ) : flatItems.length === 0 ? (
-          <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
+          <Card className="border border-border shadow-sm">
             <CardContent className="pt-16 pb-16 text-center">
               <motion.div
                 initial={{ scale: 0.8, opacity: 0 }}
