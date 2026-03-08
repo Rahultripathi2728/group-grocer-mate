@@ -461,7 +461,7 @@ export default function GroupsPage() {
           </div>
 
           {/* Group Details */}
-          <Card className="lg:col-span-2 border-0 shadow-lg bg-card/80 backdrop-blur-sm min-h-[400px]">
+          <Card className="lg:col-span-2 border border-border shadow-sm min-h-[400px]">
             <AnimatePresence mode="wait">
               {selectedGroup ? (
                 <motion.div
