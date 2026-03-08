@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Layers, TrendingUp, Users, ShoppingCart, ChevronLeft, Loader2, Mail, CheckCircle2 } from 'lucide-react';
+import { TrendingUp, Users, ShoppingCart, ChevronLeft, Loader2, Mail, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 type AuthView = 'main' | 'forgot-email' | 'forgot-sent' | 'signup-sent';
