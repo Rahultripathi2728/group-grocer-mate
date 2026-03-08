@@ -376,7 +376,7 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
       </Card>
 
       {/* Member-wise Spending Breakdown */}
-      <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
+      <Card className="border border-border shadow-sm">
         <CardHeader>
           <CardTitle className="font-display flex items-center gap-2">
             <Wallet className="h-5 w-5 text-primary" />
