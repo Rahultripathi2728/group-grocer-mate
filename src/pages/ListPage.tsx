@@ -267,7 +267,7 @@ export default function ListPage() {
           <Button
             onClick={() => setAddDialogOpen(true)}
             size="icon"
-            className="gradient-primary text-primary-foreground rounded-full h-12 w-12 shadow-glow"
+            className="bg-foreground text-background rounded-xl h-12 w-12 shadow-sm hover:bg-foreground/90"
           >
             <Plus className="h-5 w-5" />
           </Button>
@@ -281,7 +281,7 @@ export default function ListPage() {
             ))}
           </div>
         ) : flatItems.length === 0 ? (
-          <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
+          <Card className="border border-border shadow-sm">
             <CardContent className="pt-16 pb-16 text-center">
               <motion.div
                 initial={{ scale: 0.8, opacity: 0 }}
@@ -292,7 +292,7 @@ export default function ListPage() {
               </motion.div>
               <h3 className="text-xl font-display font-semibold mb-2">No items yet</h3>
               <p className="text-muted-foreground mb-6">Tap + to add your first item</p>
-              <Button onClick={() => setAddDialogOpen(true)} className="gradient-primary text-primary-foreground">
+              <Button onClick={() => setAddDialogOpen(true)} className="bg-primary text-primary-foreground">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Item
               </Button>
@@ -324,7 +324,7 @@ export default function ListPage() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 20 }}
-                  className="group flex items-center gap-3 p-3 rounded-xl bg-card border border-border/50 hover:border-border transition-all"
+                  className="group flex items-center gap-3 p-3 rounded-xl bg-card border border-border hover:border-primary/30 transition-all"
                 >
                   <Checkbox
                     checked={false}
@@ -409,7 +409,7 @@ export default function ListPage() {
               value={newItemName}
               onChange={(e) => setNewItemName(e.target.value)}
               placeholder="Item name"
-              className="bg-muted/50 border-0"
+              className="bg-muted border-0"
               autoFocus
               onKeyDown={(e) => { if (e.key === 'Enter' && newItemName.trim()) addItem(); }}
             />
@@ -417,7 +417,7 @@ export default function ListPage() {
             <div>
               <label className="text-sm font-medium text-muted-foreground mb-2 block">Add to</label>
               <Select value={addItemTarget} onValueChange={setAddItemTarget}>
-                <SelectTrigger className="bg-muted/50 border-0">
+                <SelectTrigger className="bg-muted border-0">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -446,7 +446,7 @@ export default function ListPage() {
               <Button
                 onClick={addItem}
                 disabled={!newItemName.trim()}
-                className="flex-1 gradient-primary text-primary-foreground"
+                className="flex-1 bg-primary text-primary-foreground"
               >
                 <Check className="h-4 w-4 mr-2" />
                 Add

@@ -279,7 +279,7 @@ export default function GroupsPage() {
           <div className="flex gap-2">
             <Dialog open={joinDialogOpen} onOpenChange={setJoinDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" className="border-primary/30 hover:bg-primary/5">
+                <Button variant="outline" className="border-border hover:bg-muted">
                   <UserPlus className="h-4 w-4 mr-2" />
                   Join Group
                 </Button>
@@ -301,7 +301,7 @@ export default function GroupsPage() {
                   </div>
                   <Button
                     type="submit"
-                    className="w-full gradient-primary text-primary-foreground"
+                    className="w-full bg-primary text-primary-foreground"
                   >
                     Join Group
                   </Button>
@@ -311,7 +311,7 @@ export default function GroupsPage() {
 
             <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="gradient-primary text-primary-foreground shadow-glow-sm hover:shadow-glow">
+                <Button className="bg-foreground text-background hover:bg-foreground/90">
                   <Plus className="h-4 w-4 mr-2" />
                   Create Group
                 </Button>
@@ -335,7 +335,7 @@ export default function GroupsPage() {
                   </div>
                   <Button
                     type="submit"
-                    className="w-full gradient-primary text-primary-foreground"
+                    className="w-full bg-primary text-primary-foreground"
                   >
                     Create Group
                   </Button>
@@ -355,7 +355,7 @@ export default function GroupsPage() {
                 ))}
               </div>
             ) : groups.length === 0 ? (
-              <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
+              <Card className="border border-border shadow-sm">
                 <CardContent className="pt-12 pb-12 text-center">
                   <motion.div
                     initial={{ scale: 0.8, opacity: 0 }}
@@ -385,15 +385,15 @@ export default function GroupsPage() {
                   >
                     <Card
                       className={cn(
-                        'border-0 shadow-lg bg-card/80 backdrop-blur-sm cursor-pointer transition-all duration-300 hover:shadow-xl',
-                        selectedGroup?.id === group.id && 'ring-2 ring-primary shadow-glow-sm'
+                        'border border-border shadow-sm cursor-pointer transition-all duration-300 hover:shadow-md',
+                        selectedGroup?.id === group.id && 'ring-2 ring-primary'
                       )}
                       onClick={() => setSelectedGroup(group)}
                     >
                       <CardContent className="pt-4 pb-4">
                         <div className="flex items-start justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5">
+                            <div className="p-2.5 rounded-xl bg-primary/10">
                               <Users className="h-5 w-5 text-primary" />
                             </div>
                             <div>
@@ -461,7 +461,7 @@ export default function GroupsPage() {
           </div>
 
           {/* Group Details */}
-          <Card className="lg:col-span-2 border-0 shadow-lg bg-card/80 backdrop-blur-sm min-h-[400px]">
+          <Card className="lg:col-span-2 border border-border shadow-sm min-h-[400px]">
             <AnimatePresence mode="wait">
               {selectedGroup ? (
                 <motion.div
@@ -470,7 +470,7 @@ export default function GroupsPage() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
                 >
-                  <CardHeader className="border-b border-border/50">
+                  <CardHeader className="border-b border-border">
                     <div className="flex items-center justify-between">
                       <div>
                         <CardTitle className="font-display flex items-center gap-2">
@@ -518,7 +518,7 @@ export default function GroupsPage() {
                           className="flex items-center justify-between p-4 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors"
                         >
                           <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center">
+                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
                               <span className="text-sm font-bold text-primary">
                                 {member.profile?.full_name?.[0]?.toUpperCase() || 'U'}
                               </span>
@@ -585,7 +585,7 @@ export default function GroupsPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmCreateGroup} className="gradient-primary text-primary-foreground">
+            <AlertDialogAction onClick={confirmCreateGroup} className="bg-primary text-primary-foreground">
               Create Group
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -603,7 +603,7 @@ export default function GroupsPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmJoinGroup} className="gradient-primary text-primary-foreground">
+            <AlertDialogAction onClick={confirmJoinGroup} className="bg-primary text-primary-foreground">
               Join Group
             </AlertDialogAction>
           </AlertDialogFooter>
