@@ -11,6 +11,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
@@ -23,6 +29,7 @@ import {
   ArrowRight,
   CheckCircle2,
   Sparkles,
+  CalendarIcon,
 } from 'lucide-react';
 import AddExpenseDialog from '@/components/expenses/AddExpenseDialog';
 import BudgetCard from '@/components/expenses/BudgetCard';
@@ -68,6 +75,12 @@ export default function ExpensesPage() {
   const [loading, setLoading] = useState(true);
   const [addExpenseOpen, setAddExpenseOpen] = useState(false);
 
+  // Date filter state - default: 1st of current month to today
+  const [dateFrom, setDateFrom] = useState<Date>(startOfMonth(new Date()));
+  const [dateTo, setDateTo] = useState<Date>(new Date());
+  const [fromOpen, setFromOpen] = useState(false);
+  const [toOpen, setToOpen] = useState(false);
+
   // Settlement state
   const [groups, setGroups] = useState<Group[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string>('');
@@ -76,8 +89,8 @@ export default function ExpensesPage() {
   const fetchSummary = async () => {
     if (!user) return;
 
-    const startDate = format(startOfMonth(new Date()), 'yyyy-MM-dd');
-    const endDate = format(endOfMonth(new Date()), 'yyyy-MM-dd');
+    const startDate = format(dateFrom, 'yyyy-MM-dd');
+    const endDate = format(dateTo, 'yyyy-MM-dd');
 
     const { data: expenses } = await supabase
       .from('expenses')
@@ -203,7 +216,7 @@ export default function ExpensesPage() {
   useEffect(() => {
     fetchSummary();
     fetchGroups();
-  }, [user]);
+  }, [user, dateFrom, dateTo]);
 
   return (
     <DashboardLayout>
@@ -223,7 +236,7 @@ export default function ExpensesPage() {
             transition={{ delay: 0.1 }}
             className="text-muted-foreground mt-1"
           >
-            {format(new Date(), 'MMMM yyyy')} Overview
+            {format(dateFrom, 'dd MMM')} – {format(dateTo, 'dd MMM yyyy')} Overview
           </motion.p>
         </div>
 
@@ -248,6 +261,63 @@ export default function ExpensesPage() {
 
           {/* Personal Expenses Tab */}
           <TabsContent value="personal" className="mt-6 space-y-6">
+            {/* Date Range Filter */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center gap-2 flex-wrap"
+            >
+              <Popover open={fromOpen} onOpenChange={setFromOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "flex-1 min-w-[130px] justify-start text-left font-normal bg-muted/50 border-0",
+                      !dateFrom && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
+                    {format(dateFrom, 'dd MMM yyyy')}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={dateFrom}
+                    onSelect={(d) => { if (d) { setDateFrom(d); setFromOpen(false); } }}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+
+              <span className="text-muted-foreground text-sm font-medium">to</span>
+
+              <Popover open={toOpen} onOpenChange={setToOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "flex-1 min-w-[130px] justify-start text-left font-normal bg-muted/50 border-0",
+                      !dateTo && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
+                    {format(dateTo, 'dd MMM yyyy')}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <Calendar
+                    mode="single"
+                    selected={dateTo}
+                    onSelect={(d) => { if (d) { setDateTo(d); setToOpen(false); } }}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            </motion.div>
+
             {/* Budget Card */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
