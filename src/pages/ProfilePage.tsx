@@ -12,9 +12,10 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import {
   User, Mail, Lock, Save, LogOut, Download, Bell, CheckCircle2,
-  Smartphone, ArrowRight, Eye, EyeOff, ChevronLeft
+  Smartphone, ArrowRight, Eye, EyeOff, ChevronLeft, ShieldCheck, Loader2
 } from 'lucide-react';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 
 export default function ProfilePage() {
   const { user, signOut } = useAuth();
