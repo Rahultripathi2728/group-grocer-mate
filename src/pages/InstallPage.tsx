@@ -110,7 +110,7 @@ export default function InstallPage() {
                   </li>
                   <li className="flex items-start gap-2">
                     <Download className="h-3.5 w-3.5 mt-0.5 shrink-0 text-primary" />
-                    <span><strong>"Add to Home Screen"</strong> select karein</span>
+                    <span>Select <strong>"Add to Home Screen"</strong></span>
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 shrink-0 text-primary" />
