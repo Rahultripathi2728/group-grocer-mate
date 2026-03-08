@@ -134,7 +134,7 @@ export default function ProfilePage() {
   const handleTogglePush = async () => {
     if (isSubscribed) {
       await unsubscribe();
-      toast({ title: 'Notifications off kar diye' });
+      toast({ title: 'Notifications turned off' });
     } else {
       const success = await subscribe();
       if (success) toast({ title: 'Notifications enabled! 🔔' });
