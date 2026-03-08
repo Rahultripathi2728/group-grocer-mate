@@ -82,6 +82,9 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
   const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastSettlement, setLastSettlement] = useState<Settlement | null>(null);
+  const [expandedSettlement, setExpandedSettlement] = useState<string | null>(null);
+  const [settlementExpenses, setSettlementExpenses] = useState<Record<string, GroupExpense[]>>({});
+  const [loadingSettlementDetail, setLoadingSettlementDetail] = useState<string | null>(null);
 
   const fetchData = async () => {
     if (!groupId) return;
