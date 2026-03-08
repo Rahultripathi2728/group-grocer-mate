@@ -55,7 +55,7 @@ export default function SimplifiedBalances({ balances, memberSpending, onSettle,
               : 'bg-gradient-to-br from-primary/10 to-primary/5'
         )}
       >
-        <p className="text-sm text-muted-foreground mb-1">Tera Balance</p>
+        <p className="text-sm text-muted-foreground mb-1">Your Balance</p>
         <div className="flex items-baseline gap-2">
           <span
             className={cn(
@@ -84,10 +84,10 @@ export default function SimplifiedBalances({ balances, memberSpending, onSettle,
             )}
           >
             {myNetBalance > 0.01
-              ? 'tujhe milne hain'
+              ? 'you are owed'
               : myNetBalance < -0.01
-                ? 'tujhe dene hain'
-                : 'sab barabar hai!'}
+                ? 'you owe'
+                : 'all settled up!'}
           </span>
         </div>
 
@@ -97,7 +97,7 @@ export default function SimplifiedBalances({ balances, memberSpending, onSettle,
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-destructive/10 border border-destructive/20">
               <ArrowUpRight className="h-3.5 w-3.5 text-destructive" />
               <span className="text-xs font-semibold text-destructive">
-                ₹{totalIOwe.toFixed(0)} dena hai
+                ₹{totalIOwe.toFixed(0)} to pay
               </span>
             </div>
           )}
@@ -105,7 +105,7 @@ export default function SimplifiedBalances({ balances, memberSpending, onSettle,
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-success/10 border border-success/20">
               <ArrowDownLeft className="h-3.5 w-3.5 text-success" />
               <span className="text-xs font-semibold text-success">
-                ₹{totalOwedToMe.toFixed(0)} lena hai
+                ₹{totalOwedToMe.toFixed(0)} to receive
               </span>
             </div>
           )}
@@ -115,7 +115,7 @@ export default function SimplifiedBalances({ balances, memberSpending, onSettle,
       {/* Detailed Transfers */}
       <CardContent className="pt-4 pb-5">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-          Kaun ko kitna dena hai
+          Who Pays Whom
         </p>
 
         {balances.length === 0 ? (
@@ -127,8 +127,8 @@ export default function SimplifiedBalances({ balances, memberSpending, onSettle,
             <div className="inline-flex p-3 rounded-full bg-success/10 mb-3">
               <CheckCircle2 className="h-8 w-8 text-success" />
             </div>
-            <p className="text-lg font-display font-semibold text-success">Sab settle hai!</p>
-            <p className="text-sm text-muted-foreground">Kisi ko kuch nahi dena</p>
+            <p className="text-lg font-display font-semibold text-success">All Settled Up!</p>
+            <p className="text-sm text-muted-foreground">No outstanding balances</p>
           </motion.div>
         ) : (
           <div className="space-y-2.5">
@@ -171,7 +171,7 @@ export default function SimplifiedBalances({ balances, memberSpending, onSettle,
                       </span>
                     </div>
                     <span className="text-sm font-medium truncate">
-                      {isYouPaying ? 'Tu' : balance.from_user.full_name}
+                      {isYouPaying ? 'You' : balance.from_user.full_name}
                     </span>
                   </div>
 
@@ -196,7 +196,7 @@ export default function SimplifiedBalances({ balances, memberSpending, onSettle,
                   {/* To */}
                   <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
                     <span className="text-sm font-medium truncate text-right">
-                      {isYouReceiving ? 'Tu' : balance.to_user.full_name}
+                      {isYouReceiving ? 'You' : balance.to_user.full_name}
                     </span>
                     <div
                       className={cn(
