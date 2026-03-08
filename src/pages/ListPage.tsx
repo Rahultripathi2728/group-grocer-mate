@@ -267,7 +267,7 @@ export default function ListPage() {
           <Button
             onClick={() => setAddDialogOpen(true)}
             size="icon"
-            className="gradient-primary text-primary-foreground rounded-full h-12 w-12 shadow-glow"
+            className="bg-foreground text-background rounded-xl h-12 w-12 shadow-sm hover:bg-foreground/90"
           >
             <Plus className="h-5 w-5" />
           </Button>
