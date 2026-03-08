@@ -42,15 +42,20 @@ export default function ExpenseCard({
   onDelete,
 }: ExpenseCardProps) {
   const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const categoryInfo = getCategoryById(category);
   const CategoryIcon = categoryInfo.icon;
 
-  const handleDelete = async (e: React.MouseEvent) => {
+  const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (is_settled) {
       toast.error("Can't delete settled expenses");
       return;
     }
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
     setDeleting(true);
     const { error } = await supabase.from('expenses').delete().eq('id', id);
     if (error) {
@@ -60,6 +65,7 @@ export default function ExpenseCard({
       onDelete?.();
     }
     setDeleting(false);
+    setShowDeleteConfirm(false);
   };
 
   if (compact) {
