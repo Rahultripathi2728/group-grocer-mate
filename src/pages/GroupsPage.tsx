@@ -355,7 +355,7 @@ export default function GroupsPage() {
                 ))}
               </div>
             ) : groups.length === 0 ? (
-              <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
+              <Card className="border border-border shadow-sm">
                 <CardContent className="pt-12 pb-12 text-center">
                   <motion.div
                     initial={{ scale: 0.8, opacity: 0 }}
