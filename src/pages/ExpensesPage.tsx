@@ -110,6 +110,7 @@ export default function ExpensesPage() {
         .filter((e) => e.expense_type === 'group')
         .map((e) => e.id);
 
+      let myGroupShare = 0;
       let splitsMap = new Map<string, number>();
       if (groupExpenseIds.length > 0) {
         const { data: splits } = await supabase
