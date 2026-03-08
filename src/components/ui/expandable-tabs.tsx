@@ -4,7 +4,7 @@ import * as React from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useOnClickOutside } from "usehooks-ts";
 import { cn } from "@/lib/utils";
-import { LucideIcon } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 interface Tab {
   title: string;
@@ -48,6 +48,10 @@ const spanVariants = {
 
 const transition = { delay: 0.1, type: "spring" as const, bounce: 0, duration: 0.6 };
 
+function isSeparator(tab: TabItem): tab is Separator {
+  return tab.type === "separator";
+}
+
 export function ExpandableTabs({
   tabs,
   className,
@@ -67,10 +71,6 @@ export function ExpandableTabs({
     onChange?.(index);
   };
 
-  const SeparatorComponent = () => (
-    <div className="mx-1 h-[24px] w-[1.2px] bg-border" aria-hidden="true" />
-  );
-
   return (
     <div
       ref={outsideClickRef}
@@ -80,11 +80,20 @@ export function ExpandableTabs({
       )}
     >
       {tabs.map((tab, index) => {
-        if (tab.type === "separator") {
-          return <SeparatorComponent key={`separator-${index}`} />;
+        if (isSeparator(tab)) {
+          return (
+            <div
+              key={`separator-${index}`}
+              className="mx-1 h-[24px] w-[1.2px] bg-border"
+              aria-hidden="true"
+            />
+          );
         }
 
-        const { icon: Icon, title } = tab;
+        const Icon = tab.icon;
+        return (
+          <motion.button
+            key={tab.title}
             variants={buttonVariants}
             initial={false}
             animate="animate"
