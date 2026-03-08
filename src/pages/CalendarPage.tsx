@@ -22,7 +22,8 @@ import {
   startOfWeek,
   endOfWeek,
 } from 'date-fns';
-import { ChevronLeft, ChevronRight, Plus, CheckCircle2, Wallet, Users } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, CheckCircle2, Wallet, Users, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { getCategoryById } from '@/lib/categories';
 import { cn } from '@/lib/utils';
 import AddExpenseDialog from '@/components/expenses/AddExpenseDialog';
@@ -59,6 +60,17 @@ export default function CalendarPage() {
   const [detailExpense, setDetailExpense] = useState<DayExpense['expenses'][0] | null>(null);
 
   const userName = user?.user_metadata?.full_name || 'User';
+
+  const handleDeleteExpense = async (expenseId: string) => {
+    const { error } = await supabase.from('expenses').delete().eq('id', expenseId);
+    if (error) {
+      toast.error('Failed to delete expense');
+    } else {
+      toast.success('Expense deleted');
+      setDetailExpense(null);
+      fetchExpenses();
+    }
+  };
 
   const fetchExpenses = async () => {
     if (!user) return;
@@ -365,13 +377,23 @@ export default function CalendarPage() {
                               </div>
                             </div>
 
-                            {/* Amount */}
-                            <div className="text-right shrink-0">
-                              <p className="font-bold text-sm">₹{expense.amount.toLocaleString('en-IN')}</p>
-                              {expense.expense_type === 'group' && expense.myShare !== undefined && (
-                                <p className="text-[10px] text-muted-foreground mt-0.5">
-                                  Share: ₹{expense.myShare.toLocaleString('en-IN')}
-                                </p>
+                            {/* Amount + Delete */}
+                            <div className="flex items-center gap-2 shrink-0">
+                              <div className="text-right">
+                                <p className="font-bold text-sm">₹{expense.amount.toLocaleString('en-IN')}</p>
+                                {expense.expense_type === 'group' && expense.myShare !== undefined && (
+                                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                                    Share: ₹{expense.myShare.toLocaleString('en-IN')}
+                                  </p>
+                                )}
+                              </div>
+                              {!expense.is_settled && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleDeleteExpense(expense.id); }}
+                                  className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
                               )}
                             </div>
                           </div>
@@ -456,6 +478,18 @@ export default function CalendarPage() {
                       </p>
                     </div>
                   </div>
+
+                  {/* Delete button for unsettled */}
+                  {!detailExpense.is_settled && (
+                    <Button
+                      variant="outline"
+                      className="w-full mt-2 text-destructive border-destructive/30 hover:bg-destructive/10"
+                      onClick={() => handleDeleteExpense(detailExpense.id)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete Expense
+                    </Button>
+                  )}
                 </div>
               </>
             );
