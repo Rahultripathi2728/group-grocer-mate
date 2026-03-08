@@ -74,7 +74,7 @@ export default function ExpensesPage() {
     allExpenses: [],
   });
   const [loading, setLoading] = useState(true);
-  const [addExpenseOpen, setAddExpenseOpen] = useState(false);
+  
 
   // Date filter state - default: 1st of current month to today
   const [dateFrom, setDateFrom] = useState<Date>(startOfMonth(new Date()));
