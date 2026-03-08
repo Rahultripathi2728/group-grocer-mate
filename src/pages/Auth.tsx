@@ -61,7 +61,7 @@ export default function Auth() {
             <div className="p-3 rounded-xl bg-background/10">
               <Layers className="h-8 w-8 text-background" />
             </div>
-            <h1 className="text-3xl font-display font-bold text-background">SplitSmart</h1>
+            <h1 className="text-3xl font-display font-bold text-background">Expense Manager</h1>
           </div>
           <p className="text-background/70 text-lg max-w-md">
             Smart expense management for individuals and groups
@@ -101,7 +101,7 @@ export default function Auth() {
         </div>
 
         <p className="relative z-10 text-background/40 text-sm">
-          © 2024 SplitSmart. Manage your money wisely.
+          © 2024 Expense Manager. Manage your money wisely.
         </p>
       </div>
 
@@ -112,7 +112,7 @@ export default function Auth() {
             <div className="p-3 rounded-xl bg-foreground">
               <Layers className="h-8 w-8 text-background" />
             </div>
-            <h1 className="text-2xl font-display font-bold text-foreground">SplitSmart</h1>
+            <h1 className="text-2xl font-display font-bold text-foreground">Expense Manager</h1>
           </div>
 
           <Tabs defaultValue="signin" className="w-full">

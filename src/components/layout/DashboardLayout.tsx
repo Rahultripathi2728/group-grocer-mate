@@ -40,8 +40,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <header className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-background border-b border-border">
         <div className="flex items-center justify-between px-4 h-14">
           <Link to="/dashboard" className="flex items-center gap-2.5">
-            <img src="/app-logo.png" alt="SplitSmart" className="h-8 w-8 rounded-lg grayscale" />
-            <span className="font-display font-bold text-sm leading-tight">SplitSmart</span>
+            <img src="/app-logo.png" alt="Expense Manager" className="h-8 w-8 rounded-lg grayscale" />
+            <span className="font-display font-bold text-sm leading-tight">Expense Manager</span>
           </Link>
 
           <div className="flex items-center gap-1">
@@ -76,8 +76,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <header className="hidden lg:flex fixed top-0 left-0 right-0 z-50 bg-background border-b border-border">
         <div className="flex items-center justify-between px-8 h-16 w-full max-w-7xl mx-auto">
           <Link to="/dashboard" className="flex items-center gap-3">
-            <img src="/app-logo.png" alt="SplitSmart" className="h-9 w-9 rounded-xl grayscale" />
-            <span className="font-display font-bold text-lg leading-tight">SplitSmart</span>
+            <img src="/app-logo.png" alt="Expense Manager" className="h-9 w-9 rounded-xl grayscale" />
+            <span className="font-display font-bold text-lg leading-tight">Expense Manager</span>
           </Link>
 
           <div className="flex items-center gap-2">
