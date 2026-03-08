@@ -152,9 +152,15 @@ export default function GroupsPage() {
       return;
     }
 
+    setCreateConfirm({ name, description });
+  };
+
+  const confirmCreateGroup = async () => {
+    if (!user || !createConfirm) return;
+
     const { error } = await supabase.from('groups').insert({
-      name,
-      description: description || null,
+      name: createConfirm.name,
+      description: createConfirm.description || null,
       owner_id: user.id,
     });
 
@@ -165,6 +171,7 @@ export default function GroupsPage() {
       setCreateDialogOpen(false);
       fetchGroups();
     }
+    setCreateConfirm(null);
   };
 
   const handleJoinGroup = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -187,8 +194,14 @@ export default function GroupsPage() {
       return;
     }
 
+    setJoinConfirm({ inviteCode, groupId });
+  };
+
+  const confirmJoinGroup = async () => {
+    if (!user || !joinConfirm) return;
+
     const { error } = await supabase.from('group_memberships').insert({
-      group_id: groupId,
+      group_id: joinConfirm.groupId,
       user_id: user.id,
       role: 'member',
     });
@@ -204,6 +217,7 @@ export default function GroupsPage() {
       setJoinDialogOpen(false);
       fetchGroups();
     }
+    setJoinConfirm(null);
   };
 
   const handleLeaveGroup = async (groupId: string) => {
