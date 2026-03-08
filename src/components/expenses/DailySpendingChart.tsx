@@ -79,12 +79,12 @@ export default function DailySpendingChart({ expenses }: DailySpendingChartProps
               <AreaChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="fillPersonal" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="hsl(162, 63%, 41%)" stopOpacity={0.4} />
-                    <stop offset="100%" stopColor="hsl(162, 63%, 41%)" stopOpacity={0.05} />
+                    <stop offset="0%" stopColor="hsl(0, 0%, 9%)" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="hsl(0, 0%, 9%)" stopOpacity={0.05} />
                   </linearGradient>
                   <linearGradient id="fillGroup" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="hsl(262, 60%, 55%)" stopOpacity={0.4} />
-                    <stop offset="100%" stopColor="hsl(262, 60%, 55%)" stopOpacity={0.05} />
+                    <stop offset="0%" stopColor="hsl(0, 0%, 50%)" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="hsl(0, 0%, 50%)" stopOpacity={0.05} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
