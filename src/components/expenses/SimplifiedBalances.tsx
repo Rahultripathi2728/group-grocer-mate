@@ -174,7 +174,7 @@ export default function SimplifiedBalances({ balances, memberSpending, onSettle,
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.08 }}
                   className={cn(
-                    'flex items-center gap-3 p-3.5 rounded-xl transition-colors',
+                    'rounded-xl transition-colors overflow-hidden',
                     isYouPaying
                       ? 'bg-destructive/5 border border-destructive/15'
                       : isYouReceiving
@@ -182,71 +182,84 @@ export default function SimplifiedBalances({ balances, memberSpending, onSettle,
                         : 'bg-muted/30 border border-border/50'
                   )}
                 >
-                  {/* From */}
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <div
-                      className={cn(
-                        'h-9 w-9 rounded-full flex items-center justify-center flex-shrink-0',
-                        isYouPaying
-                          ? 'bg-destructive/20'
-                          : 'bg-muted/50'
-                      )}
-                    >
-                      <span
+                  <div className="flex items-center gap-3 p-3.5">
+                    {/* From */}
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <div
                         className={cn(
-                          'text-xs font-bold',
-                          isYouPaying ? 'text-destructive' : 'text-muted-foreground'
+                          'h-9 w-9 rounded-full flex items-center justify-center flex-shrink-0',
+                          isYouPaying ? 'bg-destructive/20' : 'bg-muted/50'
                         )}
                       >
-                        {balance.from_user.full_name[0]?.toUpperCase()}
+                        <span className={cn('text-xs font-bold', isYouPaying ? 'text-destructive' : 'text-muted-foreground')}>
+                          {balance.from_user.full_name[0]?.toUpperCase()}
+                        </span>
+                      </div>
+                      <span className="text-sm font-medium truncate">
+                        {isYouPaying ? 'You' : balance.from_user.full_name}
                       </span>
                     </div>
-                    <span className="text-sm font-medium truncate">
-                      {isYouPaying ? 'You' : balance.from_user.full_name}
-                    </span>
-                  </div>
 
-                  {/* Arrow + Amount */}
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                    <div
-                      className={cn(
-                        'px-3 py-1 rounded-lg font-display font-bold text-sm',
-                        isYouPaying
-                          ? 'bg-destructive/10 text-destructive'
-                          : isYouReceiving
-                            ? 'bg-success/10 text-success'
-                            : 'bg-primary/10 text-primary'
-                      )}
-                    >
-                      ₹{balance.amount.toFixed(0)}
-                    </div>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                  </div>
-
-                  {/* To */}
-                  <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
-                    <span className="text-sm font-medium truncate text-right">
-                      {isYouReceiving ? 'You' : balance.to_user.full_name}
-                    </span>
-                    <div
-                      className={cn(
-                        'h-9 w-9 rounded-full flex items-center justify-center flex-shrink-0',
-                        isYouReceiving
-                          ? 'bg-success/20'
-                          : 'bg-muted/50'
-                      )}
-                    >
-                      <span
+                    {/* Arrow + Amount */}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                      <div
                         className={cn(
-                          'text-xs font-bold',
-                          isYouReceiving ? 'text-success' : 'text-muted-foreground'
+                          'px-3 py-1 rounded-lg font-display font-bold text-sm',
+                          isYouPaying
+                            ? 'bg-destructive/10 text-destructive'
+                            : isYouReceiving
+                              ? 'bg-success/10 text-success'
+                              : 'bg-primary/10 text-primary'
                         )}
                       >
-                        {balance.to_user.full_name[0]?.toUpperCase()}
+                        ₹{balance.amount.toFixed(0)}
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                    </div>
+
+                    {/* To */}
+                    <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
+                      <span className="text-sm font-medium truncate text-right">
+                        {isYouReceiving ? 'You' : balance.to_user.full_name}
                       </span>
+                      <div
+                        className={cn(
+                          'h-9 w-9 rounded-full flex items-center justify-center flex-shrink-0',
+                          isYouReceiving ? 'bg-success/20' : 'bg-muted/50'
+                        )}
+                      >
+                        <span className={cn('text-xs font-bold', isYouReceiving ? 'text-success' : 'text-muted-foreground')}>
+                          {balance.to_user.full_name[0]?.toUpperCase()}
+                        </span>
+                      </div>
                     </div>
                   </div>
+
+                  {/* UPI Pay button - only for the person who owes */}
+                  {isYouPaying && (
+                    <div className="px-3.5 pb-3 flex gap-2">
+                      {upiMap[balance.to_user.user_id] ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1 border-primary/30 text-primary hover:bg-primary/5"
+                          onClick={() => handleUpiPay(
+                            upiMap[balance.to_user.user_id],
+                            balance.amount,
+                            balance.to_user.full_name
+                          )}
+                        >
+                          <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                          Pay via UPI
+                        </Button>
+                      ) : (
+                        <span className="text-xs text-muted-foreground italic flex-1 flex items-center">
+                          {balance.to_user.full_name} hasn't added UPI ID
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </motion.div>
               );
             })}
