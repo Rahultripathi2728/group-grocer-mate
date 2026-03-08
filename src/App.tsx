@@ -11,6 +11,7 @@ import AllExpensesPage from "./pages/AllExpensesPage";
 import CalendarPage from "./pages/CalendarPage";
 import GroupsPage from "./pages/GroupsPage";
 import ListPage from "./pages/ListPage";
+import InstallPage from "./pages/InstallPage";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
@@ -74,6 +75,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route path="/install" element={<InstallPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
