@@ -485,7 +485,7 @@ export default function CalendarPage() {
                     <Button
                       variant="outline"
                       className="w-full mt-2 text-destructive border-destructive/30 hover:bg-destructive/10"
-                      onClick={() => handleDeleteExpense(detailExpense.id)}
+                      onClick={() => setDeleteConfirmOpen(true)}
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
                       Delete Expense
@@ -497,6 +497,32 @@ export default function CalendarPage() {
           })()}
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Expense?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {detailExpense && (
+                <>Are you sure you want to delete <strong>"{detailExpense.description}"</strong> (₹{detailExpense.amount.toLocaleString('en-IN')})? This action cannot be undone.</>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (detailExpense) handleDeleteExpense(detailExpense.id);
+                setDeleteConfirmOpen(false);
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }
