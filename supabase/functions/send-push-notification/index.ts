@@ -144,7 +144,6 @@ serve(async (req) => {
 
     // If targeting another user, verify they share a group
     if (targetUserId !== callerId) {
-      const { data: sharedGroups } = await supabase.rpc('is_group_member', { p_group_id: '' }).select();
       // Check via direct query: caller and target share at least one group
       const { data: callerGroups } = await supabase
         .from('group_memberships')
