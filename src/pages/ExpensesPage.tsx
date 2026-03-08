@@ -216,7 +216,7 @@ export default function ExpensesPage() {
   useEffect(() => {
     fetchSummary();
     fetchGroups();
-  }, [user]);
+  }, [user, dateFrom, dateTo]);
 
   return (
     <DashboardLayout>
