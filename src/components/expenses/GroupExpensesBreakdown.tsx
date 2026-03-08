@@ -27,6 +27,7 @@ import {
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { getCategoryById } from '@/lib/categories';
+import SimplifiedBalances from './SimplifiedBalances';
 
 interface Member {
   user_id: string;
