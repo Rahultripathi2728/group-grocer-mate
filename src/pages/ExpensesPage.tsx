@@ -388,7 +388,7 @@ export default function ExpensesPage() {
             <DailySpendingChart expenses={summary.allExpenses} />
 
             {/* Recent Expenses */}
-            <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
+            <Card className="border border-border shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="font-display">Recent Expenses</CardTitle>
                 <Link to="/expenses/all">
