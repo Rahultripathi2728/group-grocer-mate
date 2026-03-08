@@ -148,7 +148,7 @@ export default function BudgetCard({ totalSpent, onBudgetChange }: BudgetCardPro
               <p className="text-xs font-semibold uppercase tracking-wider text-background/60">Spent</p>
               <p className={cn(
                 "text-2xl font-display font-bold mt-1",
-                isOverBudget ? "text-destructive" : "text-primary"
+                isOverBudget ? "text-destructive" : "text-background"
               )}>
                 ₹{totalSpent.toLocaleString('en-IN')}
               </p>
