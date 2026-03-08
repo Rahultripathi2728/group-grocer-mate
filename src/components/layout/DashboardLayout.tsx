@@ -40,27 +40,16 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <header className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-background border-b border-border">
         <div className="flex items-center justify-between px-4 h-14">
           <Link to="/dashboard" className="flex items-center gap-2.5">
-            <div className="p-1.5 rounded-lg bg-foreground">
-              <Layers className="h-4 w-4 text-background" />
-            </div>
-            <div className="flex flex-col">
-              <span className="font-display font-bold text-sm leading-tight">SplitSmart</span>
-              <span className="text-[10px] font-semibold text-primary leading-tight">● PREMIUM</span>
-            </div>
+            <img src="/app-logo.png" alt="SplitSmart" className="h-8 w-8 rounded-lg grayscale" />
+            <span className="font-display font-bold text-sm leading-tight">SplitSmart</span>
           </Link>
 
           <div className="flex items-center gap-1">
             <NotificationBell />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 px-2 py-1.5 rounded-full border border-border hover:bg-muted transition-colors">
-                  <Avatar className="h-7 w-7">
-                    <AvatarFallback className="bg-muted text-muted-foreground text-xs">
-                      <User className="h-3.5 w-3.5" />
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm font-medium">{userName.split(' ')[0]}</span>
-                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                <button className="p-2 rounded-full border border-border hover:bg-muted transition-colors">
+                  <User className="h-4.5 w-4.5 text-foreground" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
