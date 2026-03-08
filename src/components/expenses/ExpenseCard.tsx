@@ -130,7 +130,7 @@ export default function ExpenseCard({
 
   return (
     <>
-      <div className={cn("flex items-center justify-between p-4 rounded-2xl bg-card border border-border/50 hover:border-border hover:shadow-md transition-all duration-300 group/card", is_settled && "opacity-60")}>
+      <div className={cn("flex items-center justify-between p-4 rounded-2xl bg-card border border-border hover:shadow-md transition-all duration-300 group/card", is_settled && "opacity-60")}>
         <div className="flex items-center gap-4">
           <div className={cn('p-3 rounded-xl transition-transform duration-300 group-hover/card:scale-110', categoryInfo.bgColor)}>
             <CategoryIcon className={cn('h-5 w-5', categoryInfo.color)} />

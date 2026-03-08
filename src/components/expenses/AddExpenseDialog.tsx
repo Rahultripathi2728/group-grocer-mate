@@ -278,7 +278,7 @@ export default function AddExpenseDialog({
             <Button
               type="submit"
               disabled={loading || (expenseType === 'group' && !selectedGroup)}
-              className="flex-1 gradient-primary text-primary-foreground"
+              className="flex-1 bg-foreground text-background hover:bg-foreground/90"
             >
               {loading ? 'Adding...' : 'Add Expense'}
             </Button>

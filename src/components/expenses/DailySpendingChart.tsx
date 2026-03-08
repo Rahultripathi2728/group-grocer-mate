@@ -129,7 +129,7 @@ export default function DailySpendingChart({ expenses }: DailySpendingChartProps
               Personal
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="h-2 w-2 rounded-full" style={{ backgroundColor: 'hsl(262, 60%, 55%)' }} />
+              <div className="h-2 w-2 rounded-full bg-muted-foreground" />
               Group
             </div>
           </div>

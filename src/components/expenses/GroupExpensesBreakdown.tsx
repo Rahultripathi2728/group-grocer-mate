@@ -500,7 +500,7 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
 
       {/* Settlement History */}
       {settlements.length > 0 && (
-        <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
+        <Card className="border border-border shadow-sm">
           <CardHeader>
             <CardTitle className="font-display flex items-center gap-2">
               <History className="h-5 w-5 text-muted-foreground" />

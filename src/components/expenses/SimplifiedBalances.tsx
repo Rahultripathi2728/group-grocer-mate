@@ -311,7 +311,7 @@ const SimplifiedBalances = forwardRef<HTMLDivElement, Props>(function Simplified
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => { setShowSettleConfirm(false); onSettle(); }}
-                className="gradient-primary text-primary-foreground"
+                className="bg-foreground text-background hover:bg-foreground/90"
               >
                 Confirm Settlement
               </AlertDialogAction>
