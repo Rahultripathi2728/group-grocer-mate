@@ -332,10 +332,10 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
   return (
     <div className="space-y-6">
       {/* Group Summary Header */}
-      <Card className="border-0 shadow-lg bg-gradient-to-br from-primary/10 to-primary/5 overflow-hidden">
+      <Card className="border border-border shadow-sm overflow-hidden">
         <CardContent className="pt-6">
           <div className="flex items-center gap-3 mb-4">
-            <div className="p-3 rounded-xl bg-primary/20">
+            <div className="p-3 rounded-xl bg-muted">
               <Users className="h-6 w-6 text-primary" />
             </div>
             <div>
