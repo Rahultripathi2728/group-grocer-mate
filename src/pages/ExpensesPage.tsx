@@ -307,15 +307,15 @@ export default function ExpensesPage() {
 
               <Popover open={toOpen} onOpenChange={setToOpen}>
                 <PopoverTrigger asChild>
-                  <Button
+              <Button
                     variant="outline"
                     className={cn(
-                      "flex-1 min-w-[130px] justify-start text-left font-normal bg-muted/50 border-0",
+                      "flex-1 min-w-[130px] justify-start text-left font-normal border border-border",
                       !dateTo && "text-muted-foreground"
                     )}
                   >
-                    <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
-                    {format(dateTo, 'dd MMM yyyy')}
+                    <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+                    {format(dateTo, 'MM/dd/yyyy')}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="end">
