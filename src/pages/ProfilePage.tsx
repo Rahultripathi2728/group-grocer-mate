@@ -24,6 +24,7 @@ export default function ProfilePage() {
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
+  const [upiId, setUpiId] = useState('');
   const [saving, setSaving] = useState(false);
 
   const [currentPassword, setCurrentPassword] = useState('');
