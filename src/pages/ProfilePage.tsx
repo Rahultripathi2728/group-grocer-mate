@@ -102,7 +102,7 @@ export default function ProfilePage() {
       return;
     }
     if (newPassword.length < 6) {
-      toast({ title: 'Password kam se kam 6 characters hona chahiye', variant: 'destructive' });
+      toast({ title: 'Password must be at least 6 characters', variant: 'destructive' });
       return;
     }
     setChangingPassword(true);
