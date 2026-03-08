@@ -196,7 +196,7 @@ export default function SimplifiedBalances({ balances, memberSpending, onSettle,
                   {/* To */}
                   <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
                     <span className="text-sm font-medium truncate text-right">
-                      {isYouReceiving ? 'Tu' : balance.to_user.full_name}
+                      {isYouReceiving ? 'You' : balance.to_user.full_name}
                     </span>
                     <div
                       className={cn(
