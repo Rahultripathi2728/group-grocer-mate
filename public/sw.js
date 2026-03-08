@@ -5,7 +5,7 @@ precacheAndRoute(self.__WB_MANIFEST);
 
 // Push Notification Handler
 self.addEventListener('push', (event) => {
-  let data = { title: 'My Moolah', body: 'You have a new notification' };
+  let data = { title: 'Expense Manager', body: 'You have a new notification' };
   
   if (event.data) {
     try {
@@ -31,7 +31,7 @@ self.addEventListener('push', (event) => {
   };
 
   event.waitUntil(
-    self.registration.showNotification(data.title || 'My Moolah', options)
+    self.registration.showNotification(data.title || 'Expense Manager', options)
   );
 });
 
