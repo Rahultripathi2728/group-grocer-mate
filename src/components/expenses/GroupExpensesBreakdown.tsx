@@ -491,26 +491,12 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
       </Card>
 
       {/* Simplified Splitwise-style Balances */}
-      <SimplifiedBalances balances={balances} memberSpending={memberSpending} />
-
-      {/* Settle Button */}
-      {balances.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex justify-center"
-        >
-          <Button
-            size="lg"
-            className="gradient-primary text-primary-foreground shadow-glow px-10 py-6 text-lg hover:scale-105 transition-transform"
-            onClick={onSettle}
-            disabled={settling}
-          >
-            <CheckCircle2 className="h-5 w-5 mr-2" />
-            {settling ? 'Settling...' : 'Mark All as Settled'}
-          </Button>
-        </motion.div>
-      )}
+      <SimplifiedBalances
+        balances={balances}
+        memberSpending={memberSpending}
+        onSettle={onSettle}
+        settling={settling}
+      />
 
       {/* Settlement History */}
       {settlements.length > 0 && (

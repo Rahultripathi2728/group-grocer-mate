@@ -1,7 +1,8 @@
 import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
-import { ArrowRight, ArrowDownLeft, ArrowUpRight, CheckCircle2, IndianRupee } from 'lucide-react';
+import { ArrowRight, ArrowDownLeft, ArrowUpRight, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Member {
@@ -25,9 +26,11 @@ interface MemberSpending {
 interface Props {
   balances: Balance[];
   memberSpending: MemberSpending[];
+  onSettle: () => void;
+  settling: boolean;
 }
 
-export default function SimplifiedBalances({ balances, memberSpending }: Props) {
+export default function SimplifiedBalances({ balances, memberSpending, onSettle, settling }: Props) {
   const { user } = useAuth();
 
   const mySpending = memberSpending.find((ms) => ms.member.user_id === user?.id);
@@ -217,6 +220,25 @@ export default function SimplifiedBalances({ balances, memberSpending }: Props) 
               );
             })}
           </div>
+        )}
+
+        {/* Settle button - only for users who owe money */}
+        {iOwe.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-5 flex justify-center"
+          >
+            <Button
+              size="lg"
+              className="gradient-primary text-primary-foreground shadow-glow px-8 py-5 text-base hover:scale-105 transition-transform w-full"
+              onClick={onSettle}
+              disabled={settling}
+            >
+              <CheckCircle2 className="h-5 w-5 mr-2" />
+              {settling ? 'Settling...' : 'Mark All as Settled'}
+            </Button>
+          </motion.div>
         )}
       </CardContent>
     </Card>
