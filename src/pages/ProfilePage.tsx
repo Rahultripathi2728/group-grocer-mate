@@ -240,7 +240,7 @@ export default function ProfilePage() {
                   type={showConfirm ? 'text' : 'password'}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Password confirm karein"
+                  placeholder="Confirm password"
                 />
                 <button
                   type="button"
