@@ -12,6 +12,16 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -63,6 +73,10 @@ export default function GroupsPage() {
   const [joinDialogOpen, setJoinDialogOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
+  
+  // Confirmation states
+  const [createConfirm, setCreateConfirm] = useState<{ name: string; description: string } | null>(null);
+  const [joinConfirm, setJoinConfirm] = useState<{ inviteCode: string; groupId: string } | null>(null);
 
   const fetchGroups = async () => {
     if (!user) return;
@@ -148,9 +162,15 @@ export default function GroupsPage() {
       return;
     }
 
+    setCreateConfirm({ name, description });
+  };
+
+  const confirmCreateGroup = async () => {
+    if (!user || !createConfirm) return;
+
     const { error } = await supabase.from('groups').insert({
-      name,
-      description: description || null,
+      name: createConfirm.name,
+      description: createConfirm.description || null,
       owner_id: user.id,
     });
 
@@ -161,6 +181,7 @@ export default function GroupsPage() {
       setCreateDialogOpen(false);
       fetchGroups();
     }
+    setCreateConfirm(null);
   };
 
   const handleJoinGroup = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -183,8 +204,14 @@ export default function GroupsPage() {
       return;
     }
 
+    setJoinConfirm({ inviteCode, groupId });
+  };
+
+  const confirmJoinGroup = async () => {
+    if (!user || !joinConfirm) return;
+
     const { error } = await supabase.from('group_memberships').insert({
-      group_id: groupId,
+      group_id: joinConfirm.groupId,
       user_id: user.id,
       role: 'member',
     });
@@ -200,6 +227,7 @@ export default function GroupsPage() {
       setJoinDialogOpen(false);
       fetchGroups();
     }
+    setJoinConfirm(null);
   };
 
   const handleLeaveGroup = async (groupId: string) => {
@@ -545,6 +573,42 @@ export default function GroupsPage() {
           </Card>
         </div>
       </div>
+
+      {/* Create Group Confirmation */}
+      <AlertDialog open={!!createConfirm} onOpenChange={(open) => !open && setCreateConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Create Group?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You are about to create a new group <strong>"{createConfirm?.name}"</strong>. You will be the admin of this group.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmCreateGroup} className="gradient-primary text-primary-foreground">
+              Create Group
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Join Group Confirmation */}
+      <AlertDialog open={!!joinConfirm} onOpenChange={(open) => !open && setJoinConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Join Group?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You are about to join a group with invite code <strong>{joinConfirm?.inviteCode}</strong>. Other members will be able to see your name and shared expenses.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmJoinGroup} className="gradient-primary text-primary-foreground">
+              Join Group
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }

@@ -4,9 +4,19 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
-import { ArrowRight, ArrowDownLeft, ArrowUpRight, CheckCircle2, ExternalLink } from 'lucide-react';
+import { ArrowRight, ArrowDownLeft, ArrowUpRight, CheckCircle2, ExternalLink, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface Member {
   user_id: string;
@@ -36,7 +46,7 @@ interface Props {
 const SimplifiedBalances = forwardRef<HTMLDivElement, Props>(function SimplifiedBalances({ balances, memberSpending, onSettle, settling }, ref) {
   const { user } = useAuth();
   const [upiMap, setUpiMap] = useState<Record<string, string>>({});
-
+  const [showSettleConfirm, setShowSettleConfirm] = useState(false);
   // Fetch UPI IDs for all members in balances
   useEffect(() => {
     const userIds = new Set<string>();
@@ -266,7 +276,6 @@ const SimplifiedBalances = forwardRef<HTMLDivElement, Props>(function Simplified
           </div>
         )}
 
-        {/* Settle button - only for users who owe money */}
         {iOwe.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -276,7 +285,7 @@ const SimplifiedBalances = forwardRef<HTMLDivElement, Props>(function Simplified
             <Button
               size="lg"
               className="gradient-primary text-primary-foreground shadow-glow px-8 py-5 text-base hover:scale-105 transition-transform w-full"
-              onClick={onSettle}
+              onClick={() => setShowSettleConfirm(true)}
               disabled={settling}
             >
               <CheckCircle2 className="h-5 w-5 mr-2" />
@@ -284,6 +293,31 @@ const SimplifiedBalances = forwardRef<HTMLDivElement, Props>(function Simplified
             </Button>
           </motion.div>
         )}
+
+        <AlertDialog open={showSettleConfirm} onOpenChange={setShowSettleConfirm}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 rounded-full bg-primary/10">
+                  <CheckCircle2 className="h-5 w-5 text-primary" />
+                </div>
+                <AlertDialogTitle>Settle All Expenses?</AlertDialogTitle>
+              </div>
+              <AlertDialogDescription>
+                You have paid <strong>₹{totalIOwe.toFixed(0)}</strong> in total. This will mark all current group expenses as settled. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => { setShowSettleConfirm(false); onSettle(); }}
+                className="gradient-primary text-primary-foreground"
+              >
+                Confirm Settlement
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardContent>
     </Card>
   );
