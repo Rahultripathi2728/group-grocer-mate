@@ -85,8 +85,8 @@ export default function InstallPage() {
                 <Smartphone className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <h3 className="font-semibold text-sm">App Install Karein</h3>
-                <p className="text-xs text-muted-foreground">Home screen se directly open karein</p>
+                 <h3 className="font-semibold text-sm">Install App</h3>
+                 <p className="text-xs text-muted-foreground">Open directly from home screen</p>
               </div>
             </div>
 
