@@ -254,7 +254,7 @@ export default function ExpensesPage() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'personal' | 'settlement')}>
-          <TabsList className="grid w-full grid-cols-2 bg-muted/50 p-1 rounded-xl">
+          <TabsList className="grid w-full grid-cols-2 bg-muted p-1 rounded-xl border border-border">
             <TabsTrigger 
               value="personal" 
               className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm flex items-center gap-2"
@@ -281,15 +281,15 @@ export default function ExpensesPage() {
             >
               <Popover open={fromOpen} onOpenChange={setFromOpen}>
                 <PopoverTrigger asChild>
-                  <Button
+              <Button
                     variant="outline"
                     className={cn(
-                      "flex-1 min-w-[130px] justify-start text-left font-normal bg-muted/50 border-0",
+                      "flex-1 min-w-[130px] justify-start text-left font-normal border border-border",
                       !dateFrom && "text-muted-foreground"
                     )}
                   >
-                    <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
-                    {format(dateFrom, 'dd MMM yyyy')}
+                    <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+                    {format(dateFrom, 'MM/dd/yyyy')}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -307,15 +307,15 @@ export default function ExpensesPage() {
 
               <Popover open={toOpen} onOpenChange={setToOpen}>
                 <PopoverTrigger asChild>
-                  <Button
+              <Button
                     variant="outline"
                     className={cn(
-                      "flex-1 min-w-[130px] justify-start text-left font-normal bg-muted/50 border-0",
+                      "flex-1 min-w-[130px] justify-start text-left font-normal border border-border",
                       !dateTo && "text-muted-foreground"
                     )}
                   >
-                    <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
-                    {format(dateTo, 'dd MMM yyyy')}
+                    <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+                    {format(dateTo, 'MM/dd/yyyy')}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="end">
@@ -388,7 +388,7 @@ export default function ExpensesPage() {
             <DailySpendingChart expenses={summary.allExpenses} />
 
             {/* Recent Expenses */}
-            <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
+            <Card className="border border-border shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="font-display">Recent Expenses</CardTitle>
                 <Link to="/expenses/all">
@@ -435,7 +435,7 @@ export default function ExpensesPage() {
           {/* Settlement Tab */}
           <TabsContent value="settlement" className="mt-6 space-y-6">
             {/* Group Selector */}
-            <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
+            <Card className="border border-border shadow-sm">
               <CardContent className="pt-6">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                   <div className="flex-1">
@@ -510,7 +510,7 @@ export default function ExpensesPage() {
         >
           <Button
             size="lg"
-            className="h-14 w-14 rounded-full gradient-primary text-primary-foreground shadow-glow p-0 hover:scale-110 transition-transform"
+            className="h-14 w-14 rounded-xl bg-foreground text-background p-0 hover:bg-foreground/90 hover:scale-105 transition-transform shadow-lg"
             onClick={() => setAddExpenseOpen(true)}
           >
             <Plus className="h-6 w-6" />
