@@ -518,7 +518,7 @@ export default function GroupsPage() {
                           className="flex items-center justify-between p-4 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors"
                         >
                           <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center">
+                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
                               <span className="text-sm font-bold text-primary">
                                 {member.profile?.full_name?.[0]?.toUpperCase() || 'U'}
                               </span>
