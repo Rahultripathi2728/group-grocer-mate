@@ -17,15 +17,10 @@ export default defineConfig(({ mode }) => ({
     react(),
     mode === "development" && componentTagger(),
     VitePWA({
-      registerType: 'manual',
-      strategies: 'injectManifest',
-      srcDir: 'public',
-      filename: 'sw.js',
-      injectManifest: {
-        injectionPoint: undefined,
-      },
+      registerType: 'autoUpdate',
       workbox: {
         navigateFallbackDenylist: [/^\/~oauth/],
+        runtimeCaching: [],
       },
       manifest: {
         name: 'ExpenseTrack - Expense Tracker',
