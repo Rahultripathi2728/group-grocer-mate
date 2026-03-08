@@ -29,7 +29,7 @@ interface Props {
   settling: boolean;
 }
 
-export default function SimplifiedBalances({ balances, memberSpending }: Props) {
+export default function SimplifiedBalances({ balances, memberSpending, onSettle, settling }: Props) {
   const { user } = useAuth();
 
   const mySpending = memberSpending.find((ms) => ms.member.user_id === user?.id);
