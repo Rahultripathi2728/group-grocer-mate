@@ -29,6 +29,7 @@ import {
   ArrowRight,
   CheckCircle2,
   Sparkles,
+  CalendarIcon,
 } from 'lucide-react';
 import AddExpenseDialog from '@/components/expenses/AddExpenseDialog';
 import BudgetCard from '@/components/expenses/BudgetCard';
