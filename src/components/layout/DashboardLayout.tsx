@@ -41,8 +41,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <header className="lg:hidden fixed top-0 left-0 right-0 z-50 glass-strong border-b">
         <div className="flex items-center justify-between px-4 h-14">
           <Link to="/dashboard" className="flex items-center gap-2">
-            <img src="/app-logo.png" alt="My Moolah" className="h-8 w-8" />
-            <span className="font-display font-bold text-base">My Moolah</span>
+            <div className="p-1.5 rounded-lg gradient-primary">
+              <Wallet className="h-4 w-4 text-primary-foreground" />
+            </div>
+            <span className="font-display font-bold text-base">Expense Manager</span>
           </Link>
 
           <div className="flex items-center gap-1">
