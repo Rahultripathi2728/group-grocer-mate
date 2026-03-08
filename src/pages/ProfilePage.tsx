@@ -98,7 +98,7 @@ export default function ProfilePage() {
 
   const handleChangePassword = async () => {
     if (newPassword !== confirmPassword) {
-      toast({ title: 'Passwords match nahi kar rahe', variant: 'destructive' });
+      toast({ title: 'Passwords do not match', variant: 'destructive' });
       return;
     }
     if (newPassword.length < 6) {
