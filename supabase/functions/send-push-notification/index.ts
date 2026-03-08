@@ -205,7 +205,7 @@ serve(async (req) => {
     const { data: subscriptions } = await supabase
       .from("push_subscriptions")
       .select("*")
-      .eq("user_id", user_id);
+      .eq("user_id", targetUserId);
 
     if (!subscriptions || subscriptions.length === 0) {
       return new Response(JSON.stringify({ message: "No push subscriptions found" }), {
