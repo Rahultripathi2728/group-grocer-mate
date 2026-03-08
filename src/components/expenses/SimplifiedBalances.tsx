@@ -171,7 +171,7 @@ export default function SimplifiedBalances({ balances, memberSpending, onSettle,
                       </span>
                     </div>
                     <span className="text-sm font-medium truncate">
-                      {isYouPaying ? 'Tu' : balance.from_user.full_name}
+                      {isYouPaying ? 'You' : balance.from_user.full_name}
                     </span>
                   </div>
 
