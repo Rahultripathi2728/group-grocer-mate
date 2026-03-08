@@ -284,7 +284,7 @@ const SimplifiedBalances = forwardRef<HTMLDivElement, Props>(function Simplified
           >
             <Button
               size="lg"
-              className="gradient-primary text-primary-foreground shadow-glow px-8 py-5 text-base hover:scale-105 transition-transform w-full"
+              className="bg-foreground text-background hover:bg-foreground/90 px-8 py-5 text-base w-full"
               onClick={() => setShowSettleConfirm(true)}
               disabled={settling}
             >
