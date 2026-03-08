@@ -435,7 +435,7 @@ export default function ExpensesPage() {
           {/* Settlement Tab */}
           <TabsContent value="settlement" className="mt-6 space-y-6">
             {/* Group Selector */}
-            <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
+            <Card className="border border-border shadow-sm">
               <CardContent className="pt-6">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                   <div className="flex-1">
