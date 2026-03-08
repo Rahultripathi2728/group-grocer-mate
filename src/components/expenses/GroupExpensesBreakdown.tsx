@@ -270,6 +270,47 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
     setBalances(newBalances);
   };
 
+  const fetchSettlementDetail = async (settlementId: string, settlementIndex: number) => {
+    if (expandedSettlement === settlementId) {
+      setExpandedSettlement(null);
+      return;
+    }
+
+    // Already fetched
+    if (settlementExpenses[settlementId]) {
+      setExpandedSettlement(settlementId);
+      return;
+    }
+
+    setLoadingSettlementDetail(settlementId);
+    setExpandedSettlement(settlementId);
+
+    const currentSettlement = settlements[settlementIndex];
+    const previousSettlement = settlements[settlementIndex + 1] || null;
+
+    // Fetch expenses created between previous settlement and this settlement
+    let query = supabase
+      .from('expenses')
+      .select('*')
+      .eq('group_id', groupId)
+      .eq('expense_type', 'group')
+      .lte('created_at', currentSettlement.settled_at)
+      .order('expense_date', { ascending: false });
+
+    if (previousSettlement) {
+      query = query.gt('created_at', previousSettlement.settled_at);
+    }
+
+    const { data } = await query;
+    const expenseList = (data || []).map((e) => ({
+      ...e,
+      amount: Number(e.amount),
+    }));
+
+    setSettlementExpenses((prev) => ({ ...prev, [settlementId]: expenseList }));
+    setLoadingSettlementDetail(null);
+  };
+
   useEffect(() => {
     fetchData();
   }, [groupId]);
