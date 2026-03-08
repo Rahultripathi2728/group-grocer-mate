@@ -573,6 +573,42 @@ export default function GroupsPage() {
           </Card>
         </div>
       </div>
+
+      {/* Create Group Confirmation */}
+      <AlertDialog open={!!createConfirm} onOpenChange={(open) => !open && setCreateConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Create Group?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You are about to create a new group <strong>"{createConfirm?.name}"</strong>. You will be the admin of this group.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmCreateGroup} className="gradient-primary text-primary-foreground">
+              Create Group
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Join Group Confirmation */}
+      <AlertDialog open={!!joinConfirm} onOpenChange={(open) => !open && setJoinConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Join Group?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You are about to join a group with invite code <strong>{joinConfirm?.inviteCode}</strong>. Other members will be able to see your name and shared expenses.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmJoinGroup} className="gradient-primary text-primary-foreground">
+              Join Group
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }
