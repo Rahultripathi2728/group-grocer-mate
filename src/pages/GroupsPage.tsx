@@ -585,7 +585,7 @@ export default function GroupsPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmCreateGroup} className="gradient-primary text-primary-foreground">
+            <AlertDialogAction onClick={confirmCreateGroup} className="bg-primary text-primary-foreground">
               Create Group
             </AlertDialogAction>
           </AlertDialogFooter>
