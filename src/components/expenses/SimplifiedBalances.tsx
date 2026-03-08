@@ -287,4 +287,6 @@ const SimplifiedBalances = forwardRef<HTMLDivElement, Props>(function Simplified
       </CardContent>
     </Card>
   );
-}
+});
+
+export default SimplifiedBalances;
