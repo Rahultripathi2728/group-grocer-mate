@@ -304,7 +304,7 @@ const SimplifiedBalances = forwardRef<HTMLDivElement, Props>(function Simplified
                 <AlertDialogTitle>Settle All Expenses?</AlertDialogTitle>
               </div>
               <AlertDialogDescription>
-                You have paid <strong>₹{totalIOwe.toFixed(0)}</strong> in total. This will mark all current group expenses as settled. This action cannot be undone.
+                You owe <strong>₹{totalIOwe.toFixed(0)}</strong> in total. This will mark all current group expenses as settled. This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
