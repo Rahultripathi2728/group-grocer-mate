@@ -56,6 +56,7 @@ export default function CalendarPage() {
   const [expensesByDate, setExpensesByDate] = useState<Map<string, DayExpense>>(new Map());
   const [loading, setLoading] = useState(true);
   const [addExpenseOpen, setAddExpenseOpen] = useState(false);
+  const [detailExpense, setDetailExpense] = useState<DayExpense['expenses'][0] | null>(null);
 
   const userName = user?.user_metadata?.full_name || 'User';
 
