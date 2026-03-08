@@ -324,7 +324,7 @@ export default function ListPage() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 20 }}
-                  className="group flex items-center gap-3 p-3 rounded-xl bg-card border border-border/50 hover:border-border transition-all"
+                  className="group flex items-center gap-3 p-3 rounded-xl bg-card border border-border hover:border-primary/30 transition-all"
                 >
                   <Checkbox
                     checked={false}
