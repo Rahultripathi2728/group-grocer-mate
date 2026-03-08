@@ -84,16 +84,16 @@ const SimplifiedBalances = forwardRef<HTMLDivElement, Props>(function Simplified
   };
 
   return (
-    <Card className="border-0 shadow-lg overflow-hidden">
+    <Card className="border border-border shadow-sm overflow-hidden">
       {/* Your Balance Header */}
       <div
         className={cn(
           'p-5',
           myNetBalance > 0.01
-            ? 'bg-gradient-to-br from-success/15 to-success/5'
+            ? 'bg-success/5'
             : myNetBalance < -0.01
-              ? 'bg-gradient-to-br from-destructive/15 to-destructive/5'
-              : 'bg-gradient-to-br from-primary/10 to-primary/5'
+              ? 'bg-destructive/5'
+              : 'bg-muted'
         )}
       >
         <p className="text-sm text-muted-foreground mb-1">Your Balance</p>
@@ -284,7 +284,7 @@ const SimplifiedBalances = forwardRef<HTMLDivElement, Props>(function Simplified
           >
             <Button
               size="lg"
-              className="gradient-primary text-primary-foreground shadow-glow px-8 py-5 text-base hover:scale-105 transition-transform w-full"
+              className="bg-foreground text-background hover:bg-foreground/90 px-8 py-5 text-base w-full"
               onClick={() => setShowSettleConfirm(true)}
               disabled={settling}
             >
@@ -311,7 +311,7 @@ const SimplifiedBalances = forwardRef<HTMLDivElement, Props>(function Simplified
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => { setShowSettleConfirm(false); onSettle(); }}
-                className="gradient-primary text-primary-foreground"
+                className="bg-foreground text-background hover:bg-foreground/90"
               >
                 Confirm Settlement
               </AlertDialogAction>

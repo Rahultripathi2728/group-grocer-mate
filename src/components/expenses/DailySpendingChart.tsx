@@ -66,10 +66,10 @@ export default function DailySpendingChart({ expenses }: DailySpendingChartProps
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
-      <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
+      <Card className="border border-border shadow-sm">
         <CardHeader className="flex flex-row items-center gap-2 pb-2">
-          <div className="p-2 rounded-xl bg-primary/10">
-            <BarChart3 className="h-4 w-4 text-primary" />
+          <div className="p-2 rounded-xl bg-muted">
+            <BarChart3 className="h-4 w-4 text-foreground" />
           </div>
           <CardTitle className="font-display text-base">Daily Spending</CardTitle>
         </CardHeader>
@@ -79,12 +79,12 @@ export default function DailySpendingChart({ expenses }: DailySpendingChartProps
               <AreaChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="fillPersonal" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="hsl(162, 63%, 41%)" stopOpacity={0.4} />
-                    <stop offset="100%" stopColor="hsl(162, 63%, 41%)" stopOpacity={0.05} />
+                    <stop offset="0%" stopColor="hsl(0, 0%, 9%)" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="hsl(0, 0%, 9%)" stopOpacity={0.05} />
                   </linearGradient>
                   <linearGradient id="fillGroup" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="hsl(262, 60%, 55%)" stopOpacity={0.4} />
-                    <stop offset="100%" stopColor="hsl(262, 60%, 55%)" stopOpacity={0.05} />
+                    <stop offset="0%" stopColor="hsl(0, 0%, 50%)" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="hsl(0, 0%, 50%)" stopOpacity={0.05} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
@@ -108,7 +108,7 @@ export default function DailySpendingChart({ expenses }: DailySpendingChartProps
                   type="monotone"
                   dataKey="personal"
                   stackId="1"
-                  stroke="hsl(162, 63%, 41%)"
+                  stroke="hsl(0, 0%, 9%)"
                   fill="url(#fillPersonal)"
                   strokeWidth={2}
                 />
@@ -116,7 +116,7 @@ export default function DailySpendingChart({ expenses }: DailySpendingChartProps
                   type="monotone"
                   dataKey="group"
                   stackId="1"
-                  stroke="hsl(262, 60%, 55%)"
+                  stroke="hsl(0, 0%, 50%)"
                   fill="url(#fillGroup)"
                   strokeWidth={2}
                 />
@@ -125,11 +125,11 @@ export default function DailySpendingChart({ expenses }: DailySpendingChartProps
           </div>
           <div className="flex items-center justify-center gap-4 mt-2 text-xs text-muted-foreground">
             <div className="flex items-center gap-1.5">
-              <div className="h-2 w-2 rounded-full bg-primary" />
+              <div className="h-2 w-2 rounded-full bg-foreground" />
               Personal
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="h-2 w-2 rounded-full" style={{ backgroundColor: 'hsl(262, 60%, 55%)' }} />
+              <div className="h-2 w-2 rounded-full bg-muted-foreground" />
               Group
             </div>
           </div>

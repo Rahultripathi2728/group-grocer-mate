@@ -332,11 +332,11 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
   return (
     <div className="space-y-6">
       {/* Group Summary Header */}
-      <Card className="border-0 shadow-lg bg-gradient-to-br from-primary/10 to-primary/5 overflow-hidden">
+      <Card className="border border-border shadow-sm overflow-hidden">
         <CardContent className="pt-6">
           <div className="flex items-center gap-3 mb-4">
-            <div className="p-3 rounded-xl bg-primary/20">
-              <Users className="h-6 w-6 text-primary" />
+            <div className="p-3 rounded-xl bg-muted">
+              <Users className="h-6 w-6 text-foreground" />
             </div>
             <div>
               <h2 className="text-xl font-display font-bold">{groupName}</h2>
@@ -363,11 +363,11 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
           )}
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="p-4 rounded-xl bg-background/50 backdrop-blur-sm">
+            <div className="p-4 rounded-xl bg-muted">
               <p className="text-xs text-muted-foreground mb-1">Total Since Settlement</p>
               <p className="text-2xl font-display font-bold">₹{totalExpenses.toLocaleString('en-IN')}</p>
             </div>
-            <div className="p-4 rounded-xl bg-background/50 backdrop-blur-sm">
+            <div className="p-4 rounded-xl bg-muted">
               <p className="text-xs text-muted-foreground mb-1">Per Person Share</p>
               <p className="text-2xl font-display font-bold">₹{perPersonShare.toFixed(0)}</p>
             </div>
@@ -376,10 +376,10 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
       </Card>
 
       {/* Member-wise Spending Breakdown */}
-      <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
+      <Card className="border border-border shadow-sm">
         <CardHeader>
           <CardTitle className="font-display flex items-center gap-2">
-            <Wallet className="h-5 w-5 text-primary" />
+            <Wallet className="h-5 w-5 text-foreground" />
             Who Spent How Much
           </CardTitle>
         </CardHeader>
@@ -402,10 +402,10 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
                         <div className={cn(
                           "h-10 w-10 rounded-full flex items-center justify-center",
                           ms.netBalance > 0 
-                            ? "bg-gradient-to-br from-success/30 to-success/10" 
+                            ? "bg-success/10" 
                             : ms.netBalance < 0 
-                              ? "bg-gradient-to-br from-destructive/30 to-destructive/10"
-                              : "bg-gradient-to-br from-muted to-muted/50"
+                              ? "bg-destructive/10"
+                              : "bg-muted"
                         )}>
                           <span className={cn(
                             "text-sm font-bold",
@@ -500,7 +500,7 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
 
       {/* Settlement History */}
       {settlements.length > 0 && (
-        <Card className="border-0 shadow-lg bg-card/80 backdrop-blur-sm">
+        <Card className="border border-border shadow-sm">
           <CardHeader>
             <CardTitle className="font-display flex items-center gap-2">
               <History className="h-5 w-5 text-muted-foreground" />

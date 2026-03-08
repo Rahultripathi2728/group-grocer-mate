@@ -27,8 +27,8 @@ export default function StatCard({
   return (
     <div
       className={cn(
-        'relative overflow-hidden p-6 rounded-2xl bg-card border border-border/50',
-        'hover:border-border hover:shadow-lg transition-all duration-300',
+        'relative overflow-hidden p-6 rounded-2xl bg-card border border-border',
+        'hover:shadow-md transition-all duration-300',
         'group',
         className
       )}

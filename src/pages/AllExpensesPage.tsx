@@ -170,7 +170,7 @@ export default function AllExpensesPage() {
           <div className="space-y-6">
             {Object.entries(groupedExpenses).map(([date, dateExpenses], groupIndex) => (
               <div key={date}>
-                <h3 className="text-sm font-medium text-muted-foreground mb-2 sticky top-0 bg-background/80 backdrop-blur-sm py-1">
+                <h3 className="text-sm font-medium text-muted-foreground mb-2 sticky top-0 bg-background py-1">
                   {format(new Date(date), 'EEEE, dd MMMM yyyy')}
                 </h3>
                 <div className="space-y-2">
