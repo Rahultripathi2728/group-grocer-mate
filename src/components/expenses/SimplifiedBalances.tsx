@@ -115,7 +115,7 @@ export default function SimplifiedBalances({ balances, memberSpending, onSettle,
       {/* Detailed Transfers */}
       <CardContent className="pt-4 pb-5">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-          Kaun ko kitna dena hai
+          Who Pays Whom
         </p>
 
         {balances.length === 0 ? (
