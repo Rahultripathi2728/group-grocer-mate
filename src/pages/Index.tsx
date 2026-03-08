@@ -8,7 +8,7 @@ const Index = () => {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="animate-pulse-soft">
-          <div className="h-12 w-12 rounded-xl gradient-primary animate-bounce-soft" />
+          <div className="h-12 w-12 rounded-xl bg-foreground" />
         </div>
       </div>
     );
