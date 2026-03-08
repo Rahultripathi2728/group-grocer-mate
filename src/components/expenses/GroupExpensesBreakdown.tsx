@@ -336,7 +336,7 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
         <CardContent className="pt-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="p-3 rounded-xl bg-muted">
-              <Users className="h-6 w-6 text-primary" />
+              <Users className="h-6 w-6 text-foreground" />
             </div>
             <div>
               <h2 className="text-xl font-display font-bold">{groupName}</h2>
