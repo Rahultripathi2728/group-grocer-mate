@@ -223,14 +223,14 @@ export default function BudgetCard({ totalSpent, onBudgetChange }: BudgetCardPro
           </div>
 
           {/* Progress Section */}
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div className="flex justify-between items-end">
               <div>
                 <p className="text-2xl font-display font-bold">
                   ₹{totalSpent.toLocaleString('en-IN')}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  of ₹{budget.amount.toLocaleString('en-IN')} spent
+                  of ₹{budget.amount.toLocaleString('en-IN')} spent ({percentage.toFixed(0)}%)
                 </p>
               </div>
               <div className="text-right">
@@ -255,24 +255,14 @@ export default function BudgetCard({ totalSpent, onBudgetChange }: BudgetCardPro
             </div>
 
             {/* Progress Bar */}
-            <div className="relative">
-              <Progress 
-                value={percentage} 
-                className={cn(
-                  "h-3 bg-muted/50",
-                  isOverBudget && "[&>div]:bg-destructive",
-                  isNearLimit && !isOverBudget && "[&>div]:bg-warning"
-                )}
-              />
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="absolute -top-6 text-xs font-medium text-muted-foreground"
-                style={{ left: `${Math.min(percentage, 95)}%` }}
-              >
-                {percentage.toFixed(0)}%
-              </motion.div>
-            </div>
+            <Progress 
+              value={percentage} 
+              className={cn(
+                "h-3 bg-muted/50",
+                isOverBudget && "[&>div]:bg-destructive",
+                isNearLimit && !isOverBudget && "[&>div]:bg-warning"
+              )}
+            />
 
             {/* Status Message */}
             <AnimatePresence mode="wait">
