@@ -417,7 +417,7 @@ export default function ListPage() {
             <div>
               <label className="text-sm font-medium text-muted-foreground mb-2 block">Add to</label>
               <Select value={addItemTarget} onValueChange={setAddItemTarget}>
-                <SelectTrigger className="bg-muted/50 border-0">
+                <SelectTrigger className="bg-muted border-0">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
