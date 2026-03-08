@@ -176,7 +176,7 @@ export default function ExpenseCard({
         </div>
         {onDelete && !is_settled && (
           <button
-            onClick={handleDelete}
+            onClick={handleDeleteClick}
             disabled={deleting}
             className="opacity-0 group-hover/card:opacity-100 p-2 rounded-xl hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
           >
