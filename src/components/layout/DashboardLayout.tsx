@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import BottomNav from './BottomNav';
 import NotificationBell from '@/components/notifications/NotificationBell';
+import PushNotificationPrompt from '@/components/notifications/PushNotificationPrompt';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { user, signOut } = useAuth();
