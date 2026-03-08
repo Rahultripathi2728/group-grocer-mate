@@ -138,56 +138,54 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
     const lastSettlementData = formattedSettlements[0] || null;
     setLastSettlement(lastSettlementData);
 
-    // Fetch ALL group expenses (for totals display)
-    const { data: allExpenseData } = await supabase
+    // Fetch only expenses AFTER last settlement (post-settlement expenses)
+    const lastSettlementDate = formattedSettlements[0]?.settled_at || null;
+    
+    let query = supabase
       .from('expenses')
       .select('*')
       .eq('group_id', groupId)
       .eq('expense_type', 'group')
       .order('expense_date', { ascending: false });
 
-    const allExpenseList = (allExpenseData || []).map((e) => ({
+    // If there's a last settlement, only fetch expenses created after it
+    if (lastSettlementDate) {
+      query = query.gt('created_at', lastSettlementDate);
+    }
+
+    const { data: postSettlementData } = await query;
+
+    const postSettlementExpenses = (postSettlementData || []).map((e) => ({
       ...e,
       amount: Number(e.amount),
     }));
 
-    // Unsettled expenses only (for balance calculations)
-    const unsettledExpenses = allExpenseList.filter((e) => !e.is_settled);
+    setExpenses(postSettlementExpenses);
 
-    setExpenses(allExpenseList);
-
-    // Calculate member spending using UNSETTLED expenses for accurate net balance
-    calculateMemberSpending(memberList, allExpenseList, unsettledExpenses);
-    // Calculate balances using only UNSETTLED expenses
-    calculateBalances(memberList, unsettledExpenses);
+    // Calculate member spending using only post-settlement expenses
+    calculateMemberSpending(memberList, postSettlementExpenses);
+    // Calculate balances using only post-settlement expenses
+    calculateBalances(memberList, postSettlementExpenses);
 
     setLoading(false);
   };
 
-  const calculateMemberSpending = (memberList: Member[], allExpenseList: GroupExpense[], unsettledExpenseList: GroupExpense[]) => {
+  const calculateMemberSpending = (memberList: Member[], expenseList: GroupExpense[]) => {
     const memberCount = memberList.length;
-    // Use ALL expenses for total display
-    const totalGroupExpense = allExpenseList.reduce((sum, e) => sum + e.amount, 0);
-
-    // Use UNSETTLED expenses for net balance calculation
-    const totalUnsettled = unsettledExpenseList.reduce((sum, e) => sum + e.amount, 0);
-    const unsettledSharePerPerson = memberCount > 0 ? totalUnsettled / memberCount : 0;
+    const totalExpense = expenseList.reduce((sum, e) => sum + e.amount, 0);
+    const sharePerPerson = memberCount > 0 ? totalExpense / memberCount : 0;
 
     const spending: MemberSpending[] = memberList.map((member) => {
-      const memberAllExpenses = allExpenseList.filter((e) => e.user_id === member.user_id);
-      const memberUnsettledPaid = unsettledExpenseList
-        .filter((e) => e.user_id === member.user_id)
-        .reduce((sum, e) => sum + e.amount, 0);
-      const totalPaid = memberAllExpenses.reduce((sum, e) => sum + e.amount, 0);
-      // Net balance based on unsettled only
-      const netBalance = memberUnsettledPaid - unsettledSharePerPerson;
+      const memberExpenses = expenseList.filter((e) => e.user_id === member.user_id);
+      const totalPaid = memberExpenses.reduce((sum, e) => sum + e.amount, 0);
+      const netBalance = totalPaid - sharePerPerson;
 
       return {
         member,
         totalPaid,
-        totalOwed: unsettledSharePerPerson,
+        totalOwed: sharePerPerson,
         netBalance,
-        expenses: memberAllExpenses,
+        expenses: memberExpenses,
       };
     });
 
