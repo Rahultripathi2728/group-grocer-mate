@@ -34,6 +34,10 @@ export default function ProfilePage() {
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
+  // OTP verification state
+  const [otpStep, setOtpStep] = useState<'idle' | 'sending' | 'verify' | 'verified'>('idle');
+  const [otpCode, setOtpCode] = useState('');
+
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isInstalled, setIsInstalled] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
