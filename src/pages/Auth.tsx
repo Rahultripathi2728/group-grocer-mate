@@ -145,7 +145,7 @@ export default function Auth() {
         <div className="flex-1 flex items-center justify-center p-8 bg-background">
           <div className="w-full max-w-md animate-fade-in">
             <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
-              <div className="p-3 rounded-xl bg-foreground"><Layers className="h-8 w-8 text-background" /></div>
+              <img src="/app-logo.png" alt="Expense Manager" className="h-10 w-10 rounded-xl" />
               <h1 className="text-2xl font-display font-bold text-foreground">Expense Manager</h1>
             </div>
             <Card className="border border-border shadow-sm">
