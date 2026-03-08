@@ -8,6 +8,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -58,6 +68,7 @@ export default function CalendarPage() {
   const [loading, setLoading] = useState(true);
   const [addExpenseOpen, setAddExpenseOpen] = useState(false);
   const [detailExpense, setDetailExpense] = useState<DayExpense['expenses'][0] | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   const userName = user?.user_metadata?.full_name || 'User';
 
@@ -377,23 +388,13 @@ export default function CalendarPage() {
                               </div>
                             </div>
 
-                            {/* Amount + Delete */}
-                            <div className="flex items-center gap-2 shrink-0">
-                              <div className="text-right">
-                                <p className="font-bold text-sm">₹{expense.amount.toLocaleString('en-IN')}</p>
-                                {expense.expense_type === 'group' && expense.myShare !== undefined && (
-                                  <p className="text-[10px] text-muted-foreground mt-0.5">
-                                    Share: ₹{expense.myShare.toLocaleString('en-IN')}
-                                  </p>
-                                )}
-                              </div>
-                              {!expense.is_settled && (
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); handleDeleteExpense(expense.id); }}
-                                  className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </button>
+                            {/* Amount */}
+                            <div className="text-right shrink-0">
+                              <p className="font-bold text-sm">₹{expense.amount.toLocaleString('en-IN')}</p>
+                              {expense.expense_type === 'group' && expense.myShare !== undefined && (
+                                <p className="text-[10px] text-muted-foreground mt-0.5">
+                                  Share: ₹{expense.myShare.toLocaleString('en-IN')}
+                                </p>
                               )}
                             </div>
                           </div>
@@ -484,7 +485,7 @@ export default function CalendarPage() {
                     <Button
                       variant="outline"
                       className="w-full mt-2 text-destructive border-destructive/30 hover:bg-destructive/10"
-                      onClick={() => handleDeleteExpense(detailExpense.id)}
+                      onClick={() => setDeleteConfirmOpen(true)}
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
                       Delete Expense
@@ -496,6 +497,32 @@ export default function CalendarPage() {
           })()}
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Expense?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {detailExpense && (
+                <>Are you sure you want to delete <strong>"{detailExpense.description}"</strong> (₹{detailExpense.amount.toLocaleString('en-IN')})? This action cannot be undone.</>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (detailExpense) handleDeleteExpense(detailExpense.id);
+                setDeleteConfirmOpen(false);
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }
