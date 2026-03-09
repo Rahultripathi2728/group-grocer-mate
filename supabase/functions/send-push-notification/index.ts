@@ -103,6 +103,8 @@ serve(async (req) => {
 
   try {
     const authHeader = req.headers.get('Authorization');
+    const isInternalTrigger = req.headers.get('x-internal-trigger') === 'true';
+
     if (!authHeader?.startsWith('Bearer ')) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -115,7 +117,8 @@ serve(async (req) => {
 
     let callerId: string | null = null;
 
-    if (!isServiceRole) {
+    // For internal DB trigger calls or service role calls, skip user auth
+    if (!isServiceRole && !isInternalTrigger) {
       const supabaseAuth = createClient(
         Deno.env.get("SUPABASE_URL")!,
         Deno.env.get("SUPABASE_ANON_KEY")!,
