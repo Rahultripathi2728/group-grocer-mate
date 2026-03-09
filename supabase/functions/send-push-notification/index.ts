@@ -144,8 +144,8 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // If targeting another user, verify they share a group
-    if (targetUserId !== callerId) {
+    // If targeting another user via user auth (not service role), verify they share a group
+    if (!isServiceRole && targetUserId !== callerId) {
       // Check via direct query: caller and target share at least one group
       const { data: callerGroups } = await supabase
         .from('group_memberships')
