@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -20,7 +20,8 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { Wallet, Users } from 'lucide-react';
+import { Wallet, Users, Sparkles } from 'lucide-react';
+import { detectCategory, getCategoryById } from '@/lib/categories';
 
 interface Group {
   id: string;
