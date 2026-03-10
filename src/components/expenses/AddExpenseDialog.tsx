@@ -231,10 +231,23 @@ export default function AddExpenseDialog({
             <Textarea
               id="description"
               name="description"
-              placeholder="What did you buy?"
+              placeholder="What did you buy? (e.g., Biryani, Uber, Netflix)"
               required
               className="resize-none"
               rows={2}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (debounceRef.current) clearTimeout(debounceRef.current);
+                debounceRef.current = setTimeout(() => {
+                  const detected = detectCategory(val);
+                  if (detected) {
+                    setCategory(detected);
+                    setAutoDetected(true);
+                  } else {
+                    setAutoDetected(false);
+                  }
+                }, 300);
+              }}
             />
           </div>
 
