@@ -52,6 +52,8 @@ export default function AddExpenseDialog({
   useEffect(() => {
     if (open && user) {
       fetchGroups();
+      setCategory('general');
+      setAutoDetected(false);
     }
   }, [open, user]);
 
