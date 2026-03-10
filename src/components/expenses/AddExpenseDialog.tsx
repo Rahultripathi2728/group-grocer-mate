@@ -281,8 +281,16 @@ export default function AddExpenseDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="category">Category</Label>
-            <Select name="category" defaultValue="general">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="category">Category</Label>
+              {autoDetected && (
+                <span className="flex items-center gap-1 text-[10px] text-primary font-medium bg-primary/10 px-1.5 py-0.5 rounded-full">
+                  <Sparkles className="h-3 w-3" />
+                  Auto-detected
+                </span>
+              )}
+            </div>
+            <Select name="category" value={category} onValueChange={(val) => { setCategory(val); setAutoDetected(false); }}>
               <SelectTrigger>
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
