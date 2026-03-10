@@ -46,7 +46,9 @@ export default function AddExpenseDialog({
   const [expenseType, setExpenseType] = useState<'personal' | 'group'>('personal');
   const [groups, setGroups] = useState<Group[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<string>('');
-
+  const [category, setCategory] = useState('general');
+  const [autoDetected, setAutoDetected] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (open && user) {
       fetchGroups();
