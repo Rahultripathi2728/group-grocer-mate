@@ -39,6 +39,7 @@ import DailySpendingChart from '@/components/expenses/DailySpendingChart';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { detectCategory } from '@/lib/categories';
 
 interface ExpenseRow {
   id: string;
