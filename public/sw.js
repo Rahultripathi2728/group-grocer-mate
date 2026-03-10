@@ -32,6 +32,12 @@ self.addEventListener('push', (event) => {
 
   event.waitUntil(
     self.registration.showNotification(data.title || 'Expense Manager', options)
+      .then(() => {
+        if ('setAppBadge' in self.navigator) {
+          return self.navigator.setAppBadge();
+        }
+      })
+      .catch(() => {})
   );
 });
 

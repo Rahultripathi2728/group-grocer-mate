@@ -25,7 +25,11 @@ export default function NotificationBell() {
           filter: `user_id=eq.${user.id}`,
         },
         () => {
-          setUnreadCount((prev) => prev + 1);
+          setUnreadCount((prev) => {
+            const newCount = prev + 1;
+            updateAppBadge(newCount);
+            return newCount;
+          });
         }
       )
       .on(
