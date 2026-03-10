@@ -235,6 +235,41 @@ export default function ExpensesPage() {
     setSettling(false);
   };
 
+  // One-time auto-recategorize old expenses with generic categories
+  useEffect(() => {
+    const recategorizeOldExpenses = async () => {
+      if (!user) return;
+      const storageKey = `recategorized_${user.id}`;
+      if (sessionStorage.getItem(storageKey)) return;
+      sessionStorage.setItem(storageKey, 'true');
+
+      const { data: oldExpenses } = await supabase
+        .from('expenses')
+        .select('id, description, category')
+        .eq('user_id', user.id)
+        .in('category', ['general', 'other']);
+
+      if (!oldExpenses || oldExpenses.length === 0) return;
+
+      let updated = 0;
+      for (const exp of oldExpenses) {
+        const detected = detectCategory(exp.description);
+        if (detected && detected !== exp.category) {
+          await supabase
+            .from('expenses')
+            .update({ category: detected })
+            .eq('id', exp.id);
+          updated++;
+        }
+      }
+      if (updated > 0) {
+        toast.success(`${updated} purane expenses ki category auto-update ho gayi!`);
+        fetchSummary();
+      }
+    };
+    recategorizeOldExpenses();
+  }, [user]);
+
   useEffect(() => {
     fetchSummary();
     fetchGroups();
