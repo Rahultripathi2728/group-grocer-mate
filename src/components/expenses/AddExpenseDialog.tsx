@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -20,7 +20,8 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { Wallet, Users } from 'lucide-react';
+import { Wallet, Users, Sparkles } from 'lucide-react';
+import { detectCategory, getCategoryById } from '@/lib/categories';
 
 interface Group {
   id: string;
@@ -45,10 +46,14 @@ export default function AddExpenseDialog({
   const [expenseType, setExpenseType] = useState<'personal' | 'group'>('personal');
   const [groups, setGroups] = useState<Group[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<string>('');
-
+  const [category, setCategory] = useState('general');
+  const [autoDetected, setAutoDetected] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (open && user) {
       fetchGroups();
+      setCategory('general');
+      setAutoDetected(false);
     }
   }, [open, user]);
 
@@ -228,10 +233,23 @@ export default function AddExpenseDialog({
             <Textarea
               id="description"
               name="description"
-              placeholder="What did you buy?"
+              placeholder="What did you buy? (e.g., Biryani, Uber, Netflix)"
               required
               className="resize-none"
               rows={2}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (debounceRef.current) clearTimeout(debounceRef.current);
+                debounceRef.current = setTimeout(() => {
+                  const detected = detectCategory(val);
+                  if (detected) {
+                    setCategory(detected);
+                    setAutoDetected(true);
+                  } else {
+                    setAutoDetected(false);
+                  }
+                }, 300);
+              }}
             />
           </div>
 
@@ -265,8 +283,16 @@ export default function AddExpenseDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="category">Category</Label>
-            <Select name="category" defaultValue="general">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="category">Category</Label>
+              {autoDetected && (
+                <span className="flex items-center gap-1 text-[10px] text-primary font-medium bg-primary/10 px-1.5 py-0.5 rounded-full">
+                  <Sparkles className="h-3 w-3" />
+                  Auto-detected
+                </span>
+              )}
+            </div>
+            <Select name="category" value={category} onValueChange={(val) => { setCategory(val); setAutoDetected(false); }}>
               <SelectTrigger>
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
