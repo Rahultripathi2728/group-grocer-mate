@@ -47,12 +47,24 @@ export default function NotificationBell() {
     };
   }, [user]);
 
+  const updateAppBadge = (count: number) => {
+    if ('setAppBadge' in navigator) {
+      if (count > 0) {
+        (navigator as any).setAppBadge(count).catch(() => {});
+      } else {
+        (navigator as any).clearAppBadge().catch(() => {});
+      }
+    }
+  };
+
   const fetchUnreadCount = async () => {
     const { count } = await supabase
       .from('notifications')
       .select('*', { count: 'exact', head: true })
       .eq('is_read', false);
-    setUnreadCount(count || 0);
+    const newCount = count || 0;
+    setUnreadCount(newCount);
+    updateAppBadge(newCount);
   };
 
   return (
