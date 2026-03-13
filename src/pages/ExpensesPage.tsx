@@ -284,7 +284,7 @@ export default function ExpensesPage() {
           <motion.h1
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-3xl font-display font-bold"
+            className="text-2xl sm:text-3xl font-display font-bold"
           >
             Expenses
           </motion.h1>
@@ -292,7 +292,7 @@ export default function ExpensesPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.1 }}
-            className="text-muted-foreground mt-1"
+            className="text-sm sm:text-base text-muted-foreground mt-1"
           >
             {format(dateFrom, 'dd MMM')} – {format(dateTo, 'dd MMM yyyy')} Overview
           </motion.p>
