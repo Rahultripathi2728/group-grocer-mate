@@ -248,8 +248,16 @@ export default function GroupsPage() {
     }
   };
 
+  // Delete group confirmation state
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+
   const handleDeleteGroup = async (groupId: string) => {
-    const { error } = await supabase.from('groups').delete().eq('id', groupId);
+    setDeleteConfirm(groupId);
+  };
+
+  const confirmDeleteGroup = async () => {
+    if (!deleteConfirm) return;
+    const { error } = await supabase.from('groups').delete().eq('id', deleteConfirm);
 
     if (error) {
       toast.error('Failed to delete group');
@@ -258,6 +266,7 @@ export default function GroupsPage() {
       setSelectedGroup(null);
       fetchGroups();
     }
+    setDeleteConfirm(null);
   };
 
   const copyInviteCode = (code: string) => {

@@ -101,13 +101,18 @@ export default function ExpensesPage() {
       .order('expense_date', { ascending: false });
 
     if (expenses) {
+      // Only count unsettled expenses in totals
       const personal = expenses
-        .filter((e) => e.expense_type === 'personal')
+        .filter((e) => e.expense_type === 'personal' && !e.is_settled)
         .reduce((sum, e) => sum + Number(e.amount), 0);
 
       // Get user's share from expense_splits for group expenses in this date range
       const groupExpenseIds = expenses
         .filter((e) => e.expense_type === 'group')
+        .map((e) => e.id);
+
+      const unsettledGroupExpenseIds = expenses
+        .filter((e) => e.expense_type === 'group' && !e.is_settled)
         .map((e) => e.id);
 
       let myGroupShare = 0;
@@ -122,7 +127,10 @@ export default function ExpensesPage() {
         (splits || []).forEach((s) => {
           splitsMap.set(s.expense_id, Number(s.amount_owed));
         });
-        myGroupShare = (splits || []).reduce((sum, s) => sum + Number(s.amount_owed), 0);
+        // Only sum unsettled group expenses for totals
+        myGroupShare = (splits || [])
+          .filter((s) => unsettledGroupExpenseIds.includes(s.expense_id))
+          .reduce((sum, s) => sum + Number(s.amount_owed), 0);
       }
 
       const mapped = expenses.map((e) => ({

@@ -146,6 +146,13 @@ const categoryKeywords: Record<string, string[]> = {
     'mall', 'market', 'bazaar', 'electronics', 'laptop', 'phone', 'mobile',
     'headphone', 'earphone', 'charger', 'cable', 'gadget', 'appliance',
     'furniture', 'sofa', 'bed', 'table', 'chair', 'decor', 'home',
+    // Personal care
+    'shampoo', 'soap', 'sabun', 'toothpaste', 'toothbrush', 'conditioner',
+    'face wash', 'body wash', 'lotion', 'cream', 'sunscreen', 'perfume',
+    'deodorant', 'deo', 'razor', 'trimmer', 'comb', 'hairbrush',
+    'mask', 'masks', 'face mask', 'sanitizer', 'tissue', 'napkin', 'diaper',
+    'cotton', 'band aid', 'detergent', 'surf', 'tide', 'ariel', 'vim',
+    'harpic', 'lizol', 'phenyl', 'broom', 'jhaadu', 'mop', 'pocha',
   ],
   health: [
     'doctor', 'hospital', 'clinic', 'medicine', 'dawai', 'pharmacy', 'medical',
