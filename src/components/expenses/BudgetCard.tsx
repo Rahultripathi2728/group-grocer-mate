@@ -160,9 +160,14 @@ export default function BudgetCard({ totalSpent, onBudgetChange }: BudgetCardPro
             <Progress 
               value={percentage} 
               className={cn(
-                "h-2 bg-background/20",
-                isOverBudget && "[&>div]:bg-destructive",
-                isNearLimit && !isOverBudget && "[&>div]:bg-warning"
+                "h-2.5 rounded-full bg-background/30",
+                isOverBudget 
+                  ? "[&>div]:bg-destructive" 
+                  : isNearLimit 
+                    ? "[&>div]:bg-warning" 
+                    : percentage >= 50 
+                      ? "[&>div]:bg-amber-400"
+                      : "[&>div]:bg-success"
               )}
             />
             <div className="flex justify-between text-xs text-background/60">
