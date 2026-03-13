@@ -93,21 +93,6 @@ const categoryKeywords: Record<string, string[]> = {
     'lassi', 'buttermilk', 'chaas', 'tandoori', 'tikka', 'kebab', 'korma', 'masala',
     'curry', 'sabzi', 'bhaji', 'pakora', 'chaat', 'dhokla', 'kachori', 'poha', 'upma',
     'pulao', 'khichdi', 'raita', 'chutney', 'pickle', 'achar', 'papad',
-    // Fruits & vegetables
-    'dahi', 'curd', 'yogurt', 'aaloo', 'aloo', 'potato', 'onion', 'pyaaz', 'pyaz',
-    'tomato', 'tamatar', 'cucumber', 'kheera', 'banana', 'kela', 'apple', 'seb',
-    'mango', 'aam', 'grapes', 'angoor', 'watermelon', 'tarbuj', 'papaya', 'orange',
-    'santra', 'pomegranate', 'anar', 'lemon', 'nimbu', 'ginger', 'adrak', 'garlic',
-    'lehsun', 'palak', 'spinach', 'gobi', 'cauliflower', 'cabbage', 'patta gobi',
-    'carrot', 'gajar', 'peas', 'matar', 'beans', 'bhindi', 'okra', 'brinjal',
-    'baingan', 'capsicum', 'shimla mirch', 'mushroom', 'corn', 'makka',
-    // Dairy & basics
-    'paneer', 'ghee', 'butter', 'makhan', 'cream', 'cheese', 'chhena', 'mawa', 'khoya',
-    // Beverages
-    'cold drink', 'soft drink', 'soda', 'coca cola', 'coke', 'pepsi', 'sprite',
-    'fanta', 'limca', 'thumsup', 'thums up', 'maaza', 'frooti', 'appy', 'real juice',
-    'nimbu pani', 'sharbat', 'sherbet', 'jaljeera', 'roohafza', 'energy drink',
-    'red bull', 'sting', 'monster',
     // General food
     'food', 'lunch', 'dinner', 'breakfast', 'snack', 'meal', 'pizza', 'burger', 'sandwich',
     'coffee', 'tea', 'juice', 'milk', 'bread', 'rice', 'chicken', 'mutton', 'fish', 'egg',
@@ -146,13 +131,6 @@ const categoryKeywords: Record<string, string[]> = {
     'mall', 'market', 'bazaar', 'electronics', 'laptop', 'phone', 'mobile',
     'headphone', 'earphone', 'charger', 'cable', 'gadget', 'appliance',
     'furniture', 'sofa', 'bed', 'table', 'chair', 'decor', 'home',
-    // Personal care
-    'shampoo', 'soap', 'sabun', 'toothpaste', 'toothbrush', 'conditioner',
-    'face wash', 'body wash', 'lotion', 'cream', 'sunscreen', 'perfume',
-    'deodorant', 'deo', 'razor', 'trimmer', 'comb', 'hairbrush',
-    'mask', 'masks', 'face mask', 'sanitizer', 'tissue', 'napkin', 'diaper',
-    'cotton', 'band aid', 'detergent', 'surf', 'tide', 'ariel', 'vim',
-    'harpic', 'lizol', 'phenyl', 'broom', 'jhaadu', 'mop', 'pocha',
   ],
   health: [
     'doctor', 'hospital', 'clinic', 'medicine', 'dawai', 'pharmacy', 'medical',

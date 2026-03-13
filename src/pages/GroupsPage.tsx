@@ -248,16 +248,8 @@ export default function GroupsPage() {
     }
   };
 
-  // Delete group confirmation state
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-
   const handleDeleteGroup = async (groupId: string) => {
-    setDeleteConfirm(groupId);
-  };
-
-  const confirmDeleteGroup = async () => {
-    if (!deleteConfirm) return;
-    const { error } = await supabase.from('groups').delete().eq('id', deleteConfirm);
+    const { error } = await supabase.from('groups').delete().eq('id', groupId);
 
     if (error) {
       toast.error('Failed to delete group');
@@ -266,7 +258,6 @@ export default function GroupsPage() {
       setSelectedGroup(null);
       fetchGroups();
     }
-    setDeleteConfirm(null);
   };
 
   const copyInviteCode = (code: string) => {
@@ -614,24 +605,6 @@ export default function GroupsPage() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={confirmJoinGroup} className="bg-primary text-primary-foreground">
               Join Group
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Delete Group Confirmation */}
-      <AlertDialog open={!!deleteConfirm} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Group?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Kya aap sure hain? Is group ke saare expenses, splits aur data permanently delete ho jayenge. Yeh action undo nahi hoga.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteGroup} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Delete Group
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
