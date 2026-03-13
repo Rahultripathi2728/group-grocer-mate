@@ -27,7 +27,7 @@ export default function StatCard({
   return (
     <div
       className={cn(
-        'relative overflow-hidden p-6 rounded-2xl bg-card border border-border',
+        'relative overflow-hidden p-4 sm:p-6 rounded-2xl bg-card border border-border',
         'hover:shadow-md transition-all duration-300',
         'group',
         className
@@ -41,10 +41,10 @@ export default function StatCard({
         )}
       />
 
-      <div className="relative flex items-start justify-between">
-        <div className="space-y-2">
-          <p className="text-sm font-medium text-muted-foreground">{title}</p>
-          <p className="text-3xl font-display font-bold tracking-tight">{value}</p>
+      <div className="relative flex items-start justify-between gap-2">
+        <div className="space-y-1 sm:space-y-2 min-w-0">
+          <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">{title}</p>
+          <p className="text-xl sm:text-3xl font-display font-bold tracking-tight truncate">{value}</p>
           {trend && (
             <div
               className={cn(
@@ -63,11 +63,11 @@ export default function StatCard({
         </div>
         <div
           className={cn(
-            'p-3 rounded-xl transition-transform duration-300 group-hover:scale-110',
+            'p-2 sm:p-3 rounded-xl transition-transform duration-300 group-hover:scale-110 shrink-0',
             iconBgColor
           )}
         >
-          <Icon className={cn('h-6 w-6', iconColor)} />
+          <Icon className={cn('h-5 w-5 sm:h-6 sm:w-6', iconColor)} />
         </div>
       </div>
     </div>
