@@ -97,13 +97,13 @@ export default function ExpenseCard({
   if (compact) {
     return (
       <>
-        <div className={cn("flex items-center justify-between p-3 rounded-xl bg-card border border-border hover:shadow-sm transition-all duration-200 group/card", is_settled && "opacity-60")}>
-          <div className="flex items-center gap-3">
-            <div className={cn('p-2 rounded-lg', categoryInfo.bgColor)}>
-              <CategoryIcon className={cn('h-4 w-4', categoryInfo.color)} />
+        <div className={cn("flex items-center justify-between p-2.5 sm:p-3 rounded-xl bg-card border border-border hover:shadow-sm transition-all duration-200 group/card", is_settled && "opacity-60")}>
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+            <div className={cn('p-1.5 sm:p-2 rounded-lg shrink-0', categoryInfo.bgColor)}>
+              <CategoryIcon className={cn('h-3.5 w-3.5 sm:h-4 sm:w-4', categoryInfo.color)} />
             </div>
             <div className="min-w-0">
-              <p className={cn("font-medium text-sm truncate max-w-[150px]", is_settled && "line-through")}>{description}</p>
+              <p className={cn("font-medium text-xs sm:text-sm truncate", is_settled && "line-through")}>{description}</p>
               <div className="flex items-center gap-2 mt-0.5">
                 {showDate && expense_date && <span className="text-xs text-muted-foreground">{format(new Date(expense_date), 'dd MMM')}</span>}
                 {is_settled ? (

@@ -136,18 +136,18 @@ export default function BudgetCard({ totalSpent, onBudgetChange }: BudgetCardPro
     <>
       {/* Dark budget card matching reference */}
       <Card className="border-0 shadow-lg overflow-hidden bg-foreground text-background">
-        <CardContent className="pt-6 pb-6">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-background/60">Monthly Budget</p>
-              <p className="text-3xl font-display font-bold mt-1">
+        <CardContent className="pt-4 pb-4 sm:pt-6 sm:pb-6">
+          <div className="flex items-start justify-between mb-3 sm:mb-4 gap-2">
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-background/60">Monthly Budget</p>
+              <p className="text-xl sm:text-3xl font-display font-bold mt-0.5 sm:mt-1 truncate">
                 ₹{budget.amount.toLocaleString('en-IN')}
               </p>
             </div>
-            <div className="text-right">
-              <p className="text-xs font-semibold uppercase tracking-wider text-background/60">Spent</p>
+            <div className="text-right min-w-0">
+              <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-background/60">Spent</p>
               <p className={cn(
-                "text-2xl font-display font-bold mt-1",
+                "text-lg sm:text-2xl font-display font-bold mt-0.5 sm:mt-1 truncate",
                 isOverBudget ? "text-destructive" : "text-background"
               )}>
                 ₹{totalSpent.toLocaleString('en-IN')}

@@ -15,7 +15,7 @@ export default function BottomNav() {
 
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border">
-      <div className="flex items-center justify-around h-16 px-2">
+      <div className="flex items-center justify-around h-14 sm:h-16 px-1 sm:px-2">
         {navItems.map((item) => {
           const isActive = location.pathname === item.href;
           return (
@@ -27,16 +27,16 @@ export default function BottomNav() {
               {isActive ? (
                 <motion.div
                   layoutId="activeTab"
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-foreground"
+                  className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-full bg-foreground"
                   transition={{ type: 'spring', bounce: 0.15, duration: 0.5 }}
                 >
-                  <item.icon className="h-4.5 w-4.5 text-background" />
-                  <span className="text-xs font-semibold text-background">
+                  <item.icon className="h-4 w-4 sm:h-[18px] sm:w-[18px] text-background shrink-0" />
+                  <span className="text-[10px] sm:text-xs font-semibold text-background whitespace-nowrap">
                     {item.label}
                   </span>
                 </motion.div>
               ) : (
-                <div className="flex flex-col items-center justify-center px-3 py-2">
+                <div className="flex flex-col items-center justify-center px-2 sm:px-3 py-2">
                   <item.icon className="h-5 w-5 text-muted-foreground" />
                 </div>
               )}

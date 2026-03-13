@@ -284,7 +284,7 @@ export default function ExpensesPage() {
           <motion.h1
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-3xl font-display font-bold"
+            className="text-2xl sm:text-3xl font-display font-bold"
           >
             Expenses
           </motion.h1>
@@ -292,7 +292,7 @@ export default function ExpensesPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.1 }}
-            className="text-muted-foreground mt-1"
+            className="text-sm sm:text-base text-muted-foreground mt-1"
           >
             {format(dateFrom, 'dd MMM')} – {format(dateTo, 'dd MMM yyyy')} Overview
           </motion.p>
@@ -303,16 +303,16 @@ export default function ExpensesPage() {
           <TabsList className="grid w-full grid-cols-2 bg-muted p-1 rounded-xl border border-border">
             <TabsTrigger 
               value="personal" 
-              className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm flex items-center gap-2"
+              className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm"
             >
-              <Wallet className="h-4 w-4" />
+              <Wallet className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
               My Expenses
             </TabsTrigger>
             <TabsTrigger 
               value="settlement" 
-              className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm flex items-center gap-2"
+              className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm"
             >
-              <CheckCircle2 className="h-4 w-4" />
+              <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
               Settlement
             </TabsTrigger>
           </TabsList>
@@ -329,13 +329,14 @@ export default function ExpensesPage() {
                 <PopoverTrigger asChild>
               <Button
                     variant="outline"
+                    size="sm"
                     className={cn(
-                      "flex-1 min-w-[130px] justify-start text-left font-normal border border-border",
+                      "flex-1 min-w-0 justify-start text-left font-normal border border-border text-xs sm:text-sm",
                       !dateFrom && "text-muted-foreground"
                     )}
                   >
-                    <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
-                    {format(dateFrom, 'MM/dd/yyyy')}
+                    <CalendarIcon className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
+                    {format(dateFrom, 'dd/MM/yy')}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -355,13 +356,14 @@ export default function ExpensesPage() {
                 <PopoverTrigger asChild>
               <Button
                     variant="outline"
+                    size="sm"
                     className={cn(
-                      "flex-1 min-w-[130px] justify-start text-left font-normal border border-border",
+                      "flex-1 min-w-0 justify-start text-left font-normal border border-border text-xs sm:text-sm",
                       !dateTo && "text-muted-foreground"
                     )}
                   >
-                    <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
-                    {format(dateTo, 'MM/dd/yyyy')}
+                    <CalendarIcon className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
+                    {format(dateTo, 'dd/MM/yy')}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="end">
