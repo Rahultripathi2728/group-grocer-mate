@@ -72,25 +72,215 @@ async function createJwt(audience: string, subject: string, privateKeyData: { d:
   return `${unsignedToken}.${base64UrlEncode(rawSig.buffer)}`;
 }
 
+// ---- Web Push Payload Encryption (RFC 8291 + RFC 8188) ----
+
+async function hkdfExpand(ikm: Uint8Array, salt: Uint8Array, info: Uint8Array, length: number): Promise<Uint8Array> {
+  const key = await crypto.subtle.importKey("raw", ikm, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  
+  // Extract
+  const saltKey = await crypto.subtle.importKey("raw", salt.length ? salt : new Uint8Array(32), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const prk = new Uint8Array(await crypto.subtle.sign("HMAC", saltKey, ikm));
+  
+  // Expand
+  const prkKey = await crypto.subtle.importKey("raw", prk, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const infoWithCounter = new Uint8Array(info.length + 1);
+  infoWithCounter.set(info);
+  infoWithCounter[info.length] = 1;
+  const okm = new Uint8Array(await crypto.subtle.sign("HMAC", prkKey, infoWithCounter));
+  
+  return okm.slice(0, length);
+}
+
+function createInfo(type: string, clientPublicKey: Uint8Array, serverPublicKey: Uint8Array): Uint8Array {
+  const typeBytes = new TextEncoder().encode(type);
+  const encoder = new TextEncoder();
+  const contentEncoding = encoder.encode("Content-Encoding: ");
+  const pLabel = encoder.encode("\0P-256\0");
+  
+  // "Content-Encoding: <type>\0P-256\0" + len(client) + client + len(server) + server
+  const info = new Uint8Array(
+    contentEncoding.length + typeBytes.length + pLabel.length + 
+    2 + clientPublicKey.length + 2 + serverPublicKey.length
+  );
+  
+  let offset = 0;
+  info.set(contentEncoding, offset); offset += contentEncoding.length;
+  info.set(typeBytes, offset); offset += typeBytes.length;
+  info.set(pLabel, offset); offset += pLabel.length;
+  
+  info[offset++] = 0;
+  info[offset++] = clientPublicKey.length;
+  info.set(clientPublicKey, offset); offset += clientPublicKey.length;
+  
+  info[offset++] = 0;
+  info[offset++] = serverPublicKey.length;
+  info.set(serverPublicKey, offset);
+  
+  return info;
+}
+
+async function encryptPayload(
+  plaintext: Uint8Array,
+  clientPublicKeyBytes: Uint8Array,
+  authSecret: Uint8Array
+): Promise<{ ciphertext: Uint8Array; localPublicKey: Uint8Array }> {
+  // Generate local ECDH key pair
+  const localKeyPair = await crypto.subtle.generateKey(
+    { name: "ECDH", namedCurve: "P-256" },
+    true,
+    ["deriveBits"]
+  );
+  
+  // Export local public key (uncompressed)
+  const localPublicKeyRaw = new Uint8Array(await crypto.subtle.exportKey("raw", localKeyPair.publicKey));
+  
+  // Import client public key
+  const clientPublicKey = await crypto.subtle.importKey(
+    "raw",
+    clientPublicKeyBytes,
+    { name: "ECDH", namedCurve: "P-256" },
+    false,
+    []
+  );
+  
+  // ECDH shared secret
+  const sharedSecret = new Uint8Array(
+    await crypto.subtle.deriveBits(
+      { name: "ECDH", public: clientPublicKey },
+      localKeyPair.privateKey,
+      256
+    )
+  );
+  
+  // RFC 8291: IKM from auth secret
+  const authInfo = new TextEncoder().encode("Content-Encoding: auth\0");
+  const ikm = await hkdfExpand(sharedSecret, authSecret, authInfo, 32);
+  
+  // Generate 16-byte salt
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  
+  // Derive content encryption key and nonce
+  const cekInfo = createInfo("aesgcm", clientPublicKeyBytes, localPublicKeyRaw);
+  const nonceInfo = createInfo("nonce", clientPublicKeyBytes, localPublicKeyRaw);
+  
+  const cek = await hkdfExpand(ikm, salt, cekInfo, 16);
+  const nonce = await hkdfExpand(ikm, salt, nonceInfo, 12);
+  
+  // Add 2-byte padding (0x00 0x00 = no padding)
+  const paddedPlaintext = new Uint8Array(2 + plaintext.length);
+  paddedPlaintext[0] = 0;
+  paddedPlaintext[1] = 0;
+  paddedPlaintext.set(plaintext, 2);
+  
+  // AES-128-GCM encrypt
+  const aesKey = await crypto.subtle.importKey("raw", cek, { name: "AES-GCM" }, false, ["encrypt"]);
+  const encrypted = new Uint8Array(
+    await crypto.subtle.encrypt(
+      { name: "AES-GCM", iv: nonce, tagLength: 128 },
+      aesKey,
+      paddedPlaintext
+    )
+  );
+  
+  // Build final body: salt(16) + rs(4) + keyidlen(1) + keyid(65) + encrypted
+  const rs = 4096;
+  const header = new Uint8Array(16 + 4 + 1 + localPublicKeyRaw.length);
+  header.set(salt, 0);
+  header[16] = (rs >> 24) & 0xff;
+  header[17] = (rs >> 16) & 0xff;
+  header[18] = (rs >> 8) & 0xff;
+  header[19] = rs & 0xff;
+  header[20] = localPublicKeyRaw.length;
+  header.set(localPublicKeyRaw, 21);
+  
+  // For aesgcm encoding, body is just the encrypted content
+  // Headers carry salt and keyid
+  
+  return { 
+    ciphertext: encrypted, 
+    localPublicKey: localPublicKeyRaw,
+    salt 
+  } as any;
+}
+
 async function sendWebPush(
   subscription: { endpoint: string; p256dh: string; auth: string },
   vapidPublicKey: string,
-  privateKeyData: { d: string; x: string; y: string }
+  privateKeyData: { d: string; x: string; y: string },
+  payload: { title: string; body: string; type?: string }
 ) {
   const vapidSubject = "mailto:push@expensetrack.app";
   const url = new URL(subscription.endpoint);
   const audience = `${url.protocol}//${url.hostname}`;
 
   const jwt = await createJwt(audience, vapidSubject, privateKeyData);
+  
+  // Encode payload
+  const payloadBytes = new TextEncoder().encode(JSON.stringify(payload));
+  const clientPublicKey = base64UrlDecode(subscription.p256dh);
+  const authSecret = base64UrlDecode(subscription.auth);
+  
+  // Encrypt using Web Push encryption (aesgcm)
+  const localKeyPair = await crypto.subtle.generateKey(
+    { name: "ECDH", namedCurve: "P-256" },
+    true,
+    ["deriveBits"]
+  );
+  
+  const localPublicKeyRaw = new Uint8Array(await crypto.subtle.exportKey("raw", localKeyPair.publicKey));
+  
+  const clientKey = await crypto.subtle.importKey(
+    "raw", clientPublicKey,
+    { name: "ECDH", namedCurve: "P-256" },
+    false, []
+  );
+  
+  const sharedSecret = new Uint8Array(
+    await crypto.subtle.deriveBits(
+      { name: "ECDH", public: clientKey },
+      localKeyPair.privateKey,
+      256
+    )
+  );
+  
+  // HKDF for auth
+  const authInfo = new TextEncoder().encode("Content-Encoding: auth\0");
+  const ikm = await hkdfExpand(sharedSecret, authSecret, authInfo, 32);
+  
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  
+  const cekInfo = createInfo("aesgcm", clientPublicKey, localPublicKeyRaw);
+  const nonceInfo = createInfo("nonce", clientPublicKey, localPublicKeyRaw);
+  
+  const cek = await hkdfExpand(ikm, salt, cekInfo, 16);
+  const nonce = await hkdfExpand(ikm, salt, nonceInfo, 12);
+  
+  // Pad plaintext (2-byte padding header)
+  const paddedPayload = new Uint8Array(2 + payloadBytes.length);
+  paddedPayload[0] = 0;
+  paddedPayload[1] = 0;
+  paddedPayload.set(payloadBytes, 2);
+  
+  const aesKey = await crypto.subtle.importKey("raw", cek, { name: "AES-GCM" }, false, ["encrypt"]);
+  const encrypted = new Uint8Array(
+    await crypto.subtle.encrypt(
+      { name: "AES-GCM", iv: nonce, tagLength: 128 },
+      aesKey,
+      paddedPayload
+    )
+  );
 
   const response = await fetch(subscription.endpoint, {
     method: "POST",
     headers: {
       "Authorization": `vapid t=${jwt}, k=${vapidPublicKey}`,
       "Content-Type": "application/octet-stream",
-      "Content-Length": "0",
+      "Content-Encoding": "aesgcm",
+      "Encryption": `salt=${base64UrlEncode(salt.buffer)}`,
+      "Crypto-Key": `dh=${base64UrlEncode(localPublicKeyRaw.buffer)};p256ecdsa=${vapidPublicKey}`,
       "TTL": "86400",
     },
+    body: encrypted,
   });
 
   return response;
@@ -117,7 +307,6 @@ serve(async (req) => {
 
     let callerId: string | null = null;
 
-    // For internal DB trigger calls or service role calls, skip user auth
     if (!isServiceRole && !isInternalTrigger) {
       const supabaseAuth = createClient(
         Deno.env.get("SUPABASE_URL")!,
@@ -147,9 +336,7 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // If targeting another user via user auth (not service role/internal), verify they share a group
     if (!isServiceRole && !isInternalTrigger && targetUserId !== callerId) {
-      // Check via direct query: caller and target share at least one group
       const { data: callerGroups } = await supabase
         .from('group_memberships')
         .select('group_id')
@@ -190,7 +377,6 @@ serve(async (req) => {
       }
     }
 
-    // Get VAPID keys from database
     const { data: vapidKeys } = await supabase
       .from('vapid_keys')
       .select('*')
@@ -205,7 +391,6 @@ serve(async (req) => {
 
     const privateKeyData = JSON.parse(vapidKeys.private_key);
 
-    // Get user's push subscriptions
     const { data: subscriptions } = await supabase
       .from("push_subscriptions")
       .select("*")
@@ -217,13 +402,21 @@ serve(async (req) => {
       });
     }
 
+    // Build the push payload with actual notification content
+    const pushPayload = {
+      title: title || "Expense Manager",
+      body: message || "You have a new notification",
+      type: type || "general",
+    };
+
     const results = [];
     for (const sub of subscriptions) {
       try {
         const res = await sendWebPush(
           { endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth },
           vapidKeys.public_key,
-          privateKeyData
+          privateKeyData,
+          pushPayload
         );
         results.push({ endpoint: sub.endpoint, status: res.status });
 
