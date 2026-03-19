@@ -57,6 +57,8 @@ interface DayExpense {
     category?: string | null;
     is_settled: boolean;
     myShare?: number;
+    addedByName?: string;
+    user_id?: string;
   }>;
 }
 
@@ -114,6 +116,21 @@ export default function CalendarPage() {
         });
       }
 
+      // Fetch profile names for group expense creators
+      const groupExpenseUserIds = [...new Set(
+        expenses.filter((e) => e.expense_type === 'group').map((e) => e.user_id)
+      )];
+      let profilesMap = new Map<string, string>();
+      if (groupExpenseUserIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, full_name')
+          .in('id', groupExpenseUserIds);
+        (profiles || []).forEach((p) => {
+          profilesMap.set(p.id, p.full_name);
+        });
+      }
+
       const grouped = new Map<string, DayExpense>();
       expenses.forEach((expense) => {
         const dateKey = expense.expense_date;
@@ -152,6 +169,10 @@ export default function CalendarPage() {
           category: expense.category,
           is_settled: expense.is_settled,
           myShare,
+          user_id: expense.user_id,
+          addedByName: expense.expense_type === 'group'
+            ? (expense.user_id === user.id ? 'You' : (profilesMap.get(expense.user_id) || 'Unknown'))
+            : undefined,
         });
         grouped.set(dateKey, existing);
       });
@@ -403,6 +424,11 @@ export default function CalendarPage() {
                                     <CheckCircle2 className="h-2.5 w-2.5" />Settled
                                   </span>
                                 )}
+                                {expense.expense_type === 'group' && expense.addedByName && (
+                                  <span className="text-[10px] text-muted-foreground font-medium">
+                                    by {expense.addedByName}
+                                  </span>
+                                )}
                               </div>
                             </div>
 
@@ -496,6 +522,12 @@ export default function CalendarPage() {
                         {selectedDate ? format(selectedDate, 'dd MMM yyyy') : ''}
                       </p>
                     </div>
+                    {detailExpense.expense_type === 'group' && detailExpense.addedByName && (
+                      <div className="p-3 rounded-xl bg-muted/50">
+                        <p className="text-xs text-muted-foreground">Added By</p>
+                        <p className="font-semibold text-sm mt-0.5">{detailExpense.addedByName}</p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Delete button for unsettled */}
