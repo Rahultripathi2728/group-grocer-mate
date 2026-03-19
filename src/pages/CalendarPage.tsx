@@ -57,6 +57,8 @@ interface DayExpense {
     category?: string | null;
     is_settled: boolean;
     myShare?: number;
+    addedByName?: string;
+    user_id?: string;
   }>;
 }
 
