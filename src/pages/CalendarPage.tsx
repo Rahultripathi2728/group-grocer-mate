@@ -424,6 +424,11 @@ export default function CalendarPage() {
                                     <CheckCircle2 className="h-2.5 w-2.5" />Settled
                                   </span>
                                 )}
+                                {expense.expense_type === 'group' && expense.addedByName && (
+                                  <span className="text-[10px] text-muted-foreground font-medium">
+                                    by {expense.addedByName}
+                                  </span>
+                                )}
                               </div>
                             </div>
 
