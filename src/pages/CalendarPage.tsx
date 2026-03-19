@@ -522,6 +522,12 @@ export default function CalendarPage() {
                         {selectedDate ? format(selectedDate, 'dd MMM yyyy') : ''}
                       </p>
                     </div>
+                    {detailExpense.expense_type === 'group' && detailExpense.addedByName && (
+                      <div className="p-3 rounded-xl bg-muted/50">
+                        <p className="text-xs text-muted-foreground">Added By</p>
+                        <p className="font-semibold text-sm mt-0.5">{detailExpense.addedByName}</p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Delete button for unsettled */}
