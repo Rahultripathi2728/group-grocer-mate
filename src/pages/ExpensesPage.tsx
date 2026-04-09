@@ -435,16 +435,8 @@ export default function ExpensesPage() {
               </motion.div>
             </div>
 
-            {/* Daily Spending Chart */}
-            {/* Charts - scrollable row */}
-            <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory -mx-4 px-4">
-              <div className="min-w-[85%] snap-center shrink-0">
-                <DailySpendingChart expenses={summary.allExpenses} dateFrom={dateFrom} dateTo={dateTo} />
-              </div>
-              <div className="min-w-[85%] snap-center shrink-0">
-                <CategoryPieChart expenses={summary.allExpenses} />
-              </div>
-            </div>
+            {/* Charts with toggle */}
+            <ChartToggle expenses={summary.allExpenses} dateFrom={dateFrom} dateTo={dateTo} />
 
             {/* Recent Expenses */}
             <Card className="border border-border shadow-sm">
