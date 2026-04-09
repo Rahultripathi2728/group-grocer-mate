@@ -27,6 +27,7 @@ interface ExpenseCardProps {
   showDate?: boolean;
   compact?: boolean;
   myShare?: number;
+  groupName?: string;
   onDelete?: () => void;
 }
 
