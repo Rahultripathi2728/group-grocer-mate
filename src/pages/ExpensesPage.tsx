@@ -49,6 +49,7 @@ interface ExpenseRow {
   expense_type: string;
   category?: string | null;
   myShare?: number;
+  groupName?: string;
 }
 
 interface ExpenseSummary {
@@ -95,7 +96,7 @@ export default function ExpensesPage() {
 
     const { data: expenses } = await supabase
       .from('expenses')
-      .select('*')
+      .select('*, groups(name)')
       .gte('expense_date', startDate)
       .lte('expense_date', endDate)
       .order('expense_date', { ascending: false });
@@ -131,6 +132,7 @@ export default function ExpensesPage() {
         myShare: e.expense_type === 'group'
           ? (splitsMap.get(e.id) || 0)
           : Number(e.amount),
+        groupName: (e as any).groups?.name || undefined,
       }));
       setSummary({
         totalPersonal: personal,

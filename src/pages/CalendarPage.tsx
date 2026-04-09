@@ -418,7 +418,7 @@ export default function CalendarPage() {
                                 )}>
                                   {expense.expense_type === 'personal'
                                     ? <><Wallet className="h-2.5 w-2.5" /> Personal</>
-                                    : <><Users className="h-2.5 w-2.5" /> Group</>
+                                    : <><Users className="h-2.5 w-2.5" /> {expense.groupName || 'Group'}</>
                                   }
                                 </span>
                                 {expense.is_settled && (
