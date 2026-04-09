@@ -35,8 +35,7 @@ import BudgetCard from '@/components/expenses/BudgetCard';
 import GroupExpensesBreakdown from '@/components/expenses/GroupExpensesBreakdown';
 import StatCard from '@/components/ui/stat-card';
 import ExpenseCard from '@/components/expenses/ExpenseCard';
-import DailySpendingChart from '@/components/expenses/DailySpendingChart';
-import CategoryPieChart from '@/components/expenses/CategoryPieChart';
+import ChartToggle from '@/components/expenses/ChartToggle';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -435,16 +434,8 @@ export default function ExpensesPage() {
               </motion.div>
             </div>
 
-            {/* Daily Spending Chart */}
-            {/* Charts - scrollable row */}
-            <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory -mx-4 px-4">
-              <div className="min-w-[85%] snap-center shrink-0">
-                <DailySpendingChart expenses={summary.allExpenses} dateFrom={dateFrom} dateTo={dateTo} />
-              </div>
-              <div className="min-w-[85%] snap-center shrink-0">
-                <CategoryPieChart expenses={summary.allExpenses} />
-              </div>
-            </div>
+            {/* Charts with toggle */}
+            <ChartToggle expenses={summary.allExpenses} dateFrom={dateFrom} dateTo={dateTo} />
 
             {/* Recent Expenses */}
             <Card className="border border-border shadow-sm">
