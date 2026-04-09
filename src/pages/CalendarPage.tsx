@@ -59,6 +59,7 @@ interface DayExpense {
     myShare?: number;
     addedByName?: string;
     user_id?: string;
+    groupName?: string;
   }>;
 }
 
@@ -92,7 +93,7 @@ export default function CalendarPage() {
 
     const { data: expenses } = await supabase
       .from('expenses')
-      .select('*')
+      .select('*, groups(name)')
       .gte('expense_date', startDate)
       .lte('expense_date', endDate)
       .order('created_at', { ascending: false });
@@ -173,6 +174,7 @@ export default function CalendarPage() {
           addedByName: expense.expense_type === 'group'
             ? (expense.user_id === user.id ? 'You' : (profilesMap.get(expense.user_id) || 'Unknown'))
             : undefined,
+          groupName: (expense as any).groups?.name || undefined,
         });
         grouped.set(dateKey, existing);
       });
@@ -416,7 +418,7 @@ export default function CalendarPage() {
                                 )}>
                                   {expense.expense_type === 'personal'
                                     ? <><Wallet className="h-2.5 w-2.5" /> Personal</>
-                                    : <><Users className="h-2.5 w-2.5" /> Group</>
+                                    : <><Users className="h-2.5 w-2.5" /> {expense.groupName || 'Group'}</>
                                   }
                                 </span>
                                 {expense.is_settled && (

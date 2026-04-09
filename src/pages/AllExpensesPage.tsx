@@ -19,6 +19,7 @@ interface Expense {
   expense_type: string;
   category?: string | null;
   myShare?: number;
+  groupName?: string;
 }
 
 export default function AllExpensesPage() {
@@ -46,7 +47,7 @@ export default function AllExpensesPage() {
 
     const { data } = await supabase
       .from('expenses')
-      .select('*')
+      .select('*, groups(name)')
       .order('expense_date', { ascending: false });
 
     if (data) {
@@ -74,6 +75,7 @@ export default function AllExpensesPage() {
           myShare: e.expense_type === 'group'
             ? (splitsMap.get(e.id) || 0)
             : Number(e.amount),
+          groupName: (e as any).groups?.name || undefined,
         }))
       );
     }

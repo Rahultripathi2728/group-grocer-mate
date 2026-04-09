@@ -27,6 +27,7 @@ interface ExpenseCardProps {
   showDate?: boolean;
   compact?: boolean;
   myShare?: number;
+  groupName?: string;
   onDelete?: () => void;
 }
 
@@ -41,6 +42,7 @@ export default function ExpenseCard({
   showDate = false,
   compact = false,
   myShare,
+  groupName,
   onDelete,
 }: ExpenseCardProps) {
   const [deleting, setDeleting] = useState(false);
@@ -110,7 +112,7 @@ export default function ExpenseCard({
                   <span className="text-xs px-1.5 py-0.5 rounded-full bg-success/10 text-success flex items-center gap-1"><CheckCircle2 className="h-3 w-3" />Settled</span>
                 ) : (
                   <span className={cn('text-xs px-1.5 py-0.5 rounded-full', expense_type === 'personal' ? 'bg-primary/10 text-primary' : 'bg-accent text-accent-foreground')}>
-                    {expense_type === 'personal' ? 'Personal' : 'Group'}
+                    {expense_type === 'personal' ? 'Personal' : groupName ? groupName : 'Group'}
                   </span>
                 )}
               </div>
@@ -151,7 +153,7 @@ export default function ExpenseCard({
               ) : (
                 <div className={cn('flex items-center gap-1 text-xs px-2 py-1 rounded-full', expense_type === 'personal' ? 'bg-primary/10 text-primary' : 'bg-accent text-accent-foreground')}>
                   {expense_type === 'personal' ? <Wallet className="h-3 w-3" /> : <Users className="h-3 w-3" />}
-                  <span>{expense_type === 'personal' ? 'Personal' : 'Group'}</span>
+                  <span>{expense_type === 'personal' ? 'Personal' : groupName ? groupName : 'Group'}</span>
                 </div>
               )}
             </div>

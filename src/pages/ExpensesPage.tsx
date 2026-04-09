@@ -36,6 +36,7 @@ import GroupExpensesBreakdown from '@/components/expenses/GroupExpensesBreakdown
 import StatCard from '@/components/ui/stat-card';
 import ExpenseCard from '@/components/expenses/ExpenseCard';
 import DailySpendingChart from '@/components/expenses/DailySpendingChart';
+import CategoryPieChart from '@/components/expenses/CategoryPieChart';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -49,6 +50,7 @@ interface ExpenseRow {
   expense_type: string;
   category?: string | null;
   myShare?: number;
+  groupName?: string;
 }
 
 interface ExpenseSummary {
@@ -95,7 +97,7 @@ export default function ExpensesPage() {
 
     const { data: expenses } = await supabase
       .from('expenses')
-      .select('*')
+      .select('*, groups(name)')
       .gte('expense_date', startDate)
       .lte('expense_date', endDate)
       .order('expense_date', { ascending: false });
@@ -131,6 +133,7 @@ export default function ExpensesPage() {
         myShare: e.expense_type === 'group'
           ? (splitsMap.get(e.id) || 0)
           : Number(e.amount),
+        groupName: (e as any).groups?.name || undefined,
       }));
       setSummary({
         totalPersonal: personal,
@@ -433,7 +436,15 @@ export default function ExpensesPage() {
             </div>
 
             {/* Daily Spending Chart */}
-            <DailySpendingChart expenses={summary.allExpenses} dateFrom={dateFrom} dateTo={dateTo} />
+            {/* Charts - scrollable row */}
+            <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory -mx-4 px-4">
+              <div className="min-w-[85%] snap-center shrink-0">
+                <DailySpendingChart expenses={summary.allExpenses} dateFrom={dateFrom} dateTo={dateTo} />
+              </div>
+              <div className="min-w-[85%] snap-center shrink-0">
+                <CategoryPieChart expenses={summary.allExpenses} />
+              </div>
+            </div>
 
             {/* Recent Expenses */}
             <Card className="border border-border shadow-sm">
