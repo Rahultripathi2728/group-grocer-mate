@@ -37,6 +37,7 @@ import StatCard from '@/components/ui/stat-card';
 import ExpenseCard from '@/components/expenses/ExpenseCard';
 import DailySpendingChart from '@/components/expenses/DailySpendingChart';
 import CategoryPieChart from '@/components/expenses/CategoryPieChart';
+import { useState as useStateLocal } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
