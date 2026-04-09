@@ -153,7 +153,7 @@ export default function ExpenseCard({
               ) : (
                 <div className={cn('flex items-center gap-1 text-xs px-2 py-1 rounded-full', expense_type === 'personal' ? 'bg-primary/10 text-primary' : 'bg-accent text-accent-foreground')}>
                   {expense_type === 'personal' ? <Wallet className="h-3 w-3" /> : <Users className="h-3 w-3" />}
-                  <span>{expense_type === 'personal' ? 'Personal' : 'Group'}</span>
+                  <span>{expense_type === 'personal' ? 'Personal' : groupName ? groupName : 'Group'}</span>
                 </div>
               )}
             </div>
