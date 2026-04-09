@@ -112,7 +112,7 @@ export default function ExpenseCard({
                   <span className="text-xs px-1.5 py-0.5 rounded-full bg-success/10 text-success flex items-center gap-1"><CheckCircle2 className="h-3 w-3" />Settled</span>
                 ) : (
                   <span className={cn('text-xs px-1.5 py-0.5 rounded-full', expense_type === 'personal' ? 'bg-primary/10 text-primary' : 'bg-accent text-accent-foreground')}>
-                    {expense_type === 'personal' ? 'Personal' : 'Group'}
+                    {expense_type === 'personal' ? 'Personal' : groupName ? groupName : 'Group'}
                   </span>
                 )}
               </div>
