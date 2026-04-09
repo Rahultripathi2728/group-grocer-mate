@@ -42,6 +42,7 @@ export default function ExpenseCard({
   showDate = false,
   compact = false,
   myShare,
+  groupName,
   onDelete,
 }: ExpenseCardProps) {
   const [deleting, setDeleting] = useState(false);
