@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Lock, Eye, EyeOff, Loader2, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { appLogo } from '@/lib/assets';
 
 export default function ResetPasswordPage() {
   const navigate = useNavigate();
@@ -19,14 +20,12 @@ export default function ResetPasswordPage() {
   const [done, setDone] = useState(false);
 
   useEffect(() => {
-    // Listen for PASSWORD_RECOVERY event
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
         setIsRecovery(true);
       }
     });
 
-    // Also check URL hash for recovery type
     const hash = window.location.hash;
     if (hash.includes('type=recovery')) {
       setIsRecovery(true);
@@ -65,7 +64,7 @@ export default function ResetPasswordPage() {
         <Card className="w-full max-w-md border border-border shadow-sm">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
-              <img src="/app-logo.png" alt="Expense Manager" className="h-12 w-12 rounded-xl" />
+              <img src={appLogo} alt="Expense Manager" className="h-12 w-12 rounded-xl" />
             </div>
             <CardTitle className="text-xl">Invalid Reset Link</CardTitle>
             <CardDescription>
@@ -104,7 +103,7 @@ export default function ResetPasswordPage() {
     <div className="min-h-screen flex items-center justify-center bg-background p-8">
       <div className="w-full max-w-md animate-fade-in">
         <div className="flex items-center gap-3 mb-8 justify-center">
-          <img src="/app-logo.png" alt="Expense Manager" className="h-10 w-10 rounded-xl" />
+          <img src={appLogo} alt="Expense Manager" className="h-10 w-10 rounded-xl" />
           <h1 className="text-2xl font-display font-bold text-foreground">Expense Manager</h1>
         </div>
         <Card className="border border-border shadow-sm">

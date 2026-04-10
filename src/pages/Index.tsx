@@ -1,5 +1,6 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { appLogo } from '@/lib/assets';
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -8,7 +9,7 @@ const Index = () => {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="animate-pulse-soft">
-          <img src="/app-logo.png" alt="Expense Manager" className="h-12 w-12 rounded-xl" />
+          <img src={appLogo} alt="Expense Manager" className="h-12 w-12 rounded-xl" />
         </div>
       </div>
     );
