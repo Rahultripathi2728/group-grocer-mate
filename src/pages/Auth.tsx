@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TrendingUp, Users, ShoppingCart, ChevronLeft, Loader2, Mail, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { appLogo } from '@/lib/assets';
 
 type AuthView = 'main' | 'forgot-email' | 'forgot-sent' | 'signup-sent';
 
@@ -16,18 +17,14 @@ export default function Auth() {
   const { user, signIn, signUp, loading } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [authView, setAuthView] = useState<AuthView>('main');
-
-  // Forgot password state
   const [forgotEmail, setForgotEmail] = useState('');
-
-  // Signup confirmation state
   const [signupEmail, setSignupEmail] = useState('');
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="animate-pulse-soft">
-          <img src="/app-logo.png" alt="Expense Manager" className="h-12 w-12" />
+          <img src={appLogo} alt="Expense Manager" className="h-12 w-12" />
         </div>
       </div>
     );
@@ -74,7 +71,6 @@ export default function Auth() {
     setIsLoading(false);
   };
 
-  // Forgot Password - Send reset link
   const handleForgotSendLink = async () => {
     if (!forgotEmail) { toast.error('Please enter your email'); return; }
     setIsLoading(true);
@@ -96,13 +92,12 @@ export default function Auth() {
     setSignupEmail('');
   };
 
-  // Hero section (shared)
   const heroSection = (
     <div className="hidden lg:flex lg:w-1/2 bg-foreground p-12 flex-col justify-between relative overflow-hidden">
       <div className="relative z-10">
         <div className="flex items-center gap-3 mb-4">
           <div className="p-2 rounded-xl bg-background/10">
-            <img src="/app-logo.png" alt="Expense Manager" className="h-10 w-10" />
+            <img src={appLogo} alt="Expense Manager" className="h-10 w-10" />
           </div>
           <h1 className="text-3xl font-display font-bold text-background">Expense Manager</h1>
         </div>
@@ -137,7 +132,6 @@ export default function Auth() {
     </div>
   );
 
-  // Forgot Password - Email entry
   if (authView === 'forgot-email') {
     return (
       <div className="min-h-screen flex">
@@ -145,7 +139,7 @@ export default function Auth() {
         <div className="flex-1 flex items-center justify-center p-8 bg-background">
           <div className="w-full max-w-md animate-fade-in">
             <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
-              <img src="/app-logo.png" alt="Expense Manager" className="h-10 w-10 rounded-xl" />
+              <img src={appLogo} alt="Expense Manager" className="h-10 w-10 rounded-xl" />
               <h1 className="text-2xl font-display font-bold text-foreground">Expense Manager</h1>
             </div>
             <Card className="border border-border shadow-sm">
@@ -172,7 +166,6 @@ export default function Auth() {
     );
   }
 
-  // Forgot Password - Link sent confirmation
   if (authView === 'forgot-sent') {
     return (
       <div className="min-h-screen flex">
@@ -180,7 +173,7 @@ export default function Auth() {
         <div className="flex-1 flex items-center justify-center p-8 bg-background">
           <div className="w-full max-w-md animate-fade-in">
             <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
-              <img src="/app-logo.png" alt="Expense Manager" className="h-10 w-10 rounded-xl" />
+              <img src={appLogo} alt="Expense Manager" className="h-10 w-10 rounded-xl" />
               <h1 className="text-2xl font-display font-bold text-foreground">Expense Manager</h1>
             </div>
             <Card className="border border-border shadow-sm">
@@ -212,7 +205,6 @@ export default function Auth() {
     );
   }
 
-  // Signup - Confirmation email sent
   if (authView === 'signup-sent') {
     return (
       <div className="min-h-screen flex">
@@ -220,7 +212,7 @@ export default function Auth() {
         <div className="flex-1 flex items-center justify-center p-8 bg-background">
           <div className="w-full max-w-md animate-fade-in">
             <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
-              <img src="/app-logo.png" alt="Expense Manager" className="h-10 w-10 rounded-xl" />
+              <img src={appLogo} alt="Expense Manager" className="h-10 w-10 rounded-xl" />
               <h1 className="text-2xl font-display font-bold text-foreground">Expense Manager</h1>
             </div>
             <Card className="border border-border shadow-sm">
@@ -249,14 +241,13 @@ export default function Auth() {
     );
   }
 
-  // Main login/signup view
   return (
     <div className="min-h-screen flex">
       {heroSection}
       <div className="flex-1 flex items-center justify-center p-8 bg-background">
         <div className="w-full max-w-md animate-fade-in">
           <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
-            <img src="/app-logo.png" alt="Expense Manager" className="h-10 w-10 rounded-xl" />
+            <img src={appLogo} alt="Expense Manager" className="h-10 w-10 rounded-xl" />
             <h1 className="text-2xl font-display font-bold text-foreground">Expense Manager</h1>
           </div>
 
