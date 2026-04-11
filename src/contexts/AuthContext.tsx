@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { getAbsoluteAppUrl } from '@/lib/assets';
 
 interface AuthContextType {
   user: User | null;
@@ -44,7 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password,
       options: {
         data: { full_name: fullName },
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: getAbsoluteAppUrl('auth'),
       },
     });
     return { error };

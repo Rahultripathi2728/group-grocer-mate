@@ -15,6 +15,7 @@ import {
   Smartphone, ArrowRight, Eye, EyeOff, ChevronLeft, Loader2, KeyRound, ShieldCheck
 } from 'lucide-react';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { getAbsoluteAppUrl } from '@/lib/assets';
 
 type PasswordMode = 'idle' | 'change' | 'forgot-sent';
 
@@ -117,7 +118,7 @@ export default function ProfilePage() {
     setProcessing(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: getAbsoluteAppUrl('reset-password'),
       });
       if (error) throw error;
       setPasswordMode('forgot-sent');

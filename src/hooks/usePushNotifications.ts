@@ -1,6 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { appBasePath, getAppPath } from '@/lib/assets';
+
+function getAppServiceWorkerScope() {
+  return new URL(appBasePath, window.location.origin).href;
+}
+
+async function getAppServiceWorkerRegistration() {
+  const registrations = await navigator.serviceWorker.getRegistrations();
+  const appScope = getAppServiceWorkerScope();
+
+  return registrations.find((registration) => registration.scope === appScope) ?? null;
+}
 
 export function usePushNotifications() {
   const { user } = useAuth();
@@ -23,7 +35,12 @@ export function usePushNotifications() {
 
   const checkExistingSubscription = async () => {
     try {
-      const registration = await navigator.serviceWorker.ready;
+      const registration = await getAppServiceWorkerRegistration();
+      if (!registration) {
+        setIsSubscribed(false);
+        return;
+      }
+
       const subscription = await registration.pushManager.getSubscription();
       setIsSubscribed(!!subscription);
     } catch {
@@ -40,37 +57,68 @@ export function usePushNotifications() {
       setPermission(perm);
       if (perm !== 'granted') return false;
 
-      // Register service worker
-      const registration = await navigator.serviceWorker.register('/sw.js');
-      await navigator.serviceWorker.ready;
-
-      // Get VAPID public key from edge function
-      const { data: vapidData } = await supabase.functions.invoke('get-vapid-public-key');
-      if (!vapidData?.publicKey) {
-        console.error('Could not get VAPID public key');
-        return false;
+      let registration = await getAppServiceWorkerRegistration();
+      if (!registration) {
+        registration = await navigator.serviceWorker.register(getAppPath('sw.js'), {
+          scope: appBasePath,
+        });
       }
 
-      // Convert VAPID key to Uint8Array
-      const vapidKeyBytes = urlBase64ToUint8Array(vapidData.publicKey) as unknown as ArrayBuffer;
+      if (!registration.active) {
+        await navigator.serviceWorker.ready;
+        registration = (await getAppServiceWorkerRegistration()) ?? registration;
+      }
 
-      // Subscribe to push
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: vapidKeyBytes,
-      });
+      let subscription = await registration.pushManager.getSubscription();
+
+      if (!subscription) {
+        // Get VAPID public key from edge function
+        const { data: vapidData, error: vapidError } = await supabase.functions.invoke('get-vapid-public-key');
+        if (vapidError) throw vapidError;
+        if (!vapidData?.publicKey) {
+          throw new Error('Could not get VAPID public key');
+        }
+
+        // Convert VAPID key to Uint8Array
+        const vapidKeyBytes = urlBase64ToUint8Array(vapidData.publicKey) as unknown as ArrayBuffer;
+
+        // Subscribe to push
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: vapidKeyBytes,
+        });
+      }
 
       const subJson = subscription.toJSON();
+      const endpoint = subJson.endpoint;
+      const p256dh = subJson.keys?.p256dh;
+      const auth = subJson.keys?.auth;
 
-      // Save to database
-      await supabase.from('push_subscriptions').upsert({
-        user_id: user.id,
-        endpoint: subJson.endpoint!,
-        p256dh: subJson.keys!.p256dh!,
-        auth: subJson.keys!.auth!,
-      }, {
-        onConflict: 'user_id,endpoint',
-      });
+      if (!endpoint || !p256dh || !auth) {
+        throw new Error('Incomplete push subscription received');
+      }
+
+      const { data: existingRecord, error: existingRecordError } = await supabase
+        .from('push_subscriptions')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('endpoint', endpoint)
+        .maybeSingle();
+
+      if (existingRecordError) throw existingRecordError;
+
+      if (!existingRecord) {
+        const { error: insertError } = await supabase.from('push_subscriptions').insert({
+          user_id: user.id,
+          endpoint,
+          p256dh,
+          auth,
+        });
+
+        if (insertError && insertError.code !== '23505') {
+          throw insertError;
+        }
+      }
 
       setIsSubscribed(true);
       return true;
@@ -82,12 +130,20 @@ export function usePushNotifications() {
 
   const unsubscribe = async () => {
     try {
-      const registration = await navigator.serviceWorker.ready;
+      const registration = await getAppServiceWorkerRegistration();
+      if (!registration) {
+        setIsSubscribed(false);
+        return;
+      }
+
       const subscription = await registration.pushManager.getSubscription();
       if (subscription) {
         const endpoint = subscription.endpoint;
         await subscription.unsubscribe();
-        await supabase.from('push_subscriptions').delete().eq('endpoint', endpoint);
+
+        if (user) {
+          await supabase.from('push_subscriptions').delete().eq('user_id', user.id).eq('endpoint', endpoint);
+        }
       }
       setIsSubscribed(false);
     } catch (error) {
