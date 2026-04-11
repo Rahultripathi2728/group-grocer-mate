@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TrendingUp, Users, ShoppingCart, ChevronLeft, Loader2, Mail, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { appLogo } from '@/lib/assets';
+import { appLogo, getAbsoluteAppUrl } from '@/lib/assets';
 
 type AuthView = 'main' | 'forgot-email' | 'forgot-sent' | 'signup-sent';
 
@@ -76,7 +76,7 @@ export default function Auth() {
     setIsLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: getAbsoluteAppUrl('reset-password'),
       });
       if (error) throw error;
       setAuthView('forgot-sent');

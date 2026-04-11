@@ -4,9 +4,11 @@ import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 
+const appBase = "/group-grocer-mate/";
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  base: '/group-grocer-mate/',
+  base: appBase,
   server: {
     host: "::",
     port: 8080,
@@ -19,6 +21,9 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: 'autoUpdate',
+      devOptions: {
+        enabled: false,
+      },
       strategies: 'injectManifest',
       srcDir: 'public',
       filename: 'sw.js',
@@ -36,17 +41,18 @@ export default defineConfig(({ mode }) => ({
         background_color: '#fafafa',
         display: 'standalone',
         orientation: 'portrait',
-        scope: '/',
-        start_url: '/',
+        id: appBase,
+        scope: appBase,
+        start_url: appBase,
         categories: ['finance', 'utilities'],
         icons: [
           {
-            src: '/app-icon.png',
+            src: 'app-icon.png',
             sizes: '512x512',
             type: 'image/png',
           },
           {
-            src: '/app-icon.png',
+            src: 'app-icon.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable',
