@@ -238,6 +238,9 @@ serve(async (req) => {
 
   try {
     const authHeader = req.headers.get('Authorization');
+    const internalSecret = req.headers.get('x-internal-secret');
+    const expectedInternalSecret = Deno.env.get('INTERNAL_PUSH_SECRET');
+    const isInternalTrigger = !!(internalSecret && expectedInternalSecret && internalSecret === expectedInternalSecret);
 
     if (!authHeader?.startsWith('Bearer ')) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -251,7 +254,7 @@ serve(async (req) => {
 
     let callerId: string | null = null;
 
-    if (!isServiceRole) {
+    if (!isServiceRole && !isInternalTrigger) {
       const supabaseAuth = createClient(
         Deno.env.get("SUPABASE_URL")!,
         Deno.env.get("SUPABASE_ANON_KEY")!,
@@ -280,7 +283,7 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    if (!isServiceRole && targetUserId !== callerId) {
+    if (!isServiceRole && !isInternalTrigger && targetUserId !== callerId) {
       const { data: callerGroups } = await supabase
         .from('group_memberships')
         .select('group_id')
