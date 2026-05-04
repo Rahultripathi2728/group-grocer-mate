@@ -363,7 +363,6 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
-          email: string | null
           full_name: string
           id: string
           updated_at: string
@@ -372,7 +371,6 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           created_at?: string
-          email?: string | null
           full_name?: string
           id: string
           updated_at?: string
@@ -381,7 +379,6 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           created_at?: string
-          email?: string | null
           full_name?: string
           id?: string
           updated_at?: string
@@ -470,19 +467,16 @@ export type Database = {
         Row: {
           created_at: string
           id: string
-          private_key: string
           public_key: string
         }
         Insert: {
           created_at?: string
           id?: string
-          private_key: string
           public_key: string
         }
         Update: {
           created_at?: string
           id?: string
-          private_key?: string
           public_key?: string
         }
         Relationships: []
@@ -496,6 +490,9 @@ export type Database = {
         Args: { p_invite_code: string }
         Returns: string
       }
+      get_group_invite_code: { Args: { p_group_id: string }; Returns: string }
+      get_member_upi: { Args: { p_user_id: string }; Returns: string }
+      get_my_upi: { Args: never; Returns: string }
       is_group_admin: { Args: { p_group_id: string }; Returns: boolean }
       is_group_member: { Args: { p_group_id: string }; Returns: boolean }
     }
