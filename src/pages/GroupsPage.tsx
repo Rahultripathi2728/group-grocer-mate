@@ -83,19 +83,19 @@ export default function GroupsPage() {
 
     const { data: ownedGroups } = await supabase
       .from('groups')
-      .select('*')
+      .select('id, owner_id, name, description, created_at, updated_at')
       .eq('owner_id', user.id);
 
     const { data: memberships } = await supabase
       .from('group_memberships')
-      .select('group_id, groups(*)')
+      .select('group_id, groups(id, owner_id, name, description, created_at, updated_at)')
       .eq('user_id', user.id);
 
     const memberGroups = memberships?.map((m) => m.groups).filter(Boolean) || [];
 
     const allGroups = [
-      ...(ownedGroups || []).map((g) => ({ ...g, is_owner: true })),
-      ...memberGroups.map((g: any) => ({ ...g, is_owner: false })),
+      ...(ownedGroups || []).map((g) => ({ ...g, invite_code: '', is_owner: true })),
+      ...memberGroups.map((g: any) => ({ ...g, invite_code: '', is_owner: false })),
     ];
 
     const uniqueGroups = allGroups.filter(
