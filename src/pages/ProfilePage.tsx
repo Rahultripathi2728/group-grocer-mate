@@ -48,8 +48,8 @@ export default function ProfilePage() {
     if (user) {
       setFullName(user.user_metadata?.full_name || '');
       setEmail(user.email || '');
-      supabase.from('profiles').select('upi_id').eq('id', user.id).single().then(({ data }) => {
-        if (data?.upi_id) setUpiId(data.upi_id);
+      supabase.rpc('get_my_upi').then(({ data }) => {
+        if (data) setUpiId(data as string);
       });
     }
   }, [user]);

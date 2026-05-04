@@ -83,19 +83,19 @@ export default function GroupsPage() {
 
     const { data: ownedGroups } = await supabase
       .from('groups')
-      .select('*')
+      .select('id, owner_id, name, description, created_at, updated_at')
       .eq('owner_id', user.id);
 
     const { data: memberships } = await supabase
       .from('group_memberships')
-      .select('group_id, groups(*)')
+      .select('group_id, groups(id, owner_id, name, description, created_at, updated_at)')
       .eq('user_id', user.id);
 
     const memberGroups = memberships?.map((m) => m.groups).filter(Boolean) || [];
 
     const allGroups = [
-      ...(ownedGroups || []).map((g) => ({ ...g, is_owner: true })),
-      ...memberGroups.map((g: any) => ({ ...g, is_owner: false })),
+      ...(ownedGroups || []).map((g) => ({ ...g, invite_code: '', is_owner: true })),
+      ...memberGroups.map((g: any) => ({ ...g, invite_code: '', is_owner: false })),
     ];
 
     const uniqueGroups = allGroups.filter(
@@ -260,10 +260,27 @@ export default function GroupsPage() {
     }
   };
 
-  const copyInviteCode = (code: string) => {
-    navigator.clipboard.writeText(code);
+  const copyInviteCode = async (groupId: string) => {
+    const { data, error } = await supabase.rpc('get_group_invite_code', { p_group_id: groupId });
+    if (error || !data) {
+      toast.error('Could not load invite code');
+      return;
+    }
+    navigator.clipboard.writeText(data as string);
     toast.success('Invite code copied!');
   };
+
+  const [inviteCodeForSelected, setInviteCodeForSelected] = useState<string>('');
+
+  useEffect(() => {
+    if (selectedGroup?.is_owner) {
+      supabase.rpc('get_group_invite_code', { p_group_id: selectedGroup.id }).then(({ data }) => {
+        setInviteCodeForSelected((data as string) || '');
+      });
+    } else {
+      setInviteCodeForSelected('');
+    }
+  }, [selectedGroup]);
 
   return (
     <DashboardLayout>
@@ -419,7 +436,7 @@ export default function GroupsPage() {
                                 <DropdownMenuItem
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    copyInviteCode(group.invite_code);
+                                    copyInviteCode(group.id);
                                   }}
                                 >
                                   <Copy className="h-4 w-4 mr-2" />
@@ -489,13 +506,13 @@ export default function GroupsPage() {
                         <div className="flex items-center gap-2 bg-muted/50 px-3 py-2 rounded-xl">
                           <span className="text-sm text-muted-foreground">Invite:</span>
                           <code className="text-sm font-mono font-semibold">
-                            {selectedGroup.invite_code}
+                            {inviteCodeForSelected || '••••••'}
                           </code>
                           <Button
                             variant="ghost"
                             size="icon"
                             className="h-7 w-7 rounded-lg"
-                            onClick={() => copyInviteCode(selectedGroup.invite_code)}
+                            onClick={() => copyInviteCode(selectedGroup.id)}
                           >
                             <Copy className="h-3.5 w-3.5" />
                           </Button>

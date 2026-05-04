@@ -56,17 +56,16 @@ const SimplifiedBalances = forwardRef<HTMLDivElement, Props>(function Simplified
     });
     if (userIds.size === 0) return;
 
-    supabase
-      .from('profiles')
-      .select('id, upi_id')
-      .in('id', Array.from(userIds))
-      .then(({ data }) => {
-        const map: Record<string, string> = {};
-        data?.forEach((p: any) => {
-          if (p.upi_id) map[p.id] = p.upi_id;
-        });
-        setUpiMap(map);
-      });
+    (async () => {
+      const map: Record<string, string> = {};
+      await Promise.all(
+        Array.from(userIds).map(async (uid) => {
+          const { data } = await supabase.rpc('get_member_upi', { p_user_id: uid });
+          if (data) map[uid] = data as string;
+        })
+      );
+      setUpiMap(map);
+    })();
   }, [balances]);
 
   const mySpending = memberSpending.find((ms) => ms.member.user_id === user?.id);
