@@ -321,19 +321,21 @@ serve(async (req) => {
       }
     }
 
-    const { data: vapidKeys } = await supabase
+    const { data: vapidRow } = await supabase
       .from('vapid_keys')
-      .select('*')
+      .select('public_key')
       .limit(1)
       .single();
 
-    if (!vapidKeys) {
+    const privateKeyJwk = Deno.env.get('VAPID_PRIVATE_KEY_JWK');
+
+    if (!vapidRow || !privateKeyJwk) {
       return new Response(JSON.stringify({ error: "VAPID keys not configured" }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    const privateKeyData = JSON.parse(vapidKeys.private_key);
+    const privateKeyData = JSON.parse(privateKeyJwk);
 
     const { data: subscriptions } = await supabase
       .from("push_subscriptions")
@@ -359,7 +361,7 @@ serve(async (req) => {
       try {
         const res = await sendWebPush(
           { endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth },
-          vapidKeys.public_key,
+          vapidRow.public_key,
           privateKeyData,
           pushPayload
         );
