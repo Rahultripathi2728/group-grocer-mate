@@ -28,6 +28,8 @@ export default function ProfilePage() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [upiId, setUpiId] = useState('');
+  const [username, setUsername] = useState('');
+  const [originalUsername, setOriginalUsername] = useState('');
   const [saving, setSaving] = useState(false);
 
   // Password state
@@ -51,6 +53,11 @@ export default function ProfilePage() {
       supabase.rpc('get_my_upi').then(({ data }) => {
         if (data) setUpiId(data as string);
       });
+      supabase.from('profiles').select('username').eq('id', user.id).single().then(({ data }) => {
+        const u = (data as any)?.username || '';
+        setUsername(u);
+        setOriginalUsername(u);
+      });
     }
   }, [user]);
 
@@ -67,11 +74,25 @@ export default function ProfilePage() {
 
   const handleSaveProfile = async () => {
     if (!user) return;
+    const trimmedUsername = username.trim().toLowerCase();
+    if (trimmedUsername && !/^[a-z0-9_]{3,20}$/.test(trimmedUsername)) {
+      toast({ title: 'Invalid username', description: '3-20 chars, only lowercase letters, numbers, underscore', variant: 'destructive' });
+      return;
+    }
     setSaving(true);
     try {
       const { error: authError } = await supabase.auth.updateUser({ data: { full_name: fullName } });
       if (authError) throw authError;
-      await supabase.from('profiles').update({ full_name: fullName, upi_id: upiId || null } as any).eq('id', user.id);
+      const updatePayload: any = { full_name: fullName, upi_id: upiId || null };
+      if (trimmedUsername !== originalUsername) {
+        updatePayload.username = trimmedUsername || null;
+      }
+      const { error: profErr } = await supabase.from('profiles').update(updatePayload).eq('id', user.id);
+      if (profErr) {
+        if (profErr.code === '23505') throw new Error('Username already taken');
+        throw profErr;
+      }
+      setOriginalUsername(trimmedUsername);
       toast({ title: 'Profile updated! ✅' });
     } catch (err: any) {
       toast({ title: 'Error updating profile', description: err.message, variant: 'destructive' });
@@ -176,6 +197,16 @@ export default function ProfilePage() {
             <div className="space-y-2">
               <Label htmlFor="fullName" className="text-xs">Full Name</Label>
               <Input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Your name" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="username" className="text-xs">Username</Label>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">@</span>
+                <Input id="username" value={username}
+                  onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                  placeholder="your_handle" maxLength={20} />
+              </div>
+              <p className="text-[10px] text-muted-foreground">Friends find you by this. 3-20 chars, letters/numbers/underscore.</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="upiId" className="text-xs">UPI ID</Label>
