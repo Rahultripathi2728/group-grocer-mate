@@ -600,6 +600,8 @@ export default function GroupsPage() {
             </AnimatePresence>
           </Card>
         </div>
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Create Group Confirmation */}
