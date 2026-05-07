@@ -154,33 +154,6 @@ export type Database = {
           },
         ]
       }
-      friendships: {
-        Row: {
-          created_at: string
-          id: string
-          receiver_id: string
-          requester_id: string
-          status: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          receiver_id: string
-          requester_id: string
-          status?: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          receiver_id?: string
-          requester_id?: string
-          status?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       grocery_items: {
         Row: {
           added_by: string | null
@@ -345,54 +318,6 @@ export type Database = {
           },
         ]
       }
-      loans: {
-        Row: {
-          amount: number
-          counterparty_contact: string | null
-          counterparty_name: string | null
-          counterparty_user_id: string | null
-          created_at: string
-          creator_id: string
-          description: string | null
-          direction: string
-          id: string
-          is_settled: boolean
-          loan_date: string
-          settled_at: string | null
-          updated_at: string
-        }
-        Insert: {
-          amount: number
-          counterparty_contact?: string | null
-          counterparty_name?: string | null
-          counterparty_user_id?: string | null
-          created_at?: string
-          creator_id: string
-          description?: string | null
-          direction: string
-          id?: string
-          is_settled?: boolean
-          loan_date?: string
-          settled_at?: string | null
-          updated_at?: string
-        }
-        Update: {
-          amount?: number
-          counterparty_contact?: string | null
-          counterparty_name?: string | null
-          counterparty_user_id?: string | null
-          created_at?: string
-          creator_id?: string
-          description?: string | null
-          direction?: string
-          id?: string
-          is_settled?: boolean
-          loan_date?: string
-          settled_at?: string | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
       notifications: {
         Row: {
           created_at: string
@@ -442,7 +367,6 @@ export type Database = {
           id: string
           updated_at: string
           upi_id: string | null
-          username: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -451,7 +375,6 @@ export type Database = {
           id: string
           updated_at?: string
           upi_id?: string | null
-          username?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -460,7 +383,6 @@ export type Database = {
           id?: string
           updated_at?: string
           upi_id?: string | null
-          username?: string | null
         }
         Relationships: []
       }
@@ -564,10 +486,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      are_friends: {
-        Args: { p_user1: string; p_user2: string }
-        Returns: boolean
-      }
       get_group_id_by_invite_code: {
         Args: { p_invite_code: string }
         Returns: string
@@ -577,15 +495,6 @@ export type Database = {
       get_my_upi: { Args: never; Returns: string }
       is_group_admin: { Args: { p_group_id: string }; Returns: boolean }
       is_group_member: { Args: { p_group_id: string }; Returns: boolean }
-      search_users_by_username: {
-        Args: { p_query: string }
-        Returns: {
-          avatar_url: string
-          full_name: string
-          id: string
-          username: string
-        }[]
-      }
     }
     Enums: {
       [_ in never]: never

@@ -44,8 +44,6 @@ import {
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import FriendsSection from '@/components/friends/FriendsSection';
 
 interface Group {
   id: string;
@@ -287,15 +285,6 @@ export default function GroupsPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6 animate-fade-in">
-        <Tabs defaultValue="groups">
-          <TabsList className="grid w-full grid-cols-2 max-w-sm">
-            <TabsTrigger value="groups">Groups</TabsTrigger>
-            <TabsTrigger value="friends">Friends</TabsTrigger>
-          </TabsList>
-          <TabsContent value="friends" className="mt-6">
-            <FriendsSection />
-          </TabsContent>
-          <TabsContent value="groups" className="mt-6 space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
@@ -600,8 +589,6 @@ export default function GroupsPage() {
             </AnimatePresence>
           </Card>
         </div>
-          </TabsContent>
-        </Tabs>
       </div>
 
       {/* Create Group Confirmation */}

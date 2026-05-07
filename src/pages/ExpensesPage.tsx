@@ -33,7 +33,6 @@ import {
 
 import BudgetCard from '@/components/expenses/BudgetCard';
 import GroupExpensesBreakdown from '@/components/expenses/GroupExpensesBreakdown';
-import LoansCard from '@/components/expenses/LoansCard';
 import StatCard from '@/components/ui/stat-card';
 import ExpenseCard from '@/components/expenses/ExpenseCard';
 import ChartToggle from '@/components/expenses/ChartToggle';
@@ -437,9 +436,6 @@ export default function ExpensesPage() {
 
             {/* Charts with toggle */}
             <ChartToggle expenses={summary.allExpenses} dateFrom={dateFrom} dateTo={dateTo} />
-
-            {/* Loans (Borrow Money) */}
-            <LoansCard />
 
             {/* Recent Expenses */}
             <Card className="border border-border shadow-sm">
