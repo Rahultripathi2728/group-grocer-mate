@@ -199,6 +199,16 @@ export default function ProfilePage() {
               <Input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Your name" />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="username" className="text-xs">Username</Label>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">@</span>
+                <Input id="username" value={username}
+                  onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                  placeholder="your_handle" maxLength={20} />
+              </div>
+              <p className="text-[10px] text-muted-foreground">Friends find you by this. 3-20 chars, letters/numbers/underscore.</p>
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="upiId" className="text-xs">UPI ID</Label>
               <Input id="upiId" value={upiId} onChange={(e) => setUpiId(e.target.value)} placeholder="e.g. yourname@upi" />
             </div>
