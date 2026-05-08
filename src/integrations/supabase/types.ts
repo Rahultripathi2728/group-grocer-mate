@@ -568,6 +568,10 @@ export type Database = {
         Args: { p_user1: string; p_user2: string }
         Returns: boolean
       }
+      can_access_expense_record: {
+        Args: { _expense_id: string; _user_id: string }
+        Returns: boolean
+      }
       get_group_id_by_invite_code: {
         Args: { p_invite_code: string }
         Returns: string
@@ -585,6 +589,10 @@ export type Database = {
           id: string
           username: string
         }[]
+      }
+      user_has_expense_split: {
+        Args: { _expense_id: string; _user_id: string }
+        Returns: boolean
       }
     }
     Enums: {
