@@ -9,7 +9,7 @@ const isPreviewHost = process.env.LOVABLE_PROJECT_ID || process.env.LOVABLE_BRAN
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  base: isPreviewHost ? "/" : appBase,
+  base: mode === "development" || isPreviewHost ? "/" : appBase,
   server: {
     host: "::",
     port: 8080,
@@ -43,8 +43,8 @@ export default defineConfig(({ mode }) => ({
         display: 'standalone',
         orientation: 'portrait',
         id: appBase,
-        scope: isPreviewHost ? "/" : appBase,
-        start_url: isPreviewHost ? "/" : appBase,
+        scope: mode === "development" || isPreviewHost ? "/" : appBase,
+        start_url: mode === "development" || isPreviewHost ? "/" : appBase,
         categories: ['finance', 'utilities'],
         icons: [
           {
