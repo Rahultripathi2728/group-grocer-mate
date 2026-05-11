@@ -5,10 +5,11 @@ import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 
 const appBase = "/group-grocer-mate/";
+const isPreviewHost = process.env.LOVABLE_PROJECT_ID || process.env.LOVABLE_BRANCH_ID || process.env.GPT_ENGINEER_PROJECT_ID;
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  base: appBase,
+  base: isPreviewHost ? "/" : appBase,
   server: {
     host: "::",
     port: 8080,
@@ -42,8 +43,8 @@ export default defineConfig(({ mode }) => ({
         display: 'standalone',
         orientation: 'portrait',
         id: appBase,
-        scope: appBase,
-        start_url: appBase,
+        scope: isPreviewHost ? "/" : appBase,
+        start_url: isPreviewHost ? "/" : appBase,
         categories: ['finance', 'utilities'],
         icons: [
           {
