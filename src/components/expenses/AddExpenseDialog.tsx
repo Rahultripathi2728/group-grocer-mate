@@ -28,6 +28,11 @@ interface Group {
   name: string;
 }
 
+interface Member {
+  user_id: string;
+  full_name: string;
+}
+
 interface AddExpenseDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -46,6 +51,9 @@ export default function AddExpenseDialog({
   const [expenseType, setExpenseType] = useState<'personal' | 'group'>('personal');
   const [groups, setGroups] = useState<Group[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<string>('');
+  const [splitMode, setSplitMode] = useState<'equal' | 'single'>('equal');
+  const [members, setMembers] = useState<Member[]>([]);
+  const [payerId, setPayerId] = useState<string>('');
   const [category, setCategory] = useState('general');
   const [autoDetected, setAutoDetected] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -54,8 +62,40 @@ export default function AddExpenseDialog({
       fetchGroups();
       setCategory('general');
       setAutoDetected(false);
+      setSplitMode('equal');
+      setPayerId('');
+      setMembers([]);
     }
   }, [open, user]);
+
+  useEffect(() => {
+    const loadMembers = async () => {
+      if (expenseType !== 'group' || !selectedGroup) {
+        setMembers([]);
+        return;
+      }
+      const { data: group } = await supabase
+        .from('groups')
+        .select('owner_id')
+        .eq('id', selectedGroup)
+        .single();
+      const { data: ms } = await supabase
+        .from('group_memberships')
+        .select('user_id')
+        .eq('group_id', selectedGroup);
+      const ids = Array.from(new Set([
+        ...(ms || []).map((m: any) => m.user_id),
+        ...(group ? [group.owner_id] : []),
+      ]));
+      if (ids.length === 0) { setMembers([]); return; }
+      const { data: profs } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', ids);
+      setMembers((profs || []).map((p: any) => ({ user_id: p.id, full_name: p.full_name || 'User' })));
+    };
+    loadMembers();
+  }, [selectedGroup, expenseType]);
 
   const fetchGroups = async () => {
     if (!user) return;
@@ -146,14 +186,24 @@ export default function AddExpenseDialog({
             group.owner_id,
           ].filter((id, index, self) => self.indexOf(id) === index);
 
-          const splitAmount = amount / allMembers.length;
-
-          const splits = allMembers.map((memberId) => ({
-            expense_id: expense.id,
-            user_id: memberId,
-            amount_owed: splitAmount,
-            is_paid: memberId === user.id, // Creator pays their share automatically
-          }));
+          let splits;
+          if (splitMode === 'single' && payerId) {
+            // Single payer owes full amount; everyone else owes 0 (paid)
+            splits = allMembers.map((memberId) => ({
+              expense_id: expense.id,
+              user_id: memberId,
+              amount_owed: memberId === payerId ? amount : 0,
+              is_paid: memberId !== payerId || payerId === user.id,
+            }));
+          } else {
+            const splitAmount = amount / allMembers.length;
+            splits = allMembers.map((memberId) => ({
+              expense_id: expense.id,
+              user_id: memberId,
+              amount_owed: splitAmount,
+              is_paid: memberId === user.id,
+            }));
+          }
 
           await supabase.from('expense_splits').insert(splits);
         }
@@ -225,6 +275,53 @@ export default function AddExpenseDialog({
                   )}
                 </SelectContent>
               </Select>
+            </div>
+          )}
+
+          {expenseType === 'group' && selectedGroup && (
+            <div className="space-y-2">
+              <Label>Split Type</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSplitMode('equal')}
+                  className={`p-2 text-sm rounded-lg border-2 transition-all ${
+                    splitMode === 'equal'
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border hover:border-primary/50'
+                  }`}
+                >
+                  Split Equally
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSplitMode('single')}
+                  className={`p-2 text-sm rounded-lg border-2 transition-all ${
+                    splitMode === 'single'
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border hover:border-primary/50'
+                  }`}
+                >
+                  One Person Pays
+                </button>
+              </div>
+              {splitMode === 'single' && (
+                <div className="space-y-2 pt-2">
+                  <Label>Who paid 100%?</Label>
+                  <Select value={payerId} onValueChange={setPayerId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select person" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {members.map((m) => (
+                        <SelectItem key={m.user_id} value={m.user_id}>
+                          {m.user_id === user?.id ? `${m.full_name} (You)` : m.full_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
           )}
 
@@ -320,7 +417,11 @@ export default function AddExpenseDialog({
             </Button>
             <Button
               type="submit"
-              disabled={loading || (expenseType === 'group' && !selectedGroup)}
+              disabled={
+                loading ||
+                (expenseType === 'group' && !selectedGroup) ||
+                (expenseType === 'group' && splitMode === 'single' && !payerId)
+              }
               className="flex-1 bg-foreground text-background hover:bg-foreground/90"
             >
               {loading ? 'Adding...' : 'Add Expense'}
