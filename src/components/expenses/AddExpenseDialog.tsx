@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { Wallet, Users, Sparkles } from 'lucide-react';
+import { Wallet, Users, Sparkles, CheckCircle2, UserRound } from 'lucide-react';
 import { detectCategory, getCategoryById } from '@/lib/categories';
 
 interface Group {
@@ -57,47 +57,8 @@ export default function AddExpenseDialog({
   const [category, setCategory] = useState('general');
   const [autoDetected, setAutoDetected] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => {
-    if (open && user) {
-      fetchGroups();
-      setCategory('general');
-      setAutoDetected(false);
-      setSplitMode('equal');
-      setPayerId('');
-      setMembers([]);
-    }
-  }, [open, user]);
 
-  useEffect(() => {
-    const loadMembers = async () => {
-      if (expenseType !== 'group' || !selectedGroup) {
-        setMembers([]);
-        return;
-      }
-      const { data: group } = await supabase
-        .from('groups')
-        .select('owner_id')
-        .eq('id', selectedGroup)
-        .single();
-      const { data: ms } = await supabase
-        .from('group_memberships')
-        .select('user_id')
-        .eq('group_id', selectedGroup);
-      const ids = Array.from(new Set([
-        ...(ms || []).map((m: any) => m.user_id),
-        ...(group ? [group.owner_id] : []),
-      ]));
-      if (ids.length === 0) { setMembers([]); return; }
-      const { data: profs } = await supabase
-        .from('profiles')
-        .select('id, full_name')
-        .in('id', ids);
-      setMembers((profs || []).map((p: any) => ({ user_id: p.id, full_name: p.full_name || 'User' })));
-    };
-    loadMembers();
-  }, [selectedGroup, expenseType]);
-
-  const fetchGroups = async () => {
+  const fetchGroups = useCallback(async () => {
     if (!user) return;
 
     const { data: ownedGroups } = await supabase
@@ -119,7 +80,47 @@ export default function AddExpenseDialog({
       (group, index, self) => index === self.findIndex((g) => g.id === group.id)
     );
     setGroups(uniqueGroups);
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (open && user) {
+      fetchGroups();
+      setCategory('general');
+      setAutoDetected(false);
+      setSplitMode('equal');
+      setPayerId('');
+      setMembers([]);
+    }
+  }, [fetchGroups, open, user]);
+
+  useEffect(() => {
+    const loadMembers = async () => {
+      if (expenseType !== 'group' || !selectedGroup) {
+        setMembers([]);
+        return;
+      }
+      const { data: group } = await supabase
+        .from('groups')
+        .select('owner_id')
+        .eq('id', selectedGroup)
+        .single();
+      const { data: ms } = await supabase
+        .from('group_memberships')
+        .select('user_id')
+        .eq('group_id', selectedGroup);
+      const ids = Array.from(new Set([
+        ...(ms || []).map((m) => m.user_id),
+        ...(group ? [group.owner_id] : []),
+      ]));
+      if (ids.length === 0) { setMembers([]); return; }
+      const { data: profs } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', ids);
+      setMembers((profs || []).map((p) => ({ user_id: p.id, full_name: p.full_name || 'User' })));
+    };
+    loadMembers();
+  }, [selectedGroup, expenseType]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -278,39 +279,52 @@ export default function AddExpenseDialog({
             </div>
           )}
 
-          {expenseType === 'group' && selectedGroup && (
-            <div className="space-y-2">
-              <Label>Split Type</Label>
-              <div className="grid grid-cols-2 gap-2">
+          {expenseType === 'group' && (
+            <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-3">
+              <div className="space-y-1">
+                <Label>Split Type</Label>
+                <p className="text-xs text-muted-foreground">
+                  Choose how this group expense should be shared.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <button
                   type="button"
                   onClick={() => setSplitMode('equal')}
-                  className={`p-2 text-sm rounded-lg border-2 transition-all ${
+                  className={`flex min-h-16 items-start gap-2 rounded-lg border-2 p-3 text-left text-sm transition-all ${
                     splitMode === 'equal'
                       ? 'border-primary bg-primary/10 text-primary'
                       : 'border-border hover:border-primary/50'
                   }`}
                 >
-                  Split Equally
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span>
+                    <span className="block font-semibold">Split Equally</span>
+                    <span className="block text-xs text-muted-foreground">Everyone shares equally</span>
+                  </span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setSplitMode('single')}
-                  className={`p-2 text-sm rounded-lg border-2 transition-all ${
+                  className={`flex min-h-16 items-start gap-2 rounded-lg border-2 p-3 text-left text-sm transition-all ${
                     splitMode === 'single'
                       ? 'border-primary bg-primary/10 text-primary'
                       : 'border-border hover:border-primary/50'
                   }`}
                 >
-                  One Person Pays
+                  <UserRound className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span>
+                    <span className="block font-semibold">One Person Pays 100%</span>
+                    <span className="block text-xs text-muted-foreground">Pick one group member</span>
+                  </span>
                 </button>
               </div>
               {splitMode === 'single' && (
                 <div className="space-y-2 pt-2">
                   <Label>Who paid 100%?</Label>
-                  <Select value={payerId} onValueChange={setPayerId}>
+                  <Select value={payerId} onValueChange={setPayerId} disabled={!selectedGroup || members.length === 0}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select person" />
+                      <SelectValue placeholder={selectedGroup ? 'Select person' : 'Select group first'} />
                     </SelectTrigger>
                     <SelectContent>
                       {members.map((m) => (
