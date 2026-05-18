@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -57,47 +57,8 @@ export default function AddExpenseDialog({
   const [category, setCategory] = useState('general');
   const [autoDetected, setAutoDetected] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => {
-    if (open && user) {
-      fetchGroups();
-      setCategory('general');
-      setAutoDetected(false);
-      setSplitMode('equal');
-      setPayerId('');
-      setMembers([]);
-    }
-  }, [open, user]);
 
-  useEffect(() => {
-    const loadMembers = async () => {
-      if (expenseType !== 'group' || !selectedGroup) {
-        setMembers([]);
-        return;
-      }
-      const { data: group } = await supabase
-        .from('groups')
-        .select('owner_id')
-        .eq('id', selectedGroup)
-        .single();
-      const { data: ms } = await supabase
-        .from('group_memberships')
-        .select('user_id')
-        .eq('group_id', selectedGroup);
-      const ids = Array.from(new Set([
-        ...(ms || []).map((m: any) => m.user_id),
-        ...(group ? [group.owner_id] : []),
-      ]));
-      if (ids.length === 0) { setMembers([]); return; }
-      const { data: profs } = await supabase
-        .from('profiles')
-        .select('id, full_name')
-        .in('id', ids);
-      setMembers((profs || []).map((p: any) => ({ user_id: p.id, full_name: p.full_name || 'User' })));
-    };
-    loadMembers();
-  }, [selectedGroup, expenseType]);
-
-  const fetchGroups = async () => {
+  const fetchGroups = useCallback(async () => {
     if (!user) return;
 
     const { data: ownedGroups } = await supabase
@@ -119,7 +80,47 @@ export default function AddExpenseDialog({
       (group, index, self) => index === self.findIndex((g) => g.id === group.id)
     );
     setGroups(uniqueGroups);
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (open && user) {
+      fetchGroups();
+      setCategory('general');
+      setAutoDetected(false);
+      setSplitMode('equal');
+      setPayerId('');
+      setMembers([]);
+    }
+  }, [fetchGroups, open, user]);
+
+  useEffect(() => {
+    const loadMembers = async () => {
+      if (expenseType !== 'group' || !selectedGroup) {
+        setMembers([]);
+        return;
+      }
+      const { data: group } = await supabase
+        .from('groups')
+        .select('owner_id')
+        .eq('id', selectedGroup)
+        .single();
+      const { data: ms } = await supabase
+        .from('group_memberships')
+        .select('user_id')
+        .eq('group_id', selectedGroup);
+      const ids = Array.from(new Set([
+        ...(ms || []).map((m) => m.user_id),
+        ...(group ? [group.owner_id] : []),
+      ]));
+      if (ids.length === 0) { setMembers([]); return; }
+      const { data: profs } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', ids);
+      setMembers((profs || []).map((p) => ({ user_id: p.id, full_name: p.full_name || 'User' })));
+    };
+    loadMembers();
+  }, [selectedGroup, expenseType]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
