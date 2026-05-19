@@ -36,7 +36,7 @@ import { ChevronLeft, ChevronRight, Plus, CheckCircle2, Wallet, Users, Trash2 } 
 import { toast } from 'sonner';
 import { getCategoryById } from '@/lib/categories';
 import { cn } from '@/lib/utils';
-import AddExpenseDialog from '@/components/expenses/AddExpenseDialog';
+import AddExpenseSheet from '@/components/expenses/AddExpenseSheet';
 import ExpenseCard from '@/components/expenses/ExpenseCard';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -455,7 +455,7 @@ export default function CalendarPage() {
         </Card>
       </div>
 
-      <AddExpenseDialog
+      <AddExpenseSheet
         open={addExpenseOpen}
         onOpenChange={setAddExpenseOpen}
         onSuccess={fetchExpenses}
