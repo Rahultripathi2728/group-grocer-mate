@@ -437,13 +437,18 @@ export default function CalendarPage() {
                                     by {expense.addedByName}
                                   </span>
                                 )}
+                                {expense.expense_type === 'group' && expense.hasShare === false && (
+                                  <span className="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground">
+                                    Not in this expense
+                                  </span>
+                                )}
                               </div>
                             </div>
 
                             {/* Amount */}
                             <div className="text-right shrink-0">
                               <p className="font-bold text-sm">₹{expense.amount.toLocaleString('en-IN')}</p>
-                              {expense.expense_type === 'group' && expense.myShare !== undefined && (
+                              {expense.expense_type === 'group' && expense.hasShare && expense.myShare !== undefined && (
                                 <p className="text-[10px] text-muted-foreground mt-0.5">
                                   Share: ₹{expense.myShare.toLocaleString('en-IN')}
                                 </p>
