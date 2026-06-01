@@ -12,13 +12,21 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { Users, Wallet, UsersRound, ArrowLeft, Plus, X, Info } from 'lucide-react';
+import { Users, Wallet, ArrowLeft, Plus, X, Info, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-type Mode = 'group' | 'shared' | 'personal';
+type Mode = 'group' | 'personal';
+type SplitMode = 'equal' | 'unequal' | 'itemwise';
 
 interface Group { id: string; name: string }
 interface Person { user_id: string; full_name: string }
+
+interface BillItem {
+  id: string;
+  name: string;
+  amount: string;
+  selected: Record<string, boolean>;
+}
 
 interface Bill {
   id: string;
@@ -26,10 +34,10 @@ interface Bill {
   amount: string;
   date: string;
   category: string;
-  paidBy: string;          // user_id of payer
-  splitMode: 'equal' | 'unequal';
-  selected: Record<string, boolean>;        // user_id -> included
-  customAmounts: Record<string, string>;    // unequal mode
+  splitMode: SplitMode;
+  selected: Record<string, boolean>;
+  customAmounts: Record<string, string>;
+  items: BillItem[];
 }
 
 interface Props {
@@ -45,10 +53,17 @@ const newBill = (selfId: string, date: string): Bill => ({
   amount: '',
   date,
   category: 'general',
-  paidBy: selfId,
   splitMode: 'equal',
   selected: { [selfId]: true },
   customAmounts: {},
+  items: [],
+});
+
+const newItem = (ids: string[]): BillItem => ({
+  id: crypto.randomUUID(),
+  name: '',
+  amount: '',
+  selected: Object.fromEntries(ids.map((i) => [i, true])),
 });
 
 export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selectedDate }: Props) {
@@ -57,7 +72,8 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
   const [mode, setMode] = useState<Mode>('personal');
   const [groups, setGroups] = useState<Group[]>([]);
   const [activeGroupId, setActiveGroupId] = useState<string>('');
-  const [people, setPeople] = useState<Person[]>([]);
+  const [peopleByGroup, setPeopleByGroup] = useState<Record<string, Person[]>>({});
+  const [groupsLoaded, setGroupsLoaded] = useState(false);
   const [bills, setBills] = useState<Bill[]>([]);
   const [activeBillId, setActiveBillId] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
@@ -68,69 +84,85 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
     [selectedDate],
   );
 
-  const fetchGroups = useCallback(async () => {
+  // PARALLEL prefetch: groups + members + profiles, then cache. Runs once per session of open dialog.
+  const prefetchAll = useCallback(async () => {
     if (!user) return;
-    const { data: owned } = await supabase.from('groups').select('id, name').eq('owner_id', user.id);
-    const { data: ms } = await supabase
-      .from('group_memberships').select('group_id, groups(id, name)').eq('user_id', user.id);
-    const memberG = (ms || []).map((m) => m.groups).filter(Boolean) as Group[];
-    const all = [...(owned || []), ...memberG];
-    setGroups(all.filter((g, i, a) => i === a.findIndex((x) => x.id === g.id)));
+    const [ownedRes, msRes] = await Promise.all([
+      supabase.from('groups').select('id, name, owner_id').eq('owner_id', user.id),
+      supabase.from('group_memberships').select('group_id, groups(id, name, owner_id)').eq('user_id', user.id),
+    ]);
+    const owned = (ownedRes.data || []) as Array<{ id: string; name: string; owner_id: string }>;
+    const memberG = ((msRes.data || []).map((m: any) => m.groups).filter(Boolean)) as Array<{ id: string; name: string; owner_id: string }>;
+    const all = [...owned, ...memberG];
+    const uniq = all.filter((g, i, a) => i === a.findIndex((x) => x.id === g.id));
+    setGroups(uniq.map((g) => ({ id: g.id, name: g.name })));
+    setGroupsLoaded(true);
+
+    if (uniq.length === 0) return;
+    const groupIds = uniq.map((g) => g.id);
+    const { data: allMs } = await supabase
+      .from('group_memberships').select('group_id, user_id').in('group_id', groupIds);
+
+    const idSet = new Set<string>();
+    uniq.forEach((g) => idSet.add(g.owner_id));
+    (allMs || []).forEach((m: any) => idSet.add(m.user_id));
+
+    const { data: profs } = await supabase
+      .from('profiles').select('id, full_name').in('id', Array.from(idSet));
+    const profMap = new Map<string, string>();
+    (profs || []).forEach((p: any) => profMap.set(p.id, p.full_name || 'User'));
+
+    const map: Record<string, Person[]> = {};
+    uniq.forEach((g) => {
+      const ids = new Set<string>([g.owner_id]);
+      (allMs || []).filter((m: any) => m.group_id === g.id).forEach((m: any) => ids.add(m.user_id));
+      map[g.id] = Array.from(ids).map((id) => ({
+        user_id: id,
+        full_name: id === user.id ? 'You' : (profMap.get(id) || 'User'),
+      }));
+    });
+    setPeopleByGroup(map);
   }, [user]);
 
-  // Reset on open
   useEffect(() => {
     if (open && user) {
       setView('choose');
       setMode('personal');
       setActiveGroupId('');
-      setPeople([]);
       setBills([]);
-      fetchGroups();
+      if (!groupsLoaded) prefetchAll();
     }
-  }, [open, user, fetchGroups]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, user]);
 
-  // Load people whenever mode / activeGroup changes after form opens
+  const people: Person[] = useMemo(() => {
+    if (!user) return [];
+    if (mode === 'personal') return [{ user_id: user.id, full_name: 'You' }];
+    if (mode === 'group' && activeGroupId) return peopleByGroup[activeGroupId] || [{ user_id: user.id, full_name: 'You' }];
+    return [];
+  }, [mode, activeGroupId, peopleByGroup, user]);
+
+  // Instantly init first bill when form opens
   useEffect(() => {
-    const load = async () => {
-      if (!user || view !== 'form') return;
-      let list: Person[] = [];
-      if (mode === 'personal') {
-        list = [{ user_id: user.id, full_name: 'You' }];
-      } else if (mode === 'group' && activeGroupId) {
-        const { data: g } = await supabase.from('groups').select('owner_id').eq('id', activeGroupId).single();
-        const { data: ms } = await supabase.from('group_memberships').select('user_id').eq('group_id', activeGroupId);
-        const ids = Array.from(new Set([...(ms || []).map((m) => m.user_id), ...(g ? [g.owner_id] : [])]));
-        if (ids.length) {
-          const { data: profs } = await supabase.from('profiles').select('id, full_name').in('id', ids);
-          list = (profs || []).map((p) => ({ user_id: p.id, full_name: p.full_name || 'User' }));
-        }
-      } else if (mode === 'shared') {
-        // Union of everyone across user's groups
-        const groupIds = groups.map((g) => g.id);
-        const idSet = new Set<string>([user.id]);
-        if (groupIds.length) {
-          const { data: ms } = await supabase
-            .from('group_memberships').select('user_id').in('group_id', groupIds);
-          (ms || []).forEach((m) => idSet.add(m.user_id));
-          const { data: gs } = await supabase.from('groups').select('owner_id').in('id', groupIds);
-          (gs || []).forEach((g) => idSet.add(g.owner_id));
-        }
-        const ids = Array.from(idSet);
-        const { data: profs } = await supabase.from('profiles').select('id, full_name').in('id', ids);
-        list = (profs || []).map((p) => ({
-          user_id: p.id, full_name: p.id === user.id ? 'You' : (p.full_name || 'User'),
-        }));
-      }
-      setPeople(list);
-      // Initialize first bill with everyone selected
-      const b = newBill(user.id, dateStr);
-      b.selected = Object.fromEntries(list.map((p) => [p.user_id, true]));
-      setBills([b]);
-      setActiveBillId(b.id);
-    };
-    load();
-  }, [view, mode, activeGroupId, user, dateStr, groups]);
+    if (!user || view !== 'form') return;
+    const b = newBill(user.id, dateStr);
+    b.selected = Object.fromEntries(people.map((p) => [p.user_id, true]));
+    setBills([b]);
+    setActiveBillId(b.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, mode, activeGroupId, user, dateStr]);
+
+  // Sync new members when background fetch completes
+  useEffect(() => {
+    if (view !== 'form') return;
+    setBills((prev) => prev.map((b) => {
+      const next = { ...b.selected };
+      let changed = false;
+      people.forEach((p) => { if (!(p.user_id in next)) { next[p.user_id] = true; changed = true; } });
+      return changed ? { ...b, selected: next } : b;
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [people.length]);
 
   const activeBill = bills.find((b) => b.id === activeBillId);
 
@@ -160,7 +192,28 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
     setView('form');
   };
 
+  const itemsTotal = (bill: Bill) =>
+    bill.items.reduce((s, it) => s + (parseFloat(it.amount) || 0), 0);
+
   const computeSplits = (bill: Bill, total: number) => {
+    if (bill.splitMode === 'itemwise') {
+      if (bill.items.length === 0) return null;
+      const owed: Record<string, number> = {};
+      for (const it of bill.items) {
+        const amt = parseFloat(it.amount) || 0;
+        const ids = Object.entries(it.selected).filter(([, v]) => v).map(([k]) => k);
+        if (ids.length === 0 || amt <= 0) continue;
+        const per = amt / ids.length;
+        ids.forEach((uid) => { owed[uid] = (owed[uid] || 0) + per; });
+      }
+      const splits = Object.entries(owed).map(([user_id, v]) => ({
+        user_id, amount_owed: Math.round(v * 100) / 100,
+      }));
+      if (splits.length === 0) return null;
+      const sum = splits.reduce((s, x) => s + x.amount_owed, 0);
+      if (Math.abs(sum - total) > 0.05) return 'invalid' as const;
+      return splits;
+    }
     const selectedIds = Object.entries(bill.selected).filter(([, v]) => v).map(([k]) => k);
     if (selectedIds.length === 0) return null;
     if (bill.splitMode === 'equal') {
@@ -178,22 +231,22 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
 
   const handleSubmit = async () => {
     if (!user) return;
-    // Validate
     for (const b of bills) {
-      const amt = parseFloat(b.amount);
+      const amt = b.splitMode === 'itemwise' ? itemsTotal(b) : parseFloat(b.amount);
       if (!b.description.trim()) return toast.error(`Bill: description required`);
       if (isNaN(amt) || amt <= 0) return toast.error(`Bill "${b.description || '...'}" needs valid amount`);
       if (mode !== 'personal') {
         const splits = computeSplits(b, amt);
         if (!splits) return toast.error(`Pick at least one person to split with`);
-        if (splits === 'invalid') return toast.error(`Unequal amounts in "${b.description}" don't add up to ₹${amt}`);
+        if (splits === 'invalid') return toast.error(`Splits in "${b.description}" don't add up to ₹${amt}`);
       }
     }
     setSubmitting(true);
     try {
       for (const b of bills) {
-        const amt = Math.round(parseFloat(b.amount) * 100) / 100;
-        const expense_type = mode === 'group' ? 'group' : mode === 'shared' ? 'shared' : 'personal';
+        const rawAmt = b.splitMode === 'itemwise' ? itemsTotal(b) : parseFloat(b.amount);
+        const amt = Math.round(rawAmt * 100) / 100;
+        const expense_type = mode === 'group' ? 'group' : 'personal';
         const { data: exp, error } = await supabase.from('expenses').insert({
           user_id: user.id,
           description: b.description.trim().slice(0, 500),
@@ -211,7 +264,7 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
             expense_id: exp.id,
             user_id: s.user_id,
             amount_owed: s.amount_owed,
-            is_paid: s.user_id === b.paidBy,
+            is_paid: s.user_id === user.id,
           }));
           const { error: sErr } = await supabase.from('expense_splits').insert(rows);
           if (sErr) throw sErr;
@@ -230,7 +283,7 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
 
   const headerLabel = mode === 'group'
     ? (groups.find((g) => g.id === activeGroupId)?.name || 'Group')
-    : mode === 'shared' ? 'Shared' : 'Personal';
+    : 'Personal';
 
   const initials = (n: string) => n.split(' ').map((x) => x[0]).join('').slice(0, 2).toUpperCase();
 
@@ -243,13 +296,21 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
           </SheetHeader>
 
           <div className="space-y-5 pt-3">
-            {/* Groups row */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium">Add expense to recent groups</p>
+                <p className="text-sm font-medium">Add expense to group</p>
                 <Info className="h-4 w-4 text-muted-foreground" />
               </div>
-              {groups.length === 0 ? (
+              {!groupsLoaded ? (
+                <div className="flex gap-3 pb-2">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="flex flex-col items-center gap-1 min-w-16">
+                      <div className="h-14 w-14 rounded-full bg-muted animate-pulse" />
+                      <div className="h-3 w-12 rounded bg-muted animate-pulse" />
+                    </div>
+                  ))}
+                </div>
+              ) : groups.length === 0 ? (
                 <p className="text-xs text-muted-foreground">No groups yet. Create one from the Groups tab.</p>
               ) : (
                 <div className="flex gap-3 overflow-x-auto pb-2">
@@ -270,23 +331,13 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
             </div>
 
             <button
-              onClick={() => chooseMode('shared')}
-              className="w-full flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted/40 text-left"
-            >
-              <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
-                <UsersRound className="h-5 w-5 text-foreground" />
-              </div>
-              <span className="font-medium">Add an expense, outside groups</span>
-            </button>
-
-            <button
               onClick={() => chooseMode('personal')}
               className="w-full flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted/40 text-left"
             >
               <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
                 <Wallet className="h-5 w-5 text-foreground" />
               </div>
-              <span className="font-medium">Track your personal expense</span>
+              <span className="font-medium">Add expense as personal</span>
             </button>
           </div>
         </SheetContent>
@@ -310,7 +361,6 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
           </DialogHeader>
 
           <div className="px-4 py-4 space-y-4">
-            {/* People row */}
             {mode !== 'personal' && (
               <div className="flex gap-3 overflow-x-auto pb-1">
                 {people.map((p) => (
@@ -326,7 +376,6 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
               </div>
             )}
 
-            {/* Bill tabs */}
             <div className="flex gap-2 overflow-x-auto pb-1">
               {bills.map((b, i) => (
                 <button
@@ -373,7 +422,10 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
                     <Label>Price (₹)</Label>
                     <Input
                       type="number" step="0.01" min="0" placeholder="0.00"
-                      value={activeBill.amount}
+                      value={activeBill.splitMode === 'itemwise'
+                        ? itemsTotal(activeBill).toFixed(2)
+                        : activeBill.amount}
+                      disabled={activeBill.splitMode === 'itemwise'}
                       onChange={(e) => updateBill(activeBill.id, { amount: e.target.value })}
                     />
                   </div>
@@ -387,48 +439,31 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label>Category</Label>
-                    <Select value={activeBill.category} onValueChange={(v) => updateBill(activeBill.id, { category: v })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="general">General</SelectItem>
-                        <SelectItem value="food">Food & Groceries</SelectItem>
-                        <SelectItem value="transport">Transport</SelectItem>
-                        <SelectItem value="utilities">Utilities</SelectItem>
-                        <SelectItem value="entertainment">Entertainment</SelectItem>
-                        <SelectItem value="shopping">Shopping</SelectItem>
-                        <SelectItem value="health">Health</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {mode !== 'personal' && (
-                    <div className="space-y-1.5">
-                      <Label>Paid by</Label>
-                      <Select value={activeBill.paidBy} onValueChange={(v) => updateBill(activeBill.id, { paidBy: v })}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {people.map((p) => (
-                            <SelectItem key={p.user_id} value={p.user_id}>
-                              {p.user_id === user?.id ? 'You' : p.full_name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
+                <div className="space-y-1.5">
+                  <Label>Category</Label>
+                  <Select value={activeBill.category} onValueChange={(v) => updateBill(activeBill.id, { category: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="general">General</SelectItem>
+                      <SelectItem value="food">Food & Groceries</SelectItem>
+                      <SelectItem value="transport">Transport</SelectItem>
+                      <SelectItem value="utilities">Utilities</SelectItem>
+                      <SelectItem value="entertainment">Entertainment</SelectItem>
+                      <SelectItem value="shopping">Shopping</SelectItem>
+                      <SelectItem value="health">Health</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {/* Split */}
                 {mode !== 'personal' && (
                   <div className="space-y-2 rounded-lg border border-border p-3">
                     <Label>Split</Label>
-                    <div className="grid grid-cols-2 gap-2 p-1 bg-muted rounded-full">
+                    <div className="grid grid-cols-3 gap-2 p-1 bg-muted rounded-full">
                       <button
                         onClick={() => updateBill(activeBill.id, { splitMode: 'equal' })}
-                        className={cn('py-1.5 rounded-full text-sm font-medium',
+                        className={cn('py-1.5 rounded-full text-xs font-medium',
                           activeBill.splitMode === 'equal' ? 'bg-primary text-primary-foreground' : 'text-foreground')}
                       >Equally</button>
                       <button
@@ -436,12 +471,23 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
                           updateBill(activeBill.id, { splitMode: 'unequal' });
                           setUnequalOpenFor(activeBill.id);
                         }}
-                        className={cn('py-1.5 rounded-full text-sm font-medium',
+                        className={cn('py-1.5 rounded-full text-xs font-medium',
                           activeBill.splitMode === 'unequal' ? 'bg-primary text-primary-foreground' : 'text-foreground')}
                       >Unequally</button>
+                      <button
+                        onClick={() => {
+                          const allIds = people.map((p) => p.user_id);
+                          updateBill(activeBill.id, {
+                            splitMode: 'itemwise',
+                            items: activeBill.items.length ? activeBill.items : [newItem(allIds)],
+                          });
+                        }}
+                        className={cn('py-1.5 rounded-full text-xs font-medium',
+                          activeBill.splitMode === 'itemwise' ? 'bg-primary text-primary-foreground' : 'text-foreground')}
+                      >Item wise</button>
                     </div>
 
-                    {activeBill.splitMode === 'equal' ? (
+                    {activeBill.splitMode === 'equal' && (
                       <div className="space-y-1.5 pt-1">
                         <p className="text-xs text-muted-foreground">Split among ( Tap to unselect )</p>
                         <div className="flex flex-wrap gap-2">
@@ -466,13 +512,24 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
                           })}
                         </div>
                       </div>
-                    ) : (
+                    )}
+
+                    {activeBill.splitMode === 'unequal' && (
                       <Button
                         type="button" variant="outline" size="sm"
                         onClick={() => setUnequalOpenFor(activeBill.id)}
                       >
                         Edit unequal split
                       </Button>
+                    )}
+
+                    {activeBill.splitMode === 'itemwise' && (
+                      <ItemwiseEditor
+                        bill={activeBill}
+                        people={people}
+                        currentUserId={user?.id}
+                        onChange={(patch) => updateBill(activeBill.id, patch)}
+                      />
                     )}
                   </div>
                 )}
@@ -492,7 +549,6 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
         </DialogContent>
       </Dialog>
 
-      {/* Unequal split sheet */}
       <UnequalSplitSheet
         open={!!unequalOpenFor}
         onClose={() => setUnequalOpenFor(null)}
@@ -502,6 +558,81 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
         onChange={(patch) => unequalOpenFor && updateBill(unequalOpenFor, patch)}
       />
     </>
+  );
+}
+
+function ItemwiseEditor({
+  bill, people, currentUserId, onChange,
+}: {
+  bill: Bill;
+  people: Person[];
+  currentUserId?: string;
+  onChange: (patch: Partial<Bill>) => void;
+}) {
+  const updateItem = (id: string, patch: Partial<BillItem>) => {
+    onChange({ items: bill.items.map((it) => (it.id === id ? { ...it, ...patch } : it)) });
+  };
+  const removeItem = (id: string) => {
+    onChange({ items: bill.items.filter((it) => it.id !== id) });
+  };
+  const addItem = () => {
+    const ids = people.map((p) => p.user_id);
+    onChange({ items: [...bill.items, { id: crypto.randomUUID(), name: '', amount: '', selected: Object.fromEntries(ids.map((i) => [i, true])) }] });
+  };
+
+  const total = bill.items.reduce((s, it) => s + (parseFloat(it.amount) || 0), 0);
+
+  return (
+    <div className="space-y-3 pt-2">
+      <p className="text-xs text-muted-foreground">Add each item & pick who shares it</p>
+      {bill.items.map((it, idx) => (
+        <div key={it.id} className="space-y-2 rounded-lg border border-border p-3 bg-muted/20">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground w-12">Item {idx + 1}</span>
+            <Input
+              placeholder="e.g. Paneer"
+              value={it.name}
+              onChange={(e) => updateItem(it.id, { name: e.target.value })}
+              className="h-9 flex-1"
+            />
+            <Input
+              type="number" step="0.01" min="0" placeholder="0"
+              value={it.amount}
+              onChange={(e) => updateItem(it.id, { amount: e.target.value })}
+              className="h-9 w-24"
+            />
+            {bill.items.length > 1 && (
+              <button onClick={() => removeItem(it.id)} className="text-destructive p-1">
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {people.map((p) => {
+              const on = !!it.selected[p.user_id];
+              return (
+                <button
+                  key={p.user_id}
+                  onClick={() => updateItem(it.id, { selected: { ...it.selected, [p.user_id]: !on } })}
+                  className={cn(
+                    'px-2.5 py-1 rounded-full border text-xs',
+                    on ? 'bg-primary/10 border-primary text-primary' : 'bg-background border-border text-muted-foreground',
+                  )}
+                >
+                  {p.user_id === currentUserId ? 'You' : p.full_name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+      <div className="flex items-center justify-between">
+        <Button variant="outline" size="sm" onClick={addItem}>
+          <Plus className="h-3.5 w-3.5 mr-1" /> Add item
+        </Button>
+        <span className="text-sm font-semibold">Total: ₹{total.toFixed(2)}</span>
+      </div>
+    </div>
   );
 }
 
