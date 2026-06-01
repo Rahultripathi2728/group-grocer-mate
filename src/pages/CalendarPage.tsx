@@ -60,6 +60,7 @@ interface DayExpense {
     addedByName?: string;
     user_id?: string;
     groupName?: string;
+    hasShare?: boolean;
   }>;
 }
 
@@ -105,6 +106,7 @@ export default function CalendarPage() {
         .map((e) => e.id);
 
       let splitsMap = new Map<string, number>();
+      let hasSplitSet = new Set<string>();
       if (groupExpenseIds.length > 0) {
         const { data: splits } = await supabase
           .from('expense_splits')
@@ -114,6 +116,7 @@ export default function CalendarPage() {
 
         (splits || []).forEach((s) => {
           splitsMap.set(s.expense_id, Number(s.amount_owed));
+          hasSplitSet.add(s.expense_id);
         });
       }
 
@@ -175,6 +178,9 @@ export default function CalendarPage() {
             ? (expense.user_id === user.id ? 'You' : (profilesMap.get(expense.user_id) || 'Unknown'))
             : undefined,
           groupName: (expense as any).groups?.name || undefined,
+          hasShare: expense.expense_type === 'group'
+            ? hasSplitSet.has(expense.id)
+            : true,
         });
         grouped.set(dateKey, existing);
       });
@@ -431,13 +437,18 @@ export default function CalendarPage() {
                                     by {expense.addedByName}
                                   </span>
                                 )}
+                                {expense.expense_type === 'group' && expense.hasShare === false && (
+                                  <span className="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground">
+                                    Not in this expense
+                                  </span>
+                                )}
                               </div>
                             </div>
 
                             {/* Amount */}
                             <div className="text-right shrink-0">
                               <p className="font-bold text-sm">₹{expense.amount.toLocaleString('en-IN')}</p>
-                              {expense.expense_type === 'group' && expense.myShare !== undefined && (
+                              {expense.expense_type === 'group' && expense.hasShare && expense.myShare !== undefined && (
                                 <p className="text-[10px] text-muted-foreground mt-0.5">
                                   Share: ₹{expense.myShare.toLocaleString('en-IN')}
                                 </p>
