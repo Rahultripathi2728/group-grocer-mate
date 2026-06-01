@@ -60,6 +60,7 @@ interface DayExpense {
     addedByName?: string;
     user_id?: string;
     groupName?: string;
+    hasShare?: boolean;
   }>;
 }
 
@@ -105,6 +106,7 @@ export default function CalendarPage() {
         .map((e) => e.id);
 
       let splitsMap = new Map<string, number>();
+      let hasSplitSet = new Set<string>();
       if (groupExpenseIds.length > 0) {
         const { data: splits } = await supabase
           .from('expense_splits')
@@ -114,6 +116,7 @@ export default function CalendarPage() {
 
         (splits || []).forEach((s) => {
           splitsMap.set(s.expense_id, Number(s.amount_owed));
+          hasSplitSet.add(s.expense_id);
         });
       }
 
@@ -175,6 +178,9 @@ export default function CalendarPage() {
             ? (expense.user_id === user.id ? 'You' : (profilesMap.get(expense.user_id) || 'Unknown'))
             : undefined,
           groupName: (expense as any).groups?.name || undefined,
+          hasShare: expense.expense_type === 'group'
+            ? hasSplitSet.has(expense.id)
+            : true,
         });
         grouped.set(dateKey, existing);
       });
