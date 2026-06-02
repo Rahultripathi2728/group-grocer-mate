@@ -368,7 +368,7 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
               <p className="text-2xl font-display font-bold">₹{totalExpenses.toLocaleString('en-IN')}</p>
             </div>
             <div className="p-4 rounded-xl bg-muted">
-              <p className="text-xs text-muted-foreground mb-1">Per Person Share</p>
+              <p className="text-xs text-muted-foreground mb-1">Your Share</p>
               <p className="text-2xl font-display font-bold">₹{perPersonShare.toFixed(0)}</p>
             </div>
           </div>
@@ -584,7 +584,7 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
                                     <p className="text-lg font-bold">₹{settlementTotal.toLocaleString('en-IN')}</p>
                                   </div>
                                   <div className="p-3 rounded-lg bg-muted/30">
-                                    <p className="text-xs text-muted-foreground">Per Person Share</p>
+                                    <p className="text-xs text-muted-foreground">Your Share</p>
                                     <p className="text-lg font-bold">₹{sharePerPerson.toFixed(0)}</p>
                                   </div>
                                 </div>
