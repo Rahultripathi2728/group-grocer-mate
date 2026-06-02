@@ -19,7 +19,7 @@ import {
 import { Calendar } from '@/components/ui/calendar';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { format, startOfMonth, endOfMonth, addMonths, subMonths, isSameMonth } from 'date-fns';
 import {
   TrendingUp,
   TrendingDown,
@@ -29,6 +29,9 @@ import {
   CheckCircle2,
   Sparkles,
   CalendarIcon,
+  ChevronLeft,
+  ChevronRight,
+  SlidersHorizontal,
 } from 'lucide-react';
 
 import BudgetCard from '@/components/expenses/BudgetCard';
@@ -82,6 +85,15 @@ export default function ExpensesPage() {
   const [dateTo, setDateTo] = useState<Date>(new Date());
   const [fromOpen, setFromOpen] = useState(false);
   const [toOpen, setToOpen] = useState(false);
+  const [customOpen, setCustomOpen] = useState(false);
+  const [isCustomRange, setIsCustomRange] = useState(false);
+
+  const goToMonth = (date: Date) => {
+    const today = new Date();
+    setDateFrom(startOfMonth(date));
+    setDateTo(isSameMonth(date, today) ? today : endOfMonth(date));
+    setIsCustomRange(false);
+  };
 
   // Settlement state
   const [groups, setGroups] = useState<Group[]>([]);
@@ -327,57 +339,107 @@ export default function ExpensesPage() {
               animate={{ opacity: 1, y: 0 }}
               className="flex items-center gap-2 flex-wrap"
             >
-              <Popover open={fromOpen} onOpenChange={setFromOpen}>
-                <PopoverTrigger asChild>
-              <Button
-                    variant="outline"
-                    size="sm"
-                    className={cn(
-                      "flex-1 min-w-0 justify-start text-left font-normal border border-border text-xs sm:text-sm",
-                      !dateFrom && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
-                    {format(dateFrom, 'dd/MM/yy')}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={dateFrom}
-                    onSelect={(d) => { if (d) { setDateFrom(d); setFromOpen(false); } }}
-                    initialFocus
-                    className={cn("p-3 pointer-events-auto")}
-                  />
-                </PopoverContent>
-              </Popover>
-
-              <span className="text-muted-foreground text-sm font-medium">to</span>
-
-              <Popover open={toOpen} onOpenChange={setToOpen}>
-                <PopoverTrigger asChild>
-              <Button
-                    variant="outline"
-                    size="sm"
-                    className={cn(
-                      "flex-1 min-w-0 justify-start text-left font-normal border border-border text-xs sm:text-sm",
-                      !dateTo && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
-                    {format(dateTo, 'dd/MM/yy')}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="end">
-                  <Calendar
-                    mode="single"
-                    selected={dateTo}
-                    onSelect={(d) => { if (d) { setDateTo(d); setToOpen(false); } }}
-                    initialFocus
-                    className={cn("p-3 pointer-events-auto")}
-                  />
-                </PopoverContent>
-              </Popover>
+              {(() => {
+                const today = new Date();
+                const anchor = isCustomRange ? today : dateFrom;
+                const isCurrent = !isCustomRange && isSameMonth(anchor, today);
+                const isFuture = !isCustomRange && anchor > today;
+                const label = isCustomRange
+                  ? `${format(dateFrom, 'dd MMM')} – ${format(dateTo, 'dd MMM yy')}`
+                  : format(anchor, 'MMMM yyyy');
+                return (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9 shrink-0"
+                      onClick={() => goToMonth(subMonths(isCustomRange ? today : anchor, 1))}
+                      aria-label="Previous month"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => goToMonth(new Date())}
+                      className="flex-1 min-w-0 justify-center font-medium text-xs sm:text-sm"
+                    >
+                      <CalendarIcon className="mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
+                      <span className="truncate">{label}</span>
+                      {isCurrent && (
+                        <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">Now</span>
+                      )}
+                      {isFuture && (
+                        <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">Upcoming</span>
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9 shrink-0"
+                      onClick={() => goToMonth(addMonths(isCustomRange ? today : anchor, 1))}
+                      aria-label="Next month"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                    <Popover open={customOpen} onOpenChange={setCustomOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant={isCustomRange ? 'default' : 'outline'}
+                          size="icon"
+                          className="h-9 w-9 shrink-0"
+                          aria-label="Custom date range"
+                        >
+                          <SlidersHorizontal className="h-4 w-4" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-3 space-y-3" align="end">
+                        <p className="text-xs font-semibold text-muted-foreground">Custom date range</p>
+                        <div className="flex items-center gap-2">
+                          <Popover open={fromOpen} onOpenChange={setFromOpen}>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" size="sm" className="flex-1 justify-start text-xs">
+                                <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />
+                                {format(dateFrom, 'dd/MM/yy')}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={dateFrom}
+                                onSelect={(d) => { if (d) { setDateFrom(d); setIsCustomRange(true); setFromOpen(false); } }}
+                                initialFocus
+                                className={cn('p-3 pointer-events-auto')}
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <span className="text-xs text-muted-foreground">to</span>
+                          <Popover open={toOpen} onOpenChange={setToOpen}>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" size="sm" className="flex-1 justify-start text-xs">
+                                <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />
+                                {format(dateTo, 'dd/MM/yy')}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="end">
+                              <Calendar
+                                mode="single"
+                                selected={dateTo}
+                                onSelect={(d) => { if (d) { setDateTo(d); setIsCustomRange(true); setToOpen(false); } }}
+                                initialFocus
+                                className={cn('p-3 pointer-events-auto')}
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                        <Button size="sm" className="w-full" onClick={() => { goToMonth(new Date()); setCustomOpen(false); }}>
+                          Reset to this month
+                        </Button>
+                      </PopoverContent>
+                    </Popover>
+                  </>
+                );
+              })()}
             </motion.div>
 
             {/* Budget Card */}
