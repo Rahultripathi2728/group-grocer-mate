@@ -418,7 +418,7 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
             </div>
             <div className="p-4 rounded-xl bg-muted">
               <p className="text-xs text-muted-foreground mb-1">Your Share</p>
-              <p className="text-2xl font-display font-bold">₹{perPersonShare.toFixed(0)}</p>
+              <p className="text-2xl font-display font-bold">₹{myShare.toFixed(0)}</p>
             </div>
           </div>
         </CardContent>
