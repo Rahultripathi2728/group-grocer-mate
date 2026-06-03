@@ -85,6 +85,7 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
   const [lastSettlement, setLastSettlement] = useState<Settlement | null>(null);
   const [expandedSettlement, setExpandedSettlement] = useState<string | null>(null);
   const [settlementExpenses, setSettlementExpenses] = useState<Record<string, GroupExpense[]>>({});
+  const [settlementSplits, setSettlementSplits] = useState<Record<string, Record<string, { user_id: string; amount_owed: number }[]>>>({});
   const [loadingSettlementDetail, setLoadingSettlementDetail] = useState<string | null>(null);
 
   const fetchData = async () => {
@@ -166,28 +167,67 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
 
     setExpenses(postSettlementExpenses);
 
-    // Calculate member spending using only post-settlement expenses
-    calculateMemberSpending(memberList, postSettlementExpenses);
-    // Calculate balances using only post-settlement expenses
-    calculateBalances(memberList, postSettlementExpenses);
+    // Fetch splits for these expenses (used to honor exclusions & item-wise/unequal splits)
+    const expenseIds = postSettlementExpenses.map((e) => e.id);
+    let splitsByExpense: Record<string, { user_id: string; amount_owed: number }[]> = {};
+    if (expenseIds.length > 0) {
+      const { data: splitsData } = await supabase
+        .from('expense_splits')
+        .select('expense_id, user_id, amount_owed')
+        .in('expense_id', expenseIds);
+      (splitsData || []).forEach((s: any) => {
+        if (!splitsByExpense[s.expense_id]) splitsByExpense[s.expense_id] = [];
+        splitsByExpense[s.expense_id].push({ user_id: s.user_id, amount_owed: Number(s.amount_owed) });
+      });
+    }
+
+    // Calculate member spending & balances using actual splits (fallback: equal among all members)
+    calculateMemberSpending(memberList, postSettlementExpenses, splitsByExpense);
+    calculateBalances(memberList, postSettlementExpenses, splitsByExpense);
 
     setLoading(false);
   };
 
-  const calculateMemberSpending = (memberList: Member[], expenseList: GroupExpense[]) => {
+  // Returns map: userId -> total amount owed across all expenses, honoring splits when present
+  const computeOwedByUser = (
+    memberList: Member[],
+    expenseList: GroupExpense[],
+    splitsByExpense: Record<string, { user_id: string; amount_owed: number }[]>
+  ) => {
+    const owed: Record<string, number> = {};
+    memberList.forEach((m) => (owed[m.user_id] = 0));
     const memberCount = memberList.length;
-    const totalExpense = expenseList.reduce((sum, e) => sum + e.amount, 0);
-    const sharePerPerson = memberCount > 0 ? totalExpense / memberCount : 0;
+    expenseList.forEach((e) => {
+      const splits = splitsByExpense[e.id];
+      if (splits && splits.length > 0) {
+        splits.forEach((s) => {
+          if (owed[s.user_id] !== undefined) owed[s.user_id] += s.amount_owed;
+        });
+      } else if (memberCount > 0) {
+        const per = e.amount / memberCount;
+        memberList.forEach((m) => (owed[m.user_id] += per));
+      }
+    });
+    return owed;
+  };
+
+  const calculateMemberSpending = (
+    memberList: Member[],
+    expenseList: GroupExpense[],
+    splitsByExpense: Record<string, { user_id: string; amount_owed: number }[]>
+  ) => {
+    const owedMap = computeOwedByUser(memberList, expenseList, splitsByExpense);
 
     const spending: MemberSpending[] = memberList.map((member) => {
       const memberExpenses = expenseList.filter((e) => e.user_id === member.user_id);
       const totalPaid = memberExpenses.reduce((sum, e) => sum + e.amount, 0);
-      const netBalance = totalPaid - sharePerPerson;
+      const totalOwed = owedMap[member.user_id] || 0;
+      const netBalance = totalPaid - totalOwed;
 
       return {
         member,
         totalPaid,
-        totalOwed: sharePerPerson,
+        totalOwed,
         netBalance,
         expenses: memberExpenses,
       };
@@ -198,33 +238,27 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
     setMemberSpending(spending);
   };
 
-  const calculateBalances = (memberList: Member[], expenseList: GroupExpense[]) => {
+  const calculateBalances = (
+    memberList: Member[],
+    expenseList: GroupExpense[],
+    splitsByExpense: Record<string, { user_id: string; amount_owed: number }[]>
+  ) => {
     if (!expenseList.length || memberList.length < 2) {
       setBalances([]);
       return;
     }
 
-    const memberCount = memberList.length;
     const paidByUser: Record<string, number> = {};
-    const owedByUser: Record<string, number> = {};
-
-    memberList.forEach((m) => {
-      paidByUser[m.user_id] = 0;
-      owedByUser[m.user_id] = 0;
-    });
+    memberList.forEach((m) => (paidByUser[m.user_id] = 0));
 
     expenseList.forEach((expense) => {
       const payerId = expense.user_id;
-      const sharePerPerson = expense.amount / memberCount;
-
       if (paidByUser[payerId] !== undefined) {
         paidByUser[payerId] += expense.amount;
       }
-
-      memberList.forEach((m) => {
-        owedByUser[m.user_id] += sharePerPerson;
-      });
     });
+
+    const owedByUser = computeOwedByUser(memberList, expenseList, splitsByExpense);
 
     const netBalance: Record<string, number> = {};
     memberList.forEach((m) => {
@@ -308,7 +342,22 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
       amount: Number(e.amount),
     }));
 
+    // Fetch splits for these expenses too
+    const ids = expenseList.map((e) => e.id);
+    const splitsMap: Record<string, { user_id: string; amount_owed: number }[]> = {};
+    if (ids.length > 0) {
+      const { data: sData } = await supabase
+        .from('expense_splits')
+        .select('expense_id, user_id, amount_owed')
+        .in('expense_id', ids);
+      (sData || []).forEach((s: any) => {
+        if (!splitsMap[s.expense_id]) splitsMap[s.expense_id] = [];
+        splitsMap[s.expense_id].push({ user_id: s.user_id, amount_owed: Number(s.amount_owed) });
+      });
+    }
+
     setSettlementExpenses((prev) => ({ ...prev, [settlementId]: expenseList }));
+    setSettlementSplits((prev) => ({ ...prev, [settlementId]: splitsMap }));
     setLoadingSettlementDetail(null);
   };
 
@@ -317,7 +366,7 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
   }, [groupId]);
 
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-  const perPersonShare = members.length > 0 ? totalExpenses / members.length : 0;
+  const myShare = memberSpending.find((m) => m.member.user_id === user?.id)?.totalOwed || 0;
 
   if (loading) {
     return (
@@ -369,7 +418,7 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
             </div>
             <div className="p-4 rounded-xl bg-muted">
               <p className="text-xs text-muted-foreground mb-1">Your Share</p>
-              <p className="text-2xl font-display font-bold">₹{perPersonShare.toFixed(0)}</p>
+              <p className="text-2xl font-display font-bold">₹{myShare.toFixed(0)}</p>
             </div>
           </div>
         </CardContent>
@@ -512,10 +561,25 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
               {settlements.map((settlement, index) => {
                 const isExpanded = expandedSettlement === settlement.id;
                 const detailExpenses = settlementExpenses[settlement.id] || [];
+                const detailSplits = settlementSplits[settlement.id] || {};
                 const isLoadingDetail = loadingSettlementDetail === settlement.id;
                 const memberCount = members.length;
                 const settlementTotal = detailExpenses.reduce((sum, e) => sum + e.amount, 0);
-                const sharePerPerson = memberCount > 0 ? settlementTotal / memberCount : 0;
+                // Per-member owed honoring splits
+                const owedMap: Record<string, number> = {};
+                members.forEach((m) => (owedMap[m.user_id] = 0));
+                detailExpenses.forEach((e) => {
+                  const sp = detailSplits[e.id];
+                  if (sp && sp.length > 0) {
+                    sp.forEach((s) => {
+                      if (owedMap[s.user_id] !== undefined) owedMap[s.user_id] += s.amount_owed;
+                    });
+                  } else if (memberCount > 0) {
+                    const per = e.amount / memberCount;
+                    members.forEach((m) => (owedMap[m.user_id] += per));
+                  }
+                });
+                const myShareDetail = owedMap[user?.id || ''] || 0;
 
                 return (
                   <div key={settlement.id}>
@@ -585,7 +649,7 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
                                   </div>
                                   <div className="p-3 rounded-lg bg-muted/30">
                                     <p className="text-xs text-muted-foreground">Your Share</p>
-                                    <p className="text-lg font-bold">₹{sharePerPerson.toFixed(0)}</p>
+                                    <p className="text-lg font-bold">₹{myShareDetail.toFixed(0)}</p>
                                   </div>
                                 </div>
 
@@ -599,7 +663,8 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
                                       const memberPaid = detailExpenses
                                         .filter((e) => e.user_id === member.user_id)
                                         .reduce((sum, e) => sum + e.amount, 0);
-                                      const net = memberPaid - sharePerPerson;
+                                      const memberOwed = owedMap[member.user_id] || 0;
+                                      const net = memberPaid - memberOwed;
                                       return (
                                         <div key={member.user_id} className="flex items-center justify-between p-2 rounded-lg bg-muted/20">
                                           <div className="flex items-center gap-2">
@@ -615,7 +680,7 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
                                                 {member.user_id === user?.id && <span className="text-muted-foreground text-xs ml-1">(You)</span>}
                                               </p>
                                               <p className="text-xs text-muted-foreground">
-                                                Paid ₹{memberPaid.toFixed(0)} • Share ₹{sharePerPerson.toFixed(0)}
+                                                Paid ₹{memberPaid.toFixed(0)} • Share ₹{memberOwed.toFixed(0)}
                                               </p>
                                             </div>
                                           </div>
