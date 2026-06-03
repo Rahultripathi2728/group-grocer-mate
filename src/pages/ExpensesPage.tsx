@@ -70,7 +70,14 @@ interface Group {
 
 export default function ExpensesPage() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'personal' | 'settlement'>('personal');
+  // Tab: persisted across in-app navigation via sessionStorage (resets when browser/tab closes)
+  const [activeTab, setActiveTab] = useState<'personal' | 'settlement'>(() => {
+    const v = typeof window !== 'undefined' ? sessionStorage.getItem('expenses_active_tab') : null;
+    return v === 'settlement' ? 'settlement' : 'personal';
+  });
+  useEffect(() => {
+    try { sessionStorage.setItem('expenses_active_tab', activeTab); } catch {}
+  }, [activeTab]);
   const [summary, setSummary] = useState<ExpenseSummary>({
     totalPersonal: 0,
     totalGroup: 0,
@@ -97,7 +104,16 @@ export default function ExpensesPage() {
 
   // Settlement state
   const [groups, setGroups] = useState<Group[]>([]);
-  const [selectedGroupId, setSelectedGroupId] = useState<string>('');
+  // Selected group: persisted across browser sessions
+  const [selectedGroupId, setSelectedGroupId] = useState<string>(() => {
+    if (typeof window === 'undefined') return '';
+    return localStorage.getItem('expenses_selected_group') || '';
+  });
+  useEffect(() => {
+    if (selectedGroupId) {
+      try { localStorage.setItem('expenses_selected_group', selectedGroupId); } catch {}
+    }
+  }, [selectedGroupId]);
   const [settling, setSettling] = useState(false);
 
   const fetchSummary = async () => {
@@ -182,9 +198,11 @@ export default function ExpensesPage() {
     );
 
     setGroups(uniqueGroups);
-    if (uniqueGroups.length > 0) {
-      setSelectedGroupId(uniqueGroups[0].id);
-    }
+    // Only default to first group if no persisted selection (or persisted one no longer valid)
+    setSelectedGroupId((prev) => {
+      if (prev && uniqueGroups.some((g) => g.id === prev)) return prev;
+      return uniqueGroups.length > 0 ? uniqueGroups[0].id : '';
+    });
   };
 
   const handleSettleAll = async () => {
