@@ -561,10 +561,25 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
               {settlements.map((settlement, index) => {
                 const isExpanded = expandedSettlement === settlement.id;
                 const detailExpenses = settlementExpenses[settlement.id] || [];
+                const detailSplits = settlementSplits[settlement.id] || {};
                 const isLoadingDetail = loadingSettlementDetail === settlement.id;
                 const memberCount = members.length;
                 const settlementTotal = detailExpenses.reduce((sum, e) => sum + e.amount, 0);
-                const sharePerPerson = memberCount > 0 ? settlementTotal / memberCount : 0;
+                // Per-member owed honoring splits
+                const owedMap: Record<string, number> = {};
+                members.forEach((m) => (owedMap[m.user_id] = 0));
+                detailExpenses.forEach((e) => {
+                  const sp = detailSplits[e.id];
+                  if (sp && sp.length > 0) {
+                    sp.forEach((s) => {
+                      if (owedMap[s.user_id] !== undefined) owedMap[s.user_id] += s.amount_owed;
+                    });
+                  } else if (memberCount > 0) {
+                    const per = e.amount / memberCount;
+                    members.forEach((m) => (owedMap[m.user_id] += per));
+                  }
+                });
+                const myShareDetail = owedMap[user?.id || ''] || 0;
 
                 return (
                   <div key={settlement.id}>
@@ -634,7 +649,7 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
                                   </div>
                                   <div className="p-3 rounded-lg bg-muted/30">
                                     <p className="text-xs text-muted-foreground">Your Share</p>
-                                    <p className="text-lg font-bold">₹{sharePerPerson.toFixed(0)}</p>
+                                    <p className="text-lg font-bold">₹{myShareDetail.toFixed(0)}</p>
                                   </div>
                                 </div>
 
@@ -648,7 +663,8 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
                                       const memberPaid = detailExpenses
                                         .filter((e) => e.user_id === member.user_id)
                                         .reduce((sum, e) => sum + e.amount, 0);
-                                      const net = memberPaid - sharePerPerson;
+                                      const memberOwed = owedMap[member.user_id] || 0;
+                                      const net = memberPaid - memberOwed;
                                       return (
                                         <div key={member.user_id} className="flex items-center justify-between p-2 rounded-lg bg-muted/20">
                                           <div className="flex items-center gap-2">
@@ -664,7 +680,7 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
                                                 {member.user_id === user?.id && <span className="text-muted-foreground text-xs ml-1">(You)</span>}
                                               </p>
                                               <p className="text-xs text-muted-foreground">
-                                                Paid ₹{memberPaid.toFixed(0)} • Share ₹{sharePerPerson.toFixed(0)}
+                                                Paid ₹{memberPaid.toFixed(0)} • Share ₹{memberOwed.toFixed(0)}
                                               </p>
                                             </div>
                                           </div>
