@@ -32,7 +32,7 @@ import {
   startOfWeek,
   endOfWeek,
 } from 'date-fns';
-import { ChevronLeft, ChevronRight, Plus, CheckCircle2, Wallet, Users, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, CheckCircle2, Wallet, Users, Trash2, ChevronDown, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { getCategoryById } from '@/lib/categories';
 import { cn } from '@/lib/utils';
@@ -73,6 +73,39 @@ export default function CalendarPage() {
   const [addExpenseOpen, setAddExpenseOpen] = useState(false);
   const [detailExpense, setDetailExpense] = useState<DayExpense['expenses'][0] | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [showMore, setShowMore] = useState(false);
+  const [splitDetails, setSplitDetails] = useState<Array<{ user_id: string; full_name: string; amount_owed: number }> | null>(null);
+  const [loadingSplits, setLoadingSplits] = useState(false);
+
+  // Reset "More" state when opening a new detail dialog
+  useEffect(() => {
+    setShowMore(false);
+    setSplitDetails(null);
+  }, [detailExpense?.id]);
+
+  const loadSplitDetails = async () => {
+    if (!detailExpense || detailExpense.expense_type !== 'group') return;
+    setLoadingSplits(true);
+    const { data: splits } = await supabase
+      .from('expense_splits')
+      .select('user_id, amount_owed')
+      .eq('expense_id', detailExpense.id);
+    const userIds = Array.from(new Set([...(splits || []).map((s) => s.user_id), detailExpense.user_id!].filter(Boolean)));
+    const { data: profs } = await supabase
+      .from('profiles')
+      .select('id, full_name')
+      .in('id', userIds);
+    const nameMap = new Map<string, string>((profs || []).map((p) => [p.id, p.full_name || 'Unknown']));
+    const rows = (splits || [])
+      .map((s) => ({
+        user_id: s.user_id,
+        full_name: s.user_id === user?.id ? 'You' : (nameMap.get(s.user_id) || 'Unknown'),
+        amount_owed: Number(s.amount_owed),
+      }))
+      .sort((a, b) => b.amount_owed - a.amount_owed);
+    setSplitDetails(rows);
+    setLoadingSplits(false);
+  };
 
   const userName = user?.user_metadata?.full_name || 'User';
 
@@ -543,8 +576,79 @@ export default function CalendarPage() {
                     )}
                   </div>
 
-                  {/* Delete button for unsettled */}
-                  {!detailExpense.is_settled && (
+                  {/* More: split breakdown (group expenses only) */}
+                  {detailExpense.expense_type === 'group' && (
+                    <div className="rounded-xl border border-border overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = !showMore;
+                          setShowMore(next);
+                          if (next && !splitDetails) loadSplitDetails();
+                        }}
+                        className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium hover:bg-muted/50 transition-colors"
+                      >
+                        <span>More — split breakdown</span>
+                        <ChevronDown className={cn('h-4 w-4 transition-transform', showMore && 'rotate-180')} />
+                      </button>
+                      {showMore && (
+                        <div className="px-3 pb-3 pt-1 space-y-2 border-t border-border">
+                          {loadingSplits || !splitDetails ? (
+                            <div className="space-y-2 py-2">
+                              {[1, 2].map((i) => (
+                                <div key={i} className="h-8 bg-muted/50 rounded-lg animate-pulse" />
+                              ))}
+                            </div>
+                          ) : splitDetails.length === 0 ? (
+                            <p className="text-xs text-muted-foreground text-center py-2">No split data available.</p>
+                          ) : (() => {
+                            const payerId = detailExpense.user_id;
+                            const payerName = payerId === user?.id ? 'You' : (detailExpense.addedByName || 'Payer');
+                            const payerOwn = splitDetails.find((s) => s.user_id === payerId)?.amount_owed || 0;
+                            const owers = splitDetails.filter((s) => s.user_id !== payerId && s.amount_owed > 0);
+                            const gets = owers.reduce((sum, o) => sum + o.amount_owed, 0);
+                            return (
+                              <>
+                                <p className="text-[11px] text-muted-foreground pt-2">
+                                  Paid by <strong className="text-foreground">{payerName}</strong> · ₹{detailExpense.amount.toLocaleString('en-IN')}
+                                </p>
+                                {gets > 0 && (
+                                  <div className="flex items-center justify-between text-sm bg-success/5 border border-success/20 rounded-lg px-3 py-2">
+                                    <span className="font-medium">{payerName} {payerName === 'You' ? 'get' : 'gets'}</span>
+                                    <span className="font-bold text-success">₹{gets.toLocaleString('en-IN')}</span>
+                                  </div>
+                                )}
+                                {payerOwn > 0 && (
+                                  <div className="flex items-center justify-between text-xs text-muted-foreground px-3">
+                                    <span>{payerName === 'You' ? 'Your' : `${payerName}'s`} own share</span>
+                                    <span>₹{payerOwn.toLocaleString('en-IN')}</span>
+                                  </div>
+                                )}
+                                <div className="space-y-1.5 pt-1">
+                                  {owers.map((o) => (
+                                    <div key={o.user_id} className="flex items-center justify-between text-sm bg-muted/50 rounded-lg px-3 py-2">
+                                      <span className="flex items-center gap-1.5 min-w-0">
+                                        <span className="truncate font-medium">{o.full_name}</span>
+                                        <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
+                                        <span className="truncate text-muted-foreground">{payerName}</span>
+                                      </span>
+                                      <span className="font-semibold shrink-0">₹{o.amount_owed.toLocaleString('en-IN')}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                                {owers.length === 0 && (
+                                  <p className="text-xs text-muted-foreground text-center py-2">No one owes the payer for this expense.</p>
+                                )}
+                              </>
+                            );
+                          })()}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Delete button: only for the payer (and only when unsettled) */}
+                  {!detailExpense.is_settled && detailExpense.user_id === user?.id && (
                     <Button
                       variant="outline"
                       className="w-full mt-2 text-destructive border-destructive/30 hover:bg-destructive/10"
