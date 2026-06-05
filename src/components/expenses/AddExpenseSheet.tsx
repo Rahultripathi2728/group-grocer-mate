@@ -289,13 +289,21 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
 
   return (
     <>
-      <Sheet open={open && view === 'choose'} onOpenChange={onOpenChange}>
-        <SheetContent side="bottom" className="rounded-t-2xl max-h-[85vh] overflow-y-auto">
-          <SheetHeader className="text-left">
-            <SheetTitle className="font-display">Add expense</SheetTitle>
-          </SheetHeader>
+      {/* Choose view — full-screen */}
+      <Dialog open={open && view === 'choose'} onOpenChange={onOpenChange}>
+        <DialogContent
+          className="!left-0 !top-0 !translate-x-0 !translate-y-0 !max-w-none w-screen h-[100dvh] !rounded-none border-0 p-0 gap-0 flex flex-col data-[state=open]:slide-in-from-bottom-4 data-[state=closed]:slide-out-to-bottom-4"
+        >
+          <DialogHeader className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3">
+            <div className="flex items-center gap-2">
+              <button onClick={() => onOpenChange(false)} className="p-1 -ml-1 rounded hover:bg-muted">
+                <ArrowLeft className="h-5 w-5" />
+              </button>
+              <DialogTitle className="font-display text-lg">Add Expense</DialogTitle>
+            </div>
+          </DialogHeader>
 
-          <div className="space-y-5 pt-3">
+          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium">Add expense to group</p>
@@ -340,12 +348,14 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
               <span className="font-medium">Add expense as personal</span>
             </button>
           </div>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
-      {/* Form dialog */}
+      {/* Form dialog — full-screen */}
       <Dialog open={open && view === 'form'} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-lg max-h-[92vh] overflow-y-auto p-0">
+        <DialogContent
+          className="!left-0 !top-0 !translate-x-0 !translate-y-0 !max-w-none w-screen h-[100dvh] !rounded-none border-0 p-0 gap-0 flex flex-col data-[state=open]:slide-in-from-bottom-4 data-[state=closed]:slide-out-to-bottom-4"
+        >
           <DialogHeader className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
@@ -360,7 +370,7 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
             </div>
           </DialogHeader>
 
-          <div className="px-4 py-4 space-y-4">
+          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
             {mode !== 'personal' && (
               <div className="flex gap-3 overflow-x-auto pb-1">
                 {people.map((p) => (
