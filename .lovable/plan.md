@@ -1,49 +1,71 @@
-## Goal
-Revamp the "Add Expense" flow based on the 3 screenshots, while keeping current theme (dark/grayscale) and **without any database schema changes** (uses existing `expenses` + `expense_splits` tables).
+# Plan: Add Expense Full-Screen + Audit + Push Fix
 
----
+## 1. Add Expense — Full-screen on all devices
 
-## New Flow (3 screens / steps)
+**File:** `src/components/expenses/AddExpenseSheet.tsx` (and possibly `AddExpenseDialog.tsx`)
 
-### Step 1 — Bottom-sheet "Where to add?"
-When user taps the `+` on Calendar/Dashboard, open a bottom-sheet (instead of jumping straight to the dialog) with three sections:
+Convert from centered modal/bottom-sheet to edge-to-edge full-screen on every viewport, matching your screenshot 1 (back arrow header on left, group/Home chip on right, scrollable body, fixed "Submit expense" CTA at bottom).
 
-1. **Add expense to recent groups** — horizontal row of group icons (existing groups). Tap a group → opens Add Expense screen pre-selected with that group.
-2. **Add an expense, outside groups** — opens Add Expense screen in "custom people" mode (ad-hoc, no group).
-3. **Track your personal expense** — opens Add Expense screen in "personal" mode.
+- Replace `Dialog`/`Sheet` `max-w-*` and rounded corners with `w-screen h-[100dvh] max-w-none rounded-none`
+- Sticky header: back arrow + "Add Expense" title + group chip
+- Sticky bottom: "Submit expense" full-width black button
+- Body: scrollable, normal padding
+- Animation: slide-up from bottom (mobile feel) on all devices
+- Keep all existing functionality (Equal/Unequal/Item-wise splits, members, date, scan bill, etc.)
 
-### Step 2 — Add Expense screen
-- Header: back arrow, "Add Expense" title, top-right chip showing selected group name (or "Personal").
-- Member avatars row at top: shows all group members (with names) + an "Add Friends" button when in custom mode.
-- **Multiple bills**: a row of bill chips (`Bill 1`, `Bill 2`, …) + `+ Add bill` button. Each bill is its own sub-form (description, amount, category, date, split config). Switching chips swaps the active bill in view.
-- Each bill form: Description, Category, Price, Paid By (dropdown of members), Date.
-- **Split section**: segmented control — `Equally` | `Unequally`
-  - **Equally**: show member chips with tap-to-include/exclude. Amount auto-divides across selected members.
-  - **Unequally**: opens a second sheet (screenshot 3) — toggle `By amount` / `By shares`, list each member with checkbox + amount/shares input. Live "People: x/y" counter.
-- Submit button at the bottom inserts **all bills** as separate `expenses` rows + their `expense_splits` rows in one go.
+## 2. Push notifications — diagnose & fix
 
-### Step 3 — Unequal split sheet
-Modal sheet with `By amount` / `By shares` toggle, member rows (avatar, name, checkbox, numeric input), and live validation (sum must equal total).
+**Files to check:**
+- `supabase/functions/send-push-notification/index.ts` — VAPID signing, payload, error handling
+- `supabase/functions/get-vapid-public-key/index.ts`
+- `src/hooks/usePushNotifications.ts` — subscription registration
+- `public/sw.js` — push event handler
+- DB trigger `send_push_on_notification` — verify it's actually attached to `notifications` table (currently no triggers exist per schema dump — **this is the bug**)
 
----
+**Likely root cause:** schema shows "no triggers in database" — the `send_push_on_notification` function exists but is not attached to a trigger on `notifications`, so no push is ever fired when a notification row is inserted.
 
-## Files to create
-- `src/components/expenses/AddExpenseSheet.tsx` — the new bottom-sheet entry point (step 1).
-- `src/components/expenses/AddExpenseScreen.tsx` — full-screen dialog with multi-bill UI (step 2).
-- `src/components/expenses/UnequalSplitSheet.tsx` — modal for unequal split (step 3).
-- `src/components/expenses/BillTabs.tsx` — Bill 1 / Bill 2 / + Add bill tab strip.
+**Fix:** migration to (re)create the trigger `AFTER INSERT ON notifications` calling `send_push_on_notification()`. Also check edge function logs for failures and the SW for proper `push` listener with `showNotification` + icon.
 
-## Files to update
-- `src/pages/CalendarPage.tsx`, `src/pages/ExpensesPage.tsx`, `src/components/layout/DashboardLayout.tsx` (wherever `AddExpenseDialog` is opened) → replace with `AddExpenseSheet`.
-- Keep `AddExpenseDialog.tsx` for now (no deletes) to avoid breaking anything; switch call sites to the new sheet.
+Capacitor/native caveat: web-push (VAPID) only fires inside the browser engine; on installed Capacitor APK without FCM, push won't fire in background. I'll document this clearly — actually delivering OS-level notifications to your Android phone requires either (a) installing the app as PWA from Chrome (then web push works in background via Chrome's service), or (b) adding `@capacitor/push-notifications` + Firebase (separate setup). I'll fix the web-push path; native FCM is out of scope.
 
-## Technical notes (no DB changes)
-- Multiple bills → loop and insert N rows into `expenses`, then build `expense_splits` per bill.
-- Unequal split → write per-member `amount_owed` values directly; sum is validated client-side to equal `amount`.
-- "Outside groups" (ad-hoc people without a group) → for now restrict to existing group members or self only, because adding non-user "friends" would require schema changes. The "Add Friends" button will show a toast "Coming soon — invite friends to a group first" to stay schema-safe.
-- All styling uses existing semantic tokens (`bg-background`, `text-foreground`, `border-border`, `bg-primary`, etc.) — no hardcoded colors, dark theme preserved.
-- No migrations. Existing data untouched.
+## 3. Balance simplification — verify math
 
-## Out of scope (will note in reply)
-- Adding non-registered friends (needs schema).
-- Bill image upload, UPI app shortcuts (PhonePe/GPay/Paytm icons in screenshot 2) — UI placeholders only, no integrations.
+Memory says "always simplified (current)". I'll audit `GroupExpensesBreakdown.tsx` `calculateBalances()` to confirm:
+- Net per user = sum(paid) − sum(owed)
+- Greedy matching (largest creditor ↔ largest debtor) produces minimum transactions
+- Floating-point tolerance (0.01) applied
+- Settled expenses excluded
+- Per-user `amount_owed` from `expense_splits` honoured
+
+Any deviation → fix.
+
+## 4. Full project bug audit
+
+I'll review and produce a written report covering:
+- **ExpensesPage** — month nav, filters, persistence
+- **CalendarPage** — date calc/timezone, summary chips, delete dialog
+- **GroupExpensesBreakdown** — settlement math, settled-flag handling, split fallback logic
+- **SimplifiedBalances** — UPI fetch, settle confirmation
+- **GroupsPage** — join-by-code, admin delete, leave group
+- **AddExpenseSheet** — split validation, item-wise totals, equal/unequal sum check, payer selection
+- **AuthContext / ResetPasswordPage** — session handling
+- **NotificationsPage / NotificationBell** — read state, badge sync
+- **Edge functions** — CORS, error responses, VAPID flow
+- **DB triggers / RLS** — missing triggers, policy gaps
+
+For each bug found I'll list: file, severity, fix applied (or recommendation if out of scope).
+
+## Order of work
+
+1. Build full-screen Add Expense (UI only — no logic changes)
+2. Create migration to attach `send_push_on_notification` trigger
+3. Audit balance math + fix any bugs found
+4. Walk the rest of the codebase, fix obvious bugs, document the rest
+5. Report findings at the end
+
+## Notes
+
+- I will NOT add a Splitwise-style on/off toggle (you chose "always simplified")
+- I will NOT change UPI / scan bill / categorization behavior
+- I will NOT touch backend role/permissions unless a bug demands it
+- Expect 4–6 file edits + 1 migration; audit report in the final message
