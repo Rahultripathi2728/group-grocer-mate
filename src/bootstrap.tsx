@@ -9,7 +9,11 @@ if (!rootElement) {
 }
 
 createRoot(rootElement).render(
-  <DebugErrorBoundary>
+  import.meta.env.DEV ? (
+    <DebugErrorBoundary>
+      <App />
+    </DebugErrorBoundary>
+  ) : (
     <App />
-  </DebugErrorBoundary>
+  )
 );
