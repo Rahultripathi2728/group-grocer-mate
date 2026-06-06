@@ -1,7 +1,29 @@
 import { precacheAndRoute } from 'workbox-precaching';
+import { registerRoute, NavigationRoute } from 'workbox-routing';
+import { NetworkFirst } from 'workbox-strategies';
 
-// Precache assets injected by vite-plugin-pwa
-precacheAndRoute(self.__WB_MANIFEST);
+// Precache only hashed assets — never HTML.
+// Serving precached HTML cache-first is the classic cause of white screens
+// after a deploy: the cached index.html references hashed JS chunks that no
+// longer exist on the server.
+const manifest = (self.__WB_MANIFEST || []).filter((entry) => {
+  const url = typeof entry === 'string' ? entry : entry.url;
+  return !/\.html$/i.test(url);
+});
+precacheAndRoute(manifest);
+
+// Always fetch fresh HTML from the network, fall back to cache only when offline.
+registerRoute(
+  new NavigationRoute(
+    new NetworkFirst({
+      cacheName: 'html-navigations',
+      networkTimeoutSeconds: 4,
+    }),
+    {
+      denylist: [/^\/~oauth/, /^\/api\//],
+    }
+  )
+);
 
 const resolveAppUrl = (path = '') => {
   const normalizedPath = String(path).replace(/^\/+/, '');
