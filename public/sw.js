@@ -98,5 +98,21 @@ self.addEventListener('install', () => {
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(clients.claim());
+  event.waitUntil((async () => {
+    // Drop any previously-precached HTML so old shells can't be served again.
+    const cacheNames = await caches.keys();
+    await Promise.all(
+      cacheNames.map(async (name) => {
+        if (!/precache|workbox/i.test(name)) return;
+        const cache = await caches.open(name);
+        const requests = await cache.keys();
+        await Promise.all(
+          requests
+            .filter((req) => /\.html(\?|$)/i.test(req.url) || req.url.endsWith('/'))
+            .map((req) => cache.delete(req))
+        );
+      })
+    );
+    await clients.claim();
+  })());
 });
