@@ -239,7 +239,23 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get('Authorization');
     const internalSecret = req.headers.get('x-internal-secret');
-    const expectedInternalSecret = Deno.env.get('INTERNAL_PUSH_SECRET');
+
+    // Read expected internal secret from vault (rotated server-side, not in source code)
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+    let expectedInternalSecret: string | null = null;
+    if (internalSecret) {
+      const { data: secretRow } = await supabaseAdmin
+        .schema('vault' as any)
+        .from('decrypted_secrets')
+        .select('decrypted_secret')
+        .eq('name', 'internal_push_secret')
+        .limit(1)
+        .maybeSingle();
+      expectedInternalSecret = (secretRow as any)?.decrypted_secret ?? null;
+    }
     const isInternalTrigger = !!(internalSecret && expectedInternalSecret && internalSecret === expectedInternalSecret);
 
     if (!authHeader?.startsWith('Bearer ')) {
