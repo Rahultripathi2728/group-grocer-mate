@@ -211,57 +211,30 @@ export default function ExpensesPage() {
     setSettling(true);
 
     try {
-      // Fetch unsettled expense IDs and amounts atomically
-      const { data: unsettledExpenses } = await supabase
-        .from('expenses')
-        .select('id, amount')
-        .eq('group_id', selectedGroupId)
-        .eq('is_settled', false);
+      // Atomic settlement via SECURITY DEFINER RPC — works for expenses paid by any member
+      const { data, error } = await supabase.rpc('settle_group_expenses', {
+        p_group_id: selectedGroupId,
+      });
 
-      if (!unsettledExpenses || unsettledExpenses.length === 0) {
+      if (error) throw error;
+
+      const row = Array.isArray(data) ? data[0] : data;
+      const count = row?.expenses_settled ?? 0;
+
+      if (!count) {
         toast.info('No unsettled expenses to settle.');
         setSettling(false);
         return;
       }
 
-      const unsettledIds = unsettledExpenses.map((e) => e.id);
-      const totalSettledAmount = unsettledExpenses.reduce(
-        (sum, e) => sum + Number(e.amount), 0
-      );
-
-      // Mark expenses as settled
-      const { error: expenseError } = await supabase
-        .from('expenses')
-        .update({ is_settled: true, settled_at: new Date().toISOString() })
-        .in('id', unsettledIds);
-
-      if (expenseError) throw expenseError;
-
-      // Also mark all related expense_splits as paid
-      const { error: splitsError } = await supabase
-        .from('expense_splits')
-        .update({ is_paid: true, paid_at: new Date().toISOString() })
-        .in('expense_id', unsettledIds);
-
-      if (splitsError) console.error('Failed to update splits:', splitsError);
-
-      // Record settlement
-      const { error: settlementError } = await supabase.from('settlements').insert({
-        group_id: selectedGroupId,
-        settled_by: user.id,
-        total_amount: totalSettledAmount,
-        notes: `Settled ₹${totalSettledAmount.toLocaleString('en-IN')} on ${format(new Date(), 'dd MMM yyyy HH:mm')}`,
-      });
-
-      if (settlementError) throw settlementError;
-
-      toast.success('All expenses settled!');
+      toast.success(`Settled ${count} expense${count > 1 ? 's' : ''}!`);
       
       // Force a re-render
       const currentGroup = selectedGroupId;
       setSelectedGroupId('');
       setTimeout(() => setSelectedGroupId(currentGroup), 100);
     } catch (error) {
+      console.error('Settle failed:', error);
       toast.error('Failed to settle expenses');
     }
 
