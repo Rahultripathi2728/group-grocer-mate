@@ -247,14 +247,8 @@ serve(async (req) => {
     );
     let expectedInternalSecret: string | null = null;
     if (internalSecret) {
-      const { data: secretRow } = await supabaseAdmin
-        .schema('vault' as any)
-        .from('decrypted_secrets')
-        .select('decrypted_secret')
-        .eq('name', 'internal_push_secret')
-        .limit(1)
-        .maybeSingle();
-      expectedInternalSecret = (secretRow as any)?.decrypted_secret ?? null;
+      const { data: secretValue } = await supabaseAdmin.rpc('get_internal_push_secret');
+      expectedInternalSecret = (secretValue as string | null) ?? null;
     }
     const isInternalTrigger = !!(internalSecret && expectedInternalSecret && internalSecret === expectedInternalSecret);
 
