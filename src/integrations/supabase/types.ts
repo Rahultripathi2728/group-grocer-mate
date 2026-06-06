@@ -591,6 +591,14 @@ export type Database = {
           username: string
         }[]
       }
+      settle_group_expenses: {
+        Args: { p_group_id: string }
+        Returns: {
+          expenses_settled: number
+          settlement_id: string
+          total_amount: number
+        }[]
+      }
       user_has_expense_split: {
         Args: { _expense_id: string; _user_id: string }
         Returns: boolean
