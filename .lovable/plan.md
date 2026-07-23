@@ -1,71 +1,50 @@
-# Plan: Add Expense Full-Screen + Audit + Push Fix
+## What will change
 
-## 1. Add Expense — Full-screen on all devices
+### 1. Add Expense chooser → small bottom sheet (full-screen only on form)
+- `AddExpenseSheet.tsx`: revert the **chooser** view (Group circles + "Add as personal") to the original short `Sheet` (bottom, `side="bottom"`, auto height). The **form** view stays full-screen `Dialog` as it is now.
 
-**File:** `src/components/expenses/AddExpenseSheet.tsx` (and possibly `AddExpenseDialog.tsx`)
+### 2. Bottom nav becomes 4 tabs (List removed, Settlement promoted)
+New nav order: **Calendar · My Expenses · Settlement · Groups**
 
-Convert from centered modal/bottom-sheet to edge-to-edge full-screen on every viewport, matching your screenshot 1 (back arrow header on left, group/Home chip on right, scrollable body, fixed "Submit expense" CTA at bottom).
+- `BottomNav.tsx`: remove `List`, add `Settlement` (icon `CheckCircle2`).
+- `App.tsx`: drop `/list` route + `ListPage` import. Add `/settlement` route. Keep `/expenses` mounting only the "My Expenses" view.
 
-- Replace `Dialog`/`Sheet` `max-w-*` and rounded corners with `w-screen h-[100dvh] max-w-none rounded-none`
-- Sticky header: back arrow + "Add Expense" title + group chip
-- Sticky bottom: "Submit expense" full-width black button
-- Body: scrollable, normal padding
-- Animation: slide-up from bottom (mobile feel) on all devices
-- Keep all existing functionality (Equal/Unequal/Item-wise splits, members, date, scan bill, etc.)
+### 3. Split `ExpensesPage` into two separate pages
+- **New `MyExpensesPage.tsx`** (`/expenses`): exactly the current "Personal" tab content (date range filter, BudgetCard, stats, recent expenses, charts) — **no Tabs wrapper**.
+- **New `SettlementPage.tsx`** (`/settlement`):
+  - Horizontal scrollable group **avatar circles** (same look as AddExpense chooser — `Users` icon in circle, name under).
+  - Click circle → selects that group, shows its `GroupExpensesBreakdown` below (existing component).
+  - Persist selection in `localStorage` (`settlement_selected_group`).
+  - Empty state if no groups: "Create a group from the Groups tab".
+- Delete old `ExpensesPage.tsx`.
 
-## 2. Push notifications — diagnose & fix
+### 4. Simplify expense detail (no "who pays whom")
+- `SimplifiedBalances.tsx`: keep "Your Balance" header + chips + "Mark All as Settled" button. **Remove** the entire "Who Pays Whom" per-balance list + UPI pay buttons (per user: no breakdown of who-pays-whom).
+- `GroupExpensesBreakdown.tsx` per-expense accordion content: when a user expands a single expense (within "Who Spent How Much"), show only:
+  - Total amount · Your share · Type (group/personal) · Status (Settled/Pending) · Date · Added by · **Split type** (Equal / Unequal / Item-wise) · **Split detail** = number of people involved, plus item list if item-wise. No per-person amount list, no settlement arrows.
 
-**Files to check:**
-- `supabase/functions/send-push-notification/index.ts` — VAPID signing, payload, error handling
-- `supabase/functions/get-vapid-public-key/index.ts`
-- `src/hooks/usePushNotifications.ts` — subscription registration
-- `public/sw.js` — push event handler
-- DB trigger `send_push_on_notification` — verify it's actually attached to `notifications` table (currently no triggers exist per schema dump — **this is the bug**)
+### 5. Remove List feature completely (frontend + DB)
+- Delete files: `src/pages/ListPage.tsx`, any `List*` components under `src/components/list/` if present.
+- Remove route, nav item, any imports.
+- Migration: `DROP TABLE public.grocery_items; DROP TABLE public.grocery_lists;` and drop the related triggers/functions `notify_group_on_grocery_item`, `notify_group_on_grocery_check`. ⚠️ **All list data permanently deleted.**
 
-**Likely root cause:** schema shows "no triggers in database" — the `send_push_on_notification` function exists but is not attached to a trigger on `notifications`, so no push is ever fired when a notification row is inserted.
+### 6. Fix duplicate notifications
+Root cause to verify & fix:
+- DB trigger `notify_group_on_expense` inserts a notification → trigger `send_push_on_notification` fires the edge function. That's one push.
+- But the chooser/form was being mounted twice (Sheet + Dialog open simultaneously in some states) — already gated. Will audit `bills` loop in `AddExpenseSheet.handleSubmit`: it iterates `for (const b of bills)` and inserts each expense, which causes a per-bill push. If user adds 2 bills they get 2 pushes (correct). But if `notify_group_on_expense` AND a client-side notification call exist, that's the dupe.
+- Audit:
+  1. Check whether anywhere in client code we ALSO call `supabase.functions.invoke('send-push-notification')` after inserting an expense. If yes → remove (DB trigger already handles it).
+  2. Check whether `send_push_on_notification` is bound to both `AFTER INSERT` and another event on `notifications` (would double).
+  3. Ensure `send-push-notification` edge function isn't being called twice per event (one push per subscription per notification row).
+- Fix whichever duplicate path exists. Most likely: a leftover client-side `.functions.invoke('send-push-notification')` call → remove it.
 
-**Fix:** migration to (re)create the trigger `AFTER INSERT ON notifications` calling `send_push_on_notification()`. Also check edge function logs for failures and the SW for proper `push` listener with `showNotification` + icon.
+## Files touched
+- Edit: `src/components/expenses/AddExpenseSheet.tsx`, `src/components/layout/BottomNav.tsx`, `src/App.tsx`, `src/components/expenses/SimplifiedBalances.tsx`, `src/components/expenses/GroupExpensesBreakdown.tsx`
+- New: `src/pages/MyExpensesPage.tsx`, `src/pages/SettlementPage.tsx`
+- Delete: `src/pages/ListPage.tsx`, `src/pages/ExpensesPage.tsx`, `src/components/expenses/AddExpenseDialog.tsx` (unused after audit)
+- New migration: drop grocery tables + 2 related trigger functions
+- Audit & fix push duplication (likely remove a client-side invoke)
 
-Capacitor/native caveat: web-push (VAPID) only fires inside the browser engine; on installed Capacitor APK without FCM, push won't fire in background. I'll document this clearly — actually delivering OS-level notifications to your Android phone requires either (a) installing the app as PWA from Chrome (then web push works in background via Chrome's service), or (b) adding `@capacitor/push-notifications` + Firebase (separate setup). I'll fix the web-push path; native FCM is out of scope.
-
-## 3. Balance simplification — verify math
-
-Memory says "always simplified (current)". I'll audit `GroupExpensesBreakdown.tsx` `calculateBalances()` to confirm:
-- Net per user = sum(paid) − sum(owed)
-- Greedy matching (largest creditor ↔ largest debtor) produces minimum transactions
-- Floating-point tolerance (0.01) applied
-- Settled expenses excluded
-- Per-user `amount_owed` from `expense_splits` honoured
-
-Any deviation → fix.
-
-## 4. Full project bug audit
-
-I'll review and produce a written report covering:
-- **ExpensesPage** — month nav, filters, persistence
-- **CalendarPage** — date calc/timezone, summary chips, delete dialog
-- **GroupExpensesBreakdown** — settlement math, settled-flag handling, split fallback logic
-- **SimplifiedBalances** — UPI fetch, settle confirmation
-- **GroupsPage** — join-by-code, admin delete, leave group
-- **AddExpenseSheet** — split validation, item-wise totals, equal/unequal sum check, payer selection
-- **AuthContext / ResetPasswordPage** — session handling
-- **NotificationsPage / NotificationBell** — read state, badge sync
-- **Edge functions** — CORS, error responses, VAPID flow
-- **DB triggers / RLS** — missing triggers, policy gaps
-
-For each bug found I'll list: file, severity, fix applied (or recommendation if out of scope).
-
-## Order of work
-
-1. Build full-screen Add Expense (UI only — no logic changes)
-2. Create migration to attach `send_push_on_notification` trigger
-3. Audit balance math + fix any bugs found
-4. Walk the rest of the codebase, fix obvious bugs, document the rest
-5. Report findings at the end
-
-## Notes
-
-- I will NOT add a Splitwise-style on/off toggle (you chose "always simplified")
-- I will NOT change UPI / scan bill / categorization behavior
-- I will NOT touch backend role/permissions unless a bug demands it
-- Expect 4–6 file edits + 1 migration; audit report in the final message
+## Out of scope (confirm if you want these too)
+- I will NOT touch loans, calendar visuals, friend/profile pages, or notification UI.
+- Capacitor / GitHub Pages config untouched.
