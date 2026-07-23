@@ -3,14 +3,6 @@ import { Link } from 'react-router-dom';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   Popover,
   PopoverContent,
@@ -26,8 +18,6 @@ import {
   Wallet,
   Users,
   ArrowRight,
-  CheckCircle2,
-  Sparkles,
   CalendarIcon,
   ChevronLeft,
   ChevronRight,
@@ -35,11 +25,10 @@ import {
 } from 'lucide-react';
 
 import BudgetCard from '@/components/expenses/BudgetCard';
-import GroupExpensesBreakdown from '@/components/expenses/GroupExpensesBreakdown';
 import StatCard from '@/components/ui/stat-card';
 import ExpenseCard from '@/components/expenses/ExpenseCard';
 import ChartToggle from '@/components/expenses/ChartToggle';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { detectCategory } from '@/lib/categories';
@@ -62,22 +51,8 @@ interface ExpenseSummary {
   allExpenses: ExpenseRow[];
 }
 
-interface Group {
-  id: string;
-  name: string;
-  owner_id: string;
-}
-
 export default function ExpensesPage() {
   const { user } = useAuth();
-  // Tab: persisted across in-app navigation via sessionStorage (resets when browser/tab closes)
-  const [activeTab, setActiveTab] = useState<'personal' | 'settlement'>(() => {
-    const v = typeof window !== 'undefined' ? sessionStorage.getItem('expenses_active_tab') : null;
-    return v === 'settlement' ? 'settlement' : 'personal';
-  });
-  useEffect(() => {
-    try { sessionStorage.setItem('expenses_active_tab', activeTab); } catch {}
-  }, [activeTab]);
   const [summary, setSummary] = useState<ExpenseSummary>({
     totalPersonal: 0,
     totalGroup: 0,
@@ -101,20 +76,6 @@ export default function ExpensesPage() {
     setDateTo(isSameMonth(date, today) ? today : endOfMonth(date));
     setIsCustomRange(false);
   };
-
-  // Settlement state
-  const [groups, setGroups] = useState<Group[]>([]);
-  // Selected group: persisted across browser sessions
-  const [selectedGroupId, setSelectedGroupId] = useState<string>(() => {
-    if (typeof window === 'undefined') return '';
-    return localStorage.getItem('expenses_selected_group') || '';
-  });
-  useEffect(() => {
-    if (selectedGroupId) {
-      try { localStorage.setItem('expenses_selected_group', selectedGroupId); } catch {}
-    }
-  }, [selectedGroupId]);
-  const [settling, setSettling] = useState(false);
 
   const fetchSummary = async () => {
     if (!user) return;
