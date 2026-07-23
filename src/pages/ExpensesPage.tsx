@@ -3,43 +3,20 @@ import { Link } from 'react-router-dom';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths, isSameMonth } from 'date-fns';
 import {
-  TrendingUp,
-  TrendingDown,
-  Wallet,
-  Users,
-  ArrowRight,
-  CheckCircle2,
-  Sparkles,
-  CalendarIcon,
-  ChevronLeft,
-  ChevronRight,
-  SlidersHorizontal,
+  TrendingUp, TrendingDown, Wallet, Users, ArrowRight,
+  CalendarIcon, ChevronLeft, ChevronRight, SlidersHorizontal,
 } from 'lucide-react';
-
 import BudgetCard from '@/components/expenses/BudgetCard';
-import GroupExpensesBreakdown from '@/components/expenses/GroupExpensesBreakdown';
 import StatCard from '@/components/ui/stat-card';
 import ExpenseCard from '@/components/expenses/ExpenseCard';
 import ChartToggle from '@/components/expenses/ChartToggle';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { detectCategory } from '@/lib/categories';
@@ -62,32 +39,13 @@ interface ExpenseSummary {
   allExpenses: ExpenseRow[];
 }
 
-interface Group {
-  id: string;
-  name: string;
-  owner_id: string;
-}
-
 export default function ExpensesPage() {
   const { user } = useAuth();
-  // Tab: persisted across in-app navigation via sessionStorage (resets when browser/tab closes)
-  const [activeTab, setActiveTab] = useState<'personal' | 'settlement'>(() => {
-    const v = typeof window !== 'undefined' ? sessionStorage.getItem('expenses_active_tab') : null;
-    return v === 'settlement' ? 'settlement' : 'personal';
-  });
-  useEffect(() => {
-    try { sessionStorage.setItem('expenses_active_tab', activeTab); } catch {}
-  }, [activeTab]);
   const [summary, setSummary] = useState<ExpenseSummary>({
-    totalPersonal: 0,
-    totalGroup: 0,
-    recentExpenses: [],
-    allExpenses: [],
+    totalPersonal: 0, totalGroup: 0, recentExpenses: [], allExpenses: [],
   });
   const [loading, setLoading] = useState(true);
-  
 
-  // Date filter state - default: 1st of current month to today
   const [dateFrom, setDateFrom] = useState<Date>(startOfMonth(new Date()));
   const [dateTo, setDateTo] = useState<Date>(new Date());
   const [fromOpen, setFromOpen] = useState(false);
@@ -102,23 +60,8 @@ export default function ExpensesPage() {
     setIsCustomRange(false);
   };
 
-  // Settlement state
-  const [groups, setGroups] = useState<Group[]>([]);
-  // Selected group: persisted across browser sessions
-  const [selectedGroupId, setSelectedGroupId] = useState<string>(() => {
-    if (typeof window === 'undefined') return '';
-    return localStorage.getItem('expenses_selected_group') || '';
-  });
-  useEffect(() => {
-    if (selectedGroupId) {
-      try { localStorage.setItem('expenses_selected_group', selectedGroupId); } catch {}
-    }
-  }, [selectedGroupId]);
-  const [settling, setSettling] = useState(false);
-
   const fetchSummary = async () => {
     if (!user) return;
-
     const startDate = format(dateFrom, 'yyyy-MM-dd');
     const endDate = format(dateTo, 'yyyy-MM-dd');
 
@@ -134,32 +77,24 @@ export default function ExpensesPage() {
         .filter((e) => e.expense_type === 'personal')
         .reduce((sum, e) => sum + Number(e.amount), 0);
 
-      // Get user's share from expense_splits for group expenses in this date range
-      const groupExpenseIds = expenses
-        .filter((e) => e.expense_type === 'group')
-        .map((e) => e.id);
+      const groupExpenseIds = expenses.filter((e) => e.expense_type === 'group').map((e) => e.id);
 
       let myGroupShare = 0;
-      let splitsMap = new Map<string, number>();
+      const splitsMap = new Map<string, number>();
       if (groupExpenseIds.length > 0) {
         const { data: splits } = await supabase
           .from('expense_splits')
           .select('expense_id, amount_owed')
           .eq('user_id', user.id)
           .in('expense_id', groupExpenseIds);
-
-        (splits || []).forEach((s) => {
-          splitsMap.set(s.expense_id, Number(s.amount_owed));
-        });
+        (splits || []).forEach((s) => splitsMap.set(s.expense_id, Number(s.amount_owed)));
         myGroupShare = (splits || []).reduce((sum, s) => sum + Number(s.amount_owed), 0);
       }
 
       const mapped = expenses.map((e) => ({
         ...e,
         amount: Number(e.amount),
-        myShare: e.expense_type === 'group'
-          ? (splitsMap.get(e.id) || 0)
-          : Number(e.amount),
+        myShare: e.expense_type === 'group' ? (splitsMap.get(e.id) || 0) : Number(e.amount),
         groupName: (e as any).groups?.name || undefined,
       }));
       setSummary({
@@ -169,442 +104,166 @@ export default function ExpensesPage() {
         allExpenses: mapped,
       });
     }
-
     setLoading(false);
   };
 
-  const fetchGroups = async () => {
-    if (!user) return;
-
-    const { data: ownedGroups } = await supabase
-      .from('groups')
-      .select('id, name, owner_id')
-      .eq('owner_id', user.id);
-
-    const { data: memberships } = await supabase
-      .from('group_memberships')
-      .select('group_id, groups(id, name, owner_id)')
-      .eq('user_id', user.id);
-
-    const memberGroups = memberships?.map((m) => m.groups).filter(Boolean) || [];
-
-    const allGroups = [
-      ...(ownedGroups || []),
-      ...memberGroups.map((g: any) => g),
-    ];
-
-    const uniqueGroups = allGroups.filter(
-      (group, index, self) => index === self.findIndex((g) => g.id === group.id)
-    );
-
-    setGroups(uniqueGroups);
-    // Only default to first group if no persisted selection (or persisted one no longer valid)
-    setSelectedGroupId((prev) => {
-      if (prev && uniqueGroups.some((g) => g.id === prev)) return prev;
-      return uniqueGroups.length > 0 ? uniqueGroups[0].id : '';
-    });
-  };
-
-  const handleSettleAll = async () => {
-    if (!user || !selectedGroupId) return;
-
-    setSettling(true);
-
-    try {
-      // Atomic settlement via SECURITY DEFINER RPC — works for expenses paid by any member
-      const { data, error } = await supabase.rpc('settle_group_expenses', {
-        p_group_id: selectedGroupId,
-      });
-
-      if (error) throw error;
-
-      const row = Array.isArray(data) ? data[0] : data;
-      const count = row?.expenses_settled ?? 0;
-
-      if (!count) {
-        toast.info('No unsettled expenses to settle.');
-        setSettling(false);
-        return;
-      }
-
-      toast.success(`Settled ${count} expense${count > 1 ? 's' : ''}!`);
-      
-      // Force a re-render
-      const currentGroup = selectedGroupId;
-      setSelectedGroupId('');
-      setTimeout(() => setSelectedGroupId(currentGroup), 100);
-    } catch (error) {
-      console.error('Settle failed:', error);
-      toast.error('Failed to settle expenses');
-    }
-
-    setSettling(false);
-  };
-
-  // One-time auto-recategorize old expenses with generic categories
   useEffect(() => {
-    const recategorizeOldExpenses = async () => {
+    const recategorize = async () => {
       if (!user) return;
-      const storageKey = `recategorized_${user.id}`;
-      if (sessionStorage.getItem(storageKey)) return;
-      sessionStorage.setItem(storageKey, 'true');
-
-      const { data: oldExpenses } = await supabase
-        .from('expenses')
-        .select('id, description, category')
-        .eq('user_id', user.id)
-        .in('category', ['general', 'other']);
-
-      if (!oldExpenses || oldExpenses.length === 0) return;
-
+      const key = `recategorized_${user.id}`;
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, 'true');
+      const { data } = await supabase
+        .from('expenses').select('id, description, category')
+        .eq('user_id', user.id).in('category', ['general', 'other']);
+      if (!data?.length) return;
       let updated = 0;
-      for (const exp of oldExpenses) {
+      for (const exp of data) {
         const detected = detectCategory(exp.description);
         if (detected && detected !== exp.category) {
-          await supabase
-            .from('expenses')
-            .update({ category: detected })
-            .eq('id', exp.id);
+          await supabase.from('expenses').update({ category: detected }).eq('id', exp.id);
           updated++;
         }
       }
-      if (updated > 0) {
-        toast.success(`${updated} purane expenses ki category auto-update ho gayi!`);
-        fetchSummary();
-      }
+      if (updated > 0) { toast.success(`${updated} expenses auto-categorized!`); fetchSummary(); }
     };
-    recategorizeOldExpenses();
+    recategorize();
   }, [user]);
 
-  useEffect(() => {
-    fetchSummary();
-    fetchGroups();
-  }, [user, dateFrom, dateTo]);
+  useEffect(() => { fetchSummary(); }, [user, dateFrom, dateTo]);
 
   return (
     <DashboardLayout>
       <div className="space-y-6 animate-fade-in pb-24">
-        {/* Header */}
         <div>
-          <motion.h1
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-2xl sm:text-3xl font-display font-bold"
-          >
-            Expenses
+          <motion.h1 initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="text-2xl sm:text-3xl font-display font-bold">
+            My Expenses
           </motion.h1>
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.1 }}
-            className="text-sm sm:text-base text-muted-foreground mt-1"
-          >
+          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }} className="text-sm sm:text-base text-muted-foreground mt-1">
             {format(dateFrom, 'dd MMM')} – {format(dateTo, 'dd MMM yyyy')} Overview
           </motion.p>
         </div>
 
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'personal' | 'settlement')}>
-          <TabsList className="grid w-full grid-cols-2 bg-muted p-1 rounded-xl border border-border">
-            <TabsTrigger 
-              value="personal" 
-              className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm"
-            >
-              <Wallet className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
-              My Expenses
-            </TabsTrigger>
-            <TabsTrigger 
-              value="settlement" 
-              className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm"
-            >
-              <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
-              Settlement
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Personal Expenses Tab */}
-          <TabsContent value="personal" className="mt-6 space-y-6">
-            {/* Date Range Filter */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex items-center gap-2 flex-wrap"
-            >
-              {(() => {
-                const today = new Date();
-                const anchor = isCustomRange ? today : dateFrom;
-                const isCurrent = !isCustomRange && isSameMonth(anchor, today);
-                const isFuture = !isCustomRange && anchor > today;
-                const label = isCustomRange
-                  ? `${format(dateFrom, 'dd MMM')} – ${format(dateTo, 'dd MMM yy')}`
-                  : format(anchor, 'MMMM yyyy');
-                return (
-                  <>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-9 w-9 shrink-0"
-                      onClick={() => goToMonth(subMonths(isCustomRange ? today : anchor, 1))}
-                      aria-label="Previous month"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-2 flex-wrap">
+          {(() => {
+            const today = new Date();
+            const anchor = isCustomRange ? today : dateFrom;
+            const isCurrent = !isCustomRange && isSameMonth(anchor, today);
+            const isFuture = !isCustomRange && anchor > today;
+            const label = isCustomRange
+              ? `${format(dateFrom, 'dd MMM')} – ${format(dateTo, 'dd MMM yy')}`
+              : format(anchor, 'MMMM yyyy');
+            return (
+              <>
+                <Button variant="outline" size="icon" className="h-9 w-9 shrink-0"
+                  onClick={() => goToMonth(subMonths(isCustomRange ? today : anchor, 1))} aria-label="Previous month">
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => goToMonth(new Date())} className="flex-1 min-w-0 justify-center font-medium text-xs sm:text-sm">
+                  <CalendarIcon className="mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
+                  <span className="truncate">{label}</span>
+                  {isCurrent && <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">Now</span>}
+                  {isFuture && <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">Upcoming</span>}
+                </Button>
+                <Button variant="outline" size="icon" className="h-9 w-9 shrink-0"
+                  onClick={() => goToMonth(addMonths(isCustomRange ? today : anchor, 1))} aria-label="Next month">
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Popover open={customOpen} onOpenChange={setCustomOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant={isCustomRange ? 'default' : 'outline'} size="icon" className="h-9 w-9 shrink-0" aria-label="Custom date range">
+                      <SlidersHorizontal className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => goToMonth(new Date())}
-                      className="flex-1 min-w-0 justify-center font-medium text-xs sm:text-sm"
-                    >
-                      <CalendarIcon className="mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
-                      <span className="truncate">{label}</span>
-                      {isCurrent && (
-                        <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">Now</span>
-                      )}
-                      {isFuture && (
-                        <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">Upcoming</span>
-                      )}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-9 w-9 shrink-0"
-                      onClick={() => goToMonth(addMonths(isCustomRange ? today : anchor, 1))}
-                      aria-label="Next month"
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                    <Popover open={customOpen} onOpenChange={setCustomOpen}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant={isCustomRange ? 'default' : 'outline'}
-                          size="icon"
-                          className="h-9 w-9 shrink-0"
-                          aria-label="Custom date range"
-                        >
-                          <SlidersHorizontal className="h-4 w-4" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-3 space-y-3" align="end">
-                        <p className="text-xs font-semibold text-muted-foreground">Custom date range</p>
-                        <div className="flex items-center gap-2">
-                          <Popover open={fromOpen} onOpenChange={setFromOpen}>
-                            <PopoverTrigger asChild>
-                              <Button variant="outline" size="sm" className="flex-1 justify-start text-xs">
-                                <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />
-                                {format(dateFrom, 'dd/MM/yy')}
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar
-                                mode="single"
-                                selected={dateFrom}
-                                onSelect={(d) => { if (d) { setDateFrom(d); setIsCustomRange(true); setFromOpen(false); } }}
-                                initialFocus
-                                className={cn('p-3 pointer-events-auto')}
-                              />
-                            </PopoverContent>
-                          </Popover>
-                          <span className="text-xs text-muted-foreground">to</span>
-                          <Popover open={toOpen} onOpenChange={setToOpen}>
-                            <PopoverTrigger asChild>
-                              <Button variant="outline" size="sm" className="flex-1 justify-start text-xs">
-                                <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />
-                                {format(dateTo, 'dd/MM/yy')}
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="end">
-                              <Calendar
-                                mode="single"
-                                selected={dateTo}
-                                onSelect={(d) => { if (d) { setDateTo(d); setIsCustomRange(true); setToOpen(false); } }}
-                                initialFocus
-                                className={cn('p-3 pointer-events-auto')}
-                              />
-                            </PopoverContent>
-                          </Popover>
-                        </div>
-                        <Button size="sm" className="w-full" onClick={() => { goToMonth(new Date()); setCustomOpen(false); }}>
-                          Reset to this month
-                        </Button>
-                      </PopoverContent>
-                    </Popover>
-                  </>
-                );
-              })()}
-            </motion.div>
-
-            {/* Budget Card */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              <BudgetCard 
-                totalSpent={summary.totalPersonal + summary.totalGroup} 
-                onBudgetChange={fetchSummary}
-              />
-            </motion.div>
-
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-              >
-                <StatCard
-                  title="Personal"
-                  value={`₹${summary.totalPersonal.toLocaleString('en-IN')}`}
-                  icon={Wallet}
-                  iconColor="text-primary"
-                  iconBgColor="bg-primary/10"
-                />
-              </motion.div>
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-              >
-                <StatCard
-                  title="My Share (Group)"
-                  value={`₹${summary.totalGroup.toLocaleString('en-IN')}`}
-                  icon={Users}
-                  iconColor="text-accent-foreground"
-                  iconBgColor="bg-accent"
-                />
-              </motion.div>
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-              >
-                <StatCard
-                  title="Total"
-                  value={`₹${(summary.totalPersonal + summary.totalGroup).toLocaleString('en-IN')}`}
-                  icon={TrendingUp}
-                  iconColor="text-success"
-                  iconBgColor="bg-success/10"
-                />
-              </motion.div>
-            </div>
-
-            {/* Charts with toggle */}
-            <ChartToggle expenses={summary.allExpenses} dateFrom={dateFrom} dateTo={dateTo} />
-
-            {/* Recent Expenses */}
-            <Card className="border border-border shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="font-display">Recent Expenses</CardTitle>
-                <Link to="/expenses/all">
-                  <Button variant="ghost" size="sm" className="text-primary hover:text-primary">
-                    View All
-                    <ArrowRight className="h-4 w-4 ml-1" />
-                  </Button>
-                </Link>
-              </CardHeader>
-              <CardContent>
-                {loading ? (
-                  <div className="space-y-3">
-                    {[1, 2, 3].map((i) => (
-                      <div key={i} className="h-16 bg-muted/50 rounded-xl animate-pulse" />
-                    ))}
-                  </div>
-                ) : summary.recentExpenses.length === 0 ? (
-                  <div className="text-center py-12">
-                    <div className="inline-flex p-4 rounded-full bg-muted/50 mb-4">
-                      <TrendingDown className="h-8 w-8 text-muted-foreground" />
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-3 space-y-3" align="end">
+                    <p className="text-xs font-semibold text-muted-foreground">Custom date range</p>
+                    <div className="flex items-center gap-2">
+                      <Popover open={fromOpen} onOpenChange={setFromOpen}>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" size="sm" className="flex-1 justify-start text-xs">
+                            <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />{format(dateFrom, 'dd/MM/yy')}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar mode="single" selected={dateFrom}
+                            onSelect={(d) => { if (d) { setDateFrom(d); setIsCustomRange(true); setFromOpen(false); } }}
+                            initialFocus className={cn('p-3 pointer-events-auto')} />
+                        </PopoverContent>
+                      </Popover>
+                      <span className="text-xs text-muted-foreground">to</span>
+                      <Popover open={toOpen} onOpenChange={setToOpen}>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" size="sm" className="flex-1 justify-start text-xs">
+                            <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />{format(dateTo, 'dd/MM/yy')}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="end">
+                          <Calendar mode="single" selected={dateTo}
+                            onSelect={(d) => { if (d) { setDateTo(d); setIsCustomRange(true); setToOpen(false); } }}
+                            initialFocus className={cn('p-3 pointer-events-auto')} />
+                        </PopoverContent>
+                      </Popover>
                     </div>
-                    <p className="text-muted-foreground">No expenses yet this month</p>
-                    <p className="text-sm text-muted-foreground mt-1">Tap + to add your first expense</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {summary.recentExpenses.map((expense, i) => (
-                      <motion.div
-                        key={expense.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 + i * 0.05 }}
-                      >
-                        <ExpenseCard {...expense} showDate compact />
-                      </motion.div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                    <Button size="sm" className="w-full" onClick={() => { goToMonth(new Date()); setCustomOpen(false); }}>
+                      Reset to this month
+                    </Button>
+                  </PopoverContent>
+                </Popover>
+              </>
+            );
+          })()}
+        </motion.div>
 
-          </TabsContent>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <BudgetCard totalSpent={summary.totalPersonal + summary.totalGroup} onBudgetChange={fetchSummary} />
+        </motion.div>
 
-          {/* Settlement Tab */}
-          <TabsContent value="settlement" className="mt-6 space-y-6">
-            {/* Group Selector */}
-            <Card className="border border-border shadow-sm">
-              <CardContent className="pt-6">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                  <div className="flex-1">
-                    <label className="text-sm font-medium text-muted-foreground mb-2 block">
-                      Select Group
-                    </label>
-                    <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
-                      <SelectTrigger className="w-full bg-muted/50 border-0">
-                        <SelectValue placeholder="Select a group" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {groups.map((group) => (
-                          <SelectItem key={group.id} value={group.id}>
-                            <div className="flex items-center gap-2">
-                              <Users className="h-4 w-4 text-primary" />
-                              {group.name}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+            <StatCard title="Personal" value={`₹${summary.totalPersonal.toLocaleString('en-IN')}`}
+              icon={Wallet} iconColor="text-primary" iconBgColor="bg-primary/10" />
+          </motion.div>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+            <StatCard title="My Share (Group)" value={`₹${summary.totalGroup.toLocaleString('en-IN')}`}
+              icon={Users} iconColor="text-accent-foreground" iconBgColor="bg-accent" />
+          </motion.div>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+            <StatCard title="Total" value={`₹${(summary.totalPersonal + summary.totalGroup).toLocaleString('en-IN')}`}
+              icon={TrendingUp} iconColor="text-success" iconBgColor="bg-success/10" />
+          </motion.div>
+        </div>
 
-            {groups.length === 0 ? (
-              <Card className="border border-border shadow-sm">
-                <CardContent className="pt-12 pb-12 text-center">
-                  <motion.div
-                    initial={{ scale: 0.8, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    className="inline-flex p-6 rounded-full bg-primary/10 mb-6"
-                  >
-                    <Users className="h-10 w-10 text-primary" />
-                  </motion.div>
-                  <p className="text-muted-foreground mb-2">No groups found</p>
-                  <p className="text-sm text-muted-foreground">
-                    Create or join a group to start tracking settlements
-                  </p>
-                </CardContent>
-              </Card>
-            ) : selectedGroupId ? (
-              <GroupExpensesBreakdown
-                groupId={selectedGroupId}
-                groupName={groups.find(g => g.id === selectedGroupId)?.name || ''}
-                onSettle={handleSettleAll}
-                settling={settling}
-              />
+        <ChartToggle expenses={summary.allExpenses} dateFrom={dateFrom} dateTo={dateTo} />
+
+        <Card className="border border-border shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="font-display">Recent Expenses</CardTitle>
+            <Link to="/expenses/all">
+              <Button variant="ghost" size="sm" className="text-primary hover:text-primary">
+                View All<ArrowRight className="h-4 w-4 ml-1" />
+              </Button>
+            </Link>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="space-y-3">{[1, 2, 3].map((i) => <div key={i} className="h-16 bg-muted/50 rounded-xl animate-pulse" />)}</div>
+            ) : summary.recentExpenses.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="inline-flex p-4 rounded-full bg-muted/50 mb-4"><TrendingDown className="h-8 w-8 text-muted-foreground" /></div>
+                <p className="text-muted-foreground">No expenses yet this month</p>
+                <p className="text-sm text-muted-foreground mt-1">Tap + to add your first expense</p>
+              </div>
             ) : (
-              <Card className="border border-border shadow-sm">
-                <CardContent className="pt-12 pb-12 text-center">
-                  <motion.div
-                    initial={{ scale: 0.8, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    className="inline-flex p-6 rounded-full bg-muted/50 mb-6"
-                  >
-                    <Sparkles className="h-10 w-10 text-muted-foreground" />
+              <div className="space-y-3">
+                {summary.recentExpenses.map((expense, i) => (
+                  <motion.div key={expense.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.05 }}>
+                    <ExpenseCard {...expense} showDate compact />
                   </motion.div>
-                  <p className="text-muted-foreground">Select a group to view settlements</p>
-                </CardContent>
-              </Card>
+                ))}
+              </div>
             )}
-          </TabsContent>
-        </Tabs>
-
+          </CardContent>
+        </Card>
       </div>
     </DashboardLayout>
   );

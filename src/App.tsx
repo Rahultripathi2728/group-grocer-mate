@@ -10,7 +10,7 @@ import ExpensesPage from "./pages/ExpensesPage";
 import AllExpensesPage from "./pages/AllExpensesPage";
 import CalendarPage from "./pages/CalendarPage";
 import GroupsPage from "./pages/GroupsPage";
-import ListPage from "./pages/ListPage";
+import SettlementPage from "./pages/SettlementPage";
 import InstallPage from "./pages/InstallPage";
 import ProfilePage from "./pages/ProfilePage";
 import NotificationsPage from "./pages/NotificationsPage";
@@ -67,7 +67,15 @@ const App = () => (
               path="/list"
               element={
                 <ProtectedRoute>
-                  <ListPage />
+                  <SettlementPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settlement"
+              element={
+                <ProtectedRoute>
+                  <SettlementPage />
                 </ProtectedRoute>
               }
             />

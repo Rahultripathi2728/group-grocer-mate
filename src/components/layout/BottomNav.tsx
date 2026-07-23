@@ -1,13 +1,13 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Calendar, Wallet, Users, ShoppingCart } from 'lucide-react';
+import { Calendar, Wallet, Users, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 
 const navItems = [
   { href: '/dashboard', label: 'Calendar', icon: Calendar },
-  { href: '/expenses', label: 'Expenses', icon: Wallet },
+  { href: '/expenses', label: 'My Expenses', icon: Wallet },
+  { href: '/settlement', label: 'Settlement', icon: CheckCircle2 },
   { href: '/groups', label: 'Groups', icon: Users },
-  { href: '/list', label: 'List', icon: ShoppingCart },
 ];
 
 export default function BottomNav() {
