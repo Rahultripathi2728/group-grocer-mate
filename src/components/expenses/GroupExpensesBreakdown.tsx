@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -76,6 +77,7 @@ interface Props {
 
 export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, settling }: Props) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [members, setMembers] = useState<Member[]>([]);
   const [expenses, setExpenses] = useState<GroupExpense[]>([]);
   const [memberSpending, setMemberSpending] = useState<MemberSpending[]>([]);
@@ -558,7 +560,7 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {settlements.map((settlement, index) => {
+              {settlements.slice(0, 2).map((settlement, index) => {
                 const isExpanded = expandedSettlement === settlement.id;
                 const detailExpenses = settlementExpenses[settlement.id] || [];
                 const detailSplits = settlementSplits[settlement.id] || {};
@@ -728,6 +730,16 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
                 );
               })}
             </div>
+            {settlements.length > 2 && (
+              <Button
+                variant="outline"
+                className="w-full mt-3"
+                onClick={() => navigate(`/settlement/history?group=${groupId}`)}
+              >
+                View all settlements
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            )}
           </CardContent>
         </Card>
       )}

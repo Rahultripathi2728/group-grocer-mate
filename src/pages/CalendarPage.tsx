@@ -32,11 +32,12 @@ import {
   startOfWeek,
   endOfWeek,
 } from 'date-fns';
-import { ChevronLeft, ChevronRight, Plus, CheckCircle2, Wallet, Users, Trash2, ChevronDown, ArrowRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, CheckCircle2, Wallet, Users, Trash2, ChevronDown, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { getCategoryById } from '@/lib/categories';
 import { cn } from '@/lib/utils';
 import AddExpenseSheet from '@/components/expenses/AddExpenseSheet';
+import EditExpenseDialog from '@/components/expenses/EditExpenseDialog';
 import ExpenseCard from '@/components/expenses/ExpenseCard';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -59,6 +60,7 @@ interface DayExpense {
     myShare?: number;
     addedByName?: string;
     user_id?: string;
+    group_id?: string | null;
     groupName?: string;
     hasShare?: boolean;
   }>;
@@ -73,6 +75,7 @@ export default function CalendarPage() {
   const [addExpenseOpen, setAddExpenseOpen] = useState(false);
   const [detailExpense, setDetailExpense] = useState<DayExpense['expenses'][0] | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [showMore, setShowMore] = useState(false);
   const [splitDetails, setSplitDetails] = useState<Array<{ user_id: string; full_name: string; amount_owed: number }> | null>(null);
   const [loadingSplits, setLoadingSplits] = useState(false);
@@ -86,21 +89,43 @@ export default function CalendarPage() {
   const loadSplitDetails = async () => {
     if (!detailExpense || detailExpense.expense_type !== 'group') return;
     setLoadingSplits(true);
-    const { data: splits } = await supabase
-      .from('expense_splits')
-      .select('user_id, amount_owed')
-      .eq('expense_id', detailExpense.id);
-    const userIds = Array.from(new Set([...(splits || []).map((s) => s.user_id), detailExpense.user_id!].filter(Boolean)));
+    const groupId = detailExpense.group_id;
+
+    const [{ data: splits }, membershipsRes, groupRes] = await Promise.all([
+      supabase.from('expense_splits').select('user_id, amount_owed').eq('expense_id', detailExpense.id),
+      groupId
+        ? supabase.from('group_memberships').select('user_id').eq('group_id', groupId)
+        : Promise.resolve({ data: [] as { user_id: string }[] }),
+      groupId
+        ? supabase.from('groups').select('owner_id').eq('id', groupId).maybeSingle()
+        : Promise.resolve({ data: null as { owner_id: string } | null }),
+    ]);
+
+    const memberIds = Array.from(
+      new Set(
+        [
+          ...(membershipsRes.data || []).map((m) => m.user_id),
+          (groupRes.data as { owner_id: string } | null)?.owner_id,
+          ...(splits || []).map((s) => s.user_id),
+        ].filter(Boolean) as string[]
+      )
+    );
+
+    const userIds = memberIds.length > 0 ? memberIds : [detailExpense.user_id!].filter(Boolean);
     const { data: profs } = await supabase
       .from('profiles')
       .select('id, full_name')
       .in('id', userIds);
     const nameMap = new Map<string, string>((profs || []).map((p) => [p.id, p.full_name || 'Unknown']));
-    const rows = (splits || [])
-      .map((s) => ({
-        user_id: s.user_id,
-        full_name: s.user_id === user?.id ? 'You' : (nameMap.get(s.user_id) || 'Unknown'),
-        amount_owed: Number(s.amount_owed),
+    const owedMap = new Map<string, number>(
+      (splits || []).map((s) => [s.user_id, Number(s.amount_owed)])
+    );
+
+    const rows = userIds
+      .map((id) => ({
+        user_id: id,
+        full_name: id === user?.id ? 'You' : (nameMap.get(id) || 'Unknown'),
+        amount_owed: owedMap.get(id) || 0,
       }))
       .sort((a, b) => b.amount_owed - a.amount_owed);
     setSplitDetails(rows);
@@ -207,6 +232,7 @@ export default function CalendarPage() {
           is_settled: expense.is_settled,
           myShare,
           user_id: expense.user_id,
+          group_id: expense.group_id,
           addedByName: expense.expense_type === 'group'
             ? (expense.user_id === user.id ? 'You' : (profilesMap.get(expense.user_id) || 'Unknown'))
             : undefined,
@@ -588,7 +614,7 @@ export default function CalendarPage() {
                         }}
                         className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium hover:bg-muted/50 transition-colors"
                       >
-                        <span>More — split breakdown</span>
+                        <span>More — per person share</span>
                         <ChevronDown className={cn('h-4 w-4 transition-transform', showMore && 'rotate-180')} />
                       </button>
                       {showMore && (
@@ -601,62 +627,59 @@ export default function CalendarPage() {
                             </div>
                           ) : splitDetails.length === 0 ? (
                             <p className="text-xs text-muted-foreground text-center py-2">No split data available.</p>
-                          ) : (() => {
-                            const payerId = detailExpense.user_id;
-                            const payerName = payerId === user?.id ? 'You' : (detailExpense.addedByName || 'Payer');
-                            const payerOwn = splitDetails.find((s) => s.user_id === payerId)?.amount_owed || 0;
-                            const owers = splitDetails.filter((s) => s.user_id !== payerId && s.amount_owed > 0);
-                            const gets = owers.reduce((sum, o) => sum + o.amount_owed, 0);
-                            return (
-                              <>
-                                <p className="text-[11px] text-muted-foreground pt-2">
-                                  Paid by <strong className="text-foreground">{payerName}</strong> · ₹{detailExpense.amount.toLocaleString('en-IN')}
-                                </p>
-                                {gets > 0 && (
-                                  <div className="flex items-center justify-between text-sm bg-success/5 border border-success/20 rounded-lg px-3 py-2">
-                                    <span className="font-medium">{payerName} {payerName === 'You' ? 'get' : 'gets'}</span>
-                                    <span className="font-bold text-success">₹{gets.toLocaleString('en-IN')}</span>
+                          ) : (
+                            <>
+                              <p className="text-[11px] text-muted-foreground pt-2">
+                                Share of each group member for this expense of ₹{detailExpense.amount.toLocaleString('en-IN')}
+                              </p>
+                              <div className="space-y-1.5 pt-1">
+                                {splitDetails.map((s) => (
+                                  <div
+                                    key={s.user_id}
+                                    className={cn(
+                                      'flex items-center justify-between text-sm rounded-lg px-3 py-2',
+                                      s.amount_owed > 0 ? 'bg-muted/50' : 'bg-muted/20'
+                                    )}
+                                  >
+                                    <span className="truncate font-medium">{s.full_name}</span>
+                                    <span
+                                      className={cn(
+                                        'font-semibold shrink-0',
+                                        s.amount_owed > 0 ? '' : 'text-muted-foreground'
+                                      )}
+                                    >
+                                      {s.amount_owed > 0 ? `₹${s.amount_owed.toLocaleString('en-IN')}` : 'Not included'}
+                                    </span>
                                   </div>
-                                )}
-                                {payerOwn > 0 && (
-                                  <div className="flex items-center justify-between text-xs text-muted-foreground px-3">
-                                    <span>{payerName === 'You' ? 'Your' : `${payerName}'s`} own share</span>
-                                    <span>₹{payerOwn.toLocaleString('en-IN')}</span>
-                                  </div>
-                                )}
-                                <div className="space-y-1.5 pt-1">
-                                  {owers.map((o) => (
-                                    <div key={o.user_id} className="flex items-center justify-between text-sm bg-muted/50 rounded-lg px-3 py-2">
-                                      <span className="flex items-center gap-1.5 min-w-0">
-                                        <span className="truncate font-medium">{o.full_name}</span>
-                                        <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
-                                        <span className="truncate text-muted-foreground">{payerName}</span>
-                                      </span>
-                                      <span className="font-semibold shrink-0">₹{o.amount_owed.toLocaleString('en-IN')}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                                {owers.length === 0 && (
-                                  <p className="text-xs text-muted-foreground text-center py-2">No one owes the payer for this expense.</p>
-                                )}
-                              </>
-                            );
-                          })()}
+                                ))}
+                              </div>
+                            </>
+                          )}
                         </div>
                       )}
                     </div>
                   )}
 
-                  {/* Delete button: only for the payer (and only when unsettled) */}
+                  {/* Edit / Delete: only for the payer (and only when unsettled) */}
                   {!detailExpense.is_settled && detailExpense.user_id === user?.id && (
-                    <Button
-                      variant="outline"
-                      className="w-full mt-2 text-destructive border-destructive/30 hover:bg-destructive/10"
-                      onClick={() => setDeleteConfirmOpen(true)}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete Expense
-                    </Button>
+                    <div className="flex gap-2 mt-2">
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => setEditOpen(true)}
+                      >
+                        <Pencil className="h-4 w-4 mr-2" />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="flex-1 text-destructive border-destructive/30 hover:bg-destructive/10"
+                        onClick={() => setDeleteConfirmOpen(true)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete
+                      </Button>
+                    </div>
                   )}
                 </div>
               </>
@@ -664,6 +687,24 @@ export default function CalendarPage() {
           })()}
         </DialogContent>
       </Dialog>
+
+      {/* Edit Expense */}
+      <EditExpenseDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        expense={detailExpense ? {
+          id: detailExpense.id,
+          description: detailExpense.description,
+          amount: detailExpense.amount,
+          category: detailExpense.category,
+          expense_type: detailExpense.expense_type,
+        } : null}
+        expenseDate={selectedDate ? format(selectedDate, 'yyyy-MM-dd') : ''}
+        onSuccess={() => {
+          setDetailExpense(null);
+          fetchExpenses();
+        }}
+      />
 
       {/* Delete Confirmation */}
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>

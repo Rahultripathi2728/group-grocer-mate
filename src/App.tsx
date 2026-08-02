@@ -11,6 +11,7 @@ import AllExpensesPage from "./pages/AllExpensesPage";
 import CalendarPage from "./pages/CalendarPage";
 import GroupsPage from "./pages/GroupsPage";
 import SettlementPage from "./pages/SettlementPage";
+import SettlementHistoryPage from "./pages/SettlementHistoryPage";
 import InstallPage from "./pages/InstallPage";
 import ProfilePage from "./pages/ProfilePage";
 import NotificationsPage from "./pages/NotificationsPage";
@@ -76,6 +77,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <SettlementPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settlement/history"
+              element={
+                <ProtectedRoute>
+                  <SettlementHistoryPage />
                 </ProtectedRoute>
               }
             />
