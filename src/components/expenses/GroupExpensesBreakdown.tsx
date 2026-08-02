@@ -558,7 +558,7 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {settlements.map((settlement, index) => {
+              {settlements.slice(0, 2).map((settlement, index) => {
                 const isExpanded = expandedSettlement === settlement.id;
                 const detailExpenses = settlementExpenses[settlement.id] || [];
                 const detailSplits = settlementSplits[settlement.id] || {};
