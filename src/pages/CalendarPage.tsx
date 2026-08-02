@@ -688,6 +688,24 @@ export default function CalendarPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Edit Expense */}
+      <EditExpenseDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        expense={detailExpense ? {
+          id: detailExpense.id,
+          description: detailExpense.description,
+          amount: detailExpense.amount,
+          category: detailExpense.category,
+          expense_type: detailExpense.expense_type,
+        } : null}
+        expenseDate={selectedDate ? format(selectedDate, 'yyyy-MM-dd') : ''}
+        onSuccess={() => {
+          setDetailExpense(null);
+          fetchExpenses();
+        }}
+      />
+
       {/* Delete Confirmation */}
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent>
