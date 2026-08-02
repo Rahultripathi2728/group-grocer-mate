@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -76,6 +77,7 @@ interface Props {
 
 export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, settling }: Props) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [members, setMembers] = useState<Member[]>([]);
   const [expenses, setExpenses] = useState<GroupExpense[]>([]);
   const [memberSpending, setMemberSpending] = useState<MemberSpending[]>([]);
