@@ -32,11 +32,12 @@ import {
   startOfWeek,
   endOfWeek,
 } from 'date-fns';
-import { ChevronLeft, ChevronRight, Plus, CheckCircle2, Wallet, Users, Trash2, ChevronDown, ArrowRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, CheckCircle2, Wallet, Users, Trash2, ChevronDown, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { getCategoryById } from '@/lib/categories';
 import { cn } from '@/lib/utils';
 import AddExpenseSheet from '@/components/expenses/AddExpenseSheet';
+import EditExpenseDialog from '@/components/expenses/EditExpenseDialog';
 import ExpenseCard from '@/components/expenses/ExpenseCard';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -59,6 +60,7 @@ interface DayExpense {
     myShare?: number;
     addedByName?: string;
     user_id?: string;
+    group_id?: string | null;
     groupName?: string;
     hasShare?: boolean;
   }>;
@@ -73,6 +75,7 @@ export default function CalendarPage() {
   const [addExpenseOpen, setAddExpenseOpen] = useState(false);
   const [detailExpense, setDetailExpense] = useState<DayExpense['expenses'][0] | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [showMore, setShowMore] = useState(false);
   const [splitDetails, setSplitDetails] = useState<Array<{ user_id: string; full_name: string; amount_owed: number }> | null>(null);
   const [loadingSplits, setLoadingSplits] = useState(false);
@@ -86,21 +89,43 @@ export default function CalendarPage() {
   const loadSplitDetails = async () => {
     if (!detailExpense || detailExpense.expense_type !== 'group') return;
     setLoadingSplits(true);
-    const { data: splits } = await supabase
-      .from('expense_splits')
-      .select('user_id, amount_owed')
-      .eq('expense_id', detailExpense.id);
-    const userIds = Array.from(new Set([...(splits || []).map((s) => s.user_id), detailExpense.user_id!].filter(Boolean)));
+    const groupId = detailExpense.group_id;
+
+    const [{ data: splits }, membershipsRes, groupRes] = await Promise.all([
+      supabase.from('expense_splits').select('user_id, amount_owed').eq('expense_id', detailExpense.id),
+      groupId
+        ? supabase.from('group_memberships').select('user_id').eq('group_id', groupId)
+        : Promise.resolve({ data: [] as { user_id: string }[] }),
+      groupId
+        ? supabase.from('groups').select('owner_id').eq('id', groupId).maybeSingle()
+        : Promise.resolve({ data: null as { owner_id: string } | null }),
+    ]);
+
+    const memberIds = Array.from(
+      new Set(
+        [
+          ...(membershipsRes.data || []).map((m) => m.user_id),
+          (groupRes.data as { owner_id: string } | null)?.owner_id,
+          ...(splits || []).map((s) => s.user_id),
+        ].filter(Boolean) as string[]
+      )
+    );
+
+    const userIds = memberIds.length > 0 ? memberIds : [detailExpense.user_id!].filter(Boolean);
     const { data: profs } = await supabase
       .from('profiles')
       .select('id, full_name')
       .in('id', userIds);
     const nameMap = new Map<string, string>((profs || []).map((p) => [p.id, p.full_name || 'Unknown']));
-    const rows = (splits || [])
-      .map((s) => ({
-        user_id: s.user_id,
-        full_name: s.user_id === user?.id ? 'You' : (nameMap.get(s.user_id) || 'Unknown'),
-        amount_owed: Number(s.amount_owed),
+    const owedMap = new Map<string, number>(
+      (splits || []).map((s) => [s.user_id, Number(s.amount_owed)])
+    );
+
+    const rows = userIds
+      .map((id) => ({
+        user_id: id,
+        full_name: id === user?.id ? 'You' : (nameMap.get(id) || 'Unknown'),
+        amount_owed: owedMap.get(id) || 0,
       }))
       .sort((a, b) => b.amount_owed - a.amount_owed);
     setSplitDetails(rows);
@@ -207,6 +232,7 @@ export default function CalendarPage() {
           is_settled: expense.is_settled,
           myShare,
           user_id: expense.user_id,
+          group_id: expense.group_id,
           addedByName: expense.expense_type === 'group'
             ? (expense.user_id === user.id ? 'You' : (profilesMap.get(expense.user_id) || 'Unknown'))
             : undefined,
