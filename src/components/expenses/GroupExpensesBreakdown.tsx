@@ -728,6 +728,16 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
                 );
               })}
             </div>
+            {settlements.length > 2 && (
+              <Button
+                variant="outline"
+                className="w-full mt-3"
+                onClick={() => navigate(`/settlement/history?group=${groupId}`)}
+              >
+                View all settlements
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            )}
           </CardContent>
         </Card>
       )}
