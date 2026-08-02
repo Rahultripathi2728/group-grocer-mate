@@ -42,7 +42,10 @@ export default function NotificationsPage() {
           filter: `user_id=eq.${user.id}`,
         },
         (payload) => {
-          setNotifications((prev) => [payload.new as Notification, ...prev]);
+          const incoming = payload.new as Notification;
+          setNotifications((prev) =>
+            prev.some((n) => n.id === incoming.id) ? prev : [incoming, ...prev]
+          );
         }
       )
       .subscribe();
