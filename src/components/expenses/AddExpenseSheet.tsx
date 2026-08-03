@@ -452,7 +452,7 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
   return (
     <>
       {/* Choose view — bottom sheet */}
-      <Sheet open={open && view === 'choose'} onOpenChange={onOpenChange}>
+      <Sheet open={open && view === 'choose'} onOpenChange={handleOpenChange}>
         <SheetContent side="bottom" className="rounded-t-2xl border-t border-border p-0 max-h-[85dvh] flex flex-col">
           <SheetHeader className="px-4 pt-4 pb-2">
             <SheetTitle className="font-display text-lg text-left">Add Expense</SheetTitle>
@@ -506,17 +506,20 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
       </Sheet>
 
       {/* Form dialog — full-screen */}
-      <Dialog open={open && view === 'form'} onOpenChange={onOpenChange}>
+      <Dialog open={open && view === 'form'} onOpenChange={handleOpenChange}>
         <DialogContent
           className="!left-0 !top-0 !translate-x-0 !translate-y-0 !max-w-none w-screen h-[100dvh] !rounded-none border-0 p-0 gap-0 flex flex-col data-[state=open]:slide-in-from-bottom-4 data-[state=closed]:slide-out-to-bottom-4"
         >
           <DialogHeader className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <button onClick={() => setView('choose')} className="p-1 -ml-1 rounded hover:bg-muted">
+                <button
+                  onClick={() => (isEdit ? onOpenChange(false) : setView('choose'))}
+                  className="p-1 -ml-1 rounded hover:bg-muted"
+                >
                   <ArrowLeft className="h-5 w-5" />
                 </button>
-                <DialogTitle className="font-display text-lg">Add Expense</DialogTitle>
+                <DialogTitle className="font-display text-lg">{isEdit ? 'Edit Expense' : 'Add Expense'}</DialogTitle>
               </div>
               <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium max-w-[40%] truncate">
                 {headerLabel}
@@ -540,6 +543,7 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
               </div>
             )}
 
+            {!isEdit && (
             <div className="flex gap-2 overflow-x-auto pb-1">
               {bills.map((b, i) => (
                 <button
@@ -568,6 +572,7 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
                 <Plus className="h-3.5 w-3.5" /> Add bill
               </button>
             </div>
+            )}
 
             {activeBill && (
               <div className="space-y-3">
@@ -651,32 +656,50 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
                       >Item wise</button>
                     </div>
 
-                    {activeBill.splitMode === 'equal' && (
-                      <div className="space-y-1.5 pt-1">
-                        <p className="text-xs text-muted-foreground">Split among ( Tap to unselect )</p>
-                        <div className="flex flex-wrap gap-2">
-                          {people.map((p) => {
-                            const on = !!activeBill.selected[p.user_id];
-                            return (
-                              <button
-                                key={p.user_id}
-                                onClick={() => updateBill(activeBill.id, {
-                                  selected: { ...activeBill.selected, [p.user_id]: !on },
-                                })}
-                                className={cn(
-                                  'px-3 py-1.5 rounded-full border text-sm',
-                                  on
-                                    ? 'bg-primary/10 border-primary text-primary'
-                                    : 'bg-background border-border text-muted-foreground',
-                                )}
-                              >
-                                {p.user_id === user?.id ? 'You' : p.full_name}
-                              </button>
-                            );
-                          })}
+                    {activeBill.splitMode === 'equal' && (() => {
+                      const selectedIds = Object.entries(activeBill.selected)
+                        .filter(([, v]) => v).map(([k]) => k);
+                      const total = parseFloat(activeBill.amount) || 0;
+                      const per = selectedIds.length ? total / selectedIds.length : 0;
+                      return (
+                        <div className="space-y-1.5 pt-1">
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs text-muted-foreground">Split among ( Tap to unselect )</p>
+                            {selectedIds.length > 0 && total > 0 && (
+                              <p className="text-xs font-medium">
+                                ₹{per.toFixed(2)} × {selectedIds.length}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {people.map((p) => {
+                              const on = !!activeBill.selected[p.user_id];
+                              return (
+                                <button
+                                  key={p.user_id}
+                                  onClick={() => updateBill(activeBill.id, {
+                                    selected: { ...activeBill.selected, [p.user_id]: !on },
+                                  })}
+                                  className={cn(
+                                    'flex flex-col items-center px-3 py-1.5 rounded-full border text-sm leading-tight',
+                                    on
+                                      ? 'bg-primary/10 border-primary text-primary'
+                                      : 'bg-background border-border text-muted-foreground',
+                                  )}
+                                >
+                                  <span>{p.user_id === user?.id ? 'You' : p.full_name}</span>
+                                  {on && total > 0 && (
+                                    <span className="text-[10px] font-semibold opacity-80">
+                                      ₹{per.toFixed(2)}
+                                    </span>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
 
                     {activeBill.splitMode === 'unequal' && (
                       <Button
@@ -707,7 +730,11 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
               disabled={submitting || bills.length === 0}
               className="w-full h-12 rounded-full bg-foreground text-background hover:bg-foreground/90"
             >
-              {submitting ? 'Submitting...' : `Submit ${bills.length > 1 ? `${bills.length} expenses` : 'expense'}`}
+              {submitting
+                ? (isEdit ? 'Updating...' : 'Submitting...')
+                : isEdit
+                  ? 'Update expense'
+                  : `Submit ${bills.length > 1 ? `${bills.length} expenses` : 'expense'}`}
             </Button>
           </div>
         </DialogContent>
