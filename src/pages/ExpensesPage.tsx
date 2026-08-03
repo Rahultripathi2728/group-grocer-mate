@@ -16,6 +16,7 @@ import BudgetCard from '@/components/expenses/BudgetCard';
 import StatCard from '@/components/ui/stat-card';
 import ExpenseCard from '@/components/expenses/ExpenseCard';
 import ChartToggle from '@/components/expenses/ChartToggle';
+import AnalyticsBreakdownDialog, { BreakdownKind } from '@/components/expenses/AnalyticsBreakdownDialog';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -30,6 +31,10 @@ interface ExpenseRow {
   category?: string | null;
   myShare?: number;
   groupName?: string;
+  group_id?: string | null;
+  /** How this expense counts in analytics — a group expense paid 100% by you counts as personal */
+  analyticsType?: 'personal' | 'group';
+  soloPayer?: boolean;
 }
 
 interface ExpenseSummary {
@@ -45,6 +50,7 @@ export default function ExpensesPage() {
     totalPersonal: 0, totalGroup: 0, recentExpenses: [], allExpenses: [],
   });
   const [loading, setLoading] = useState(true);
+  const [breakdownKind, setBreakdownKind] = useState<BreakdownKind | null>(null);
 
   const [dateFrom, setDateFrom] = useState<Date>(startOfMonth(new Date()));
   const [dateTo, setDateTo] = useState<Date>(new Date());
@@ -73,33 +79,58 @@ export default function ExpensesPage() {
       .order('expense_date', { ascending: false });
 
     if (expenses) {
-      const personal = expenses
-        .filter((e) => e.expense_type === 'personal')
-        .reduce((sum, e) => sum + Number(e.amount), 0);
-
       const groupExpenseIds = expenses.filter((e) => e.expense_type === 'group').map((e) => e.id);
 
-      let myGroupShare = 0;
-      const splitsMap = new Map<string, number>();
+      // All splits (not just mine) so we can detect "paid 100% by me" group expenses
+      const splitsByExpense = new Map<string, Array<{ user_id: string; amount: number }>>();
       if (groupExpenseIds.length > 0) {
         const { data: splits } = await supabase
           .from('expense_splits')
-          .select('expense_id, amount_owed')
-          .eq('user_id', user.id)
+          .select('expense_id, user_id, amount_owed')
           .in('expense_id', groupExpenseIds);
-        (splits || []).forEach((s) => splitsMap.set(s.expense_id, Number(s.amount_owed)));
-        myGroupShare = (splits || []).reduce((sum, s) => sum + Number(s.amount_owed), 0);
+        (splits || []).forEach((s) => {
+          const list = splitsByExpense.get(s.expense_id) || [];
+          list.push({ user_id: s.user_id, amount: Number(s.amount_owed) });
+          splitsByExpense.set(s.expense_id, list);
+        });
       }
 
-      const mapped = expenses.map((e) => ({
-        ...e,
-        amount: Number(e.amount),
-        myShare: e.expense_type === 'group' ? (splitsMap.get(e.id) || 0) : Number(e.amount),
-        groupName: (e as any).groups?.name || undefined,
-      }));
+      const mapped: ExpenseRow[] = expenses.map((e) => {
+        const amount = Number(e.amount);
+        if (e.expense_type !== 'group') {
+          return {
+            ...(e as any),
+            amount,
+            myShare: amount,
+            groupName: (e as any).groups?.name || undefined,
+            analyticsType: 'personal' as const,
+          };
+        }
+        const rows = splitsByExpense.get(e.id) || [];
+        const owing = rows.filter((r) => r.amount > 0);
+        const myShare = rows.find((r) => r.user_id === user.id)?.amount || 0;
+        // Only one person owes and that person is me → effectively a personal expense
+        const soloPayer = owing.length === 1 && owing[0].user_id === user.id;
+        return {
+          ...(e as any),
+          amount,
+          myShare,
+          groupName: (e as any).groups?.name || undefined,
+          analyticsType: soloPayer ? ('personal' as const) : ('group' as const),
+          soloPayer,
+        };
+      });
+
+      const totalPersonal = mapped
+        .filter((e) => e.analyticsType === 'personal')
+        .reduce((sum, e) => sum + (e.soloPayer ? (e.myShare || e.amount) : e.amount), 0);
+      const totalGroup = mapped
+        .filter((e) => e.analyticsType === 'group')
+        .reduce((sum, e) => sum + (e.myShare || 0), 0);
+
       setSummary({
-        totalPersonal: personal,
-        totalGroup: myGroupShare,
+        totalPersonal,
+        totalGroup,
         recentExpenses: mapped.slice(0, 5),
         allExpenses: mapped,
       });
