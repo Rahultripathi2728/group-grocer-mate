@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -45,7 +45,52 @@ interface Props {
   onOpenChange: (o: boolean) => void;
   onSuccess: () => void;
   selectedDate?: Date;
+  /** When provided the sheet works in edit mode on this expense */
+  editExpense?: EditExpenseInput | null;
 }
+
+export interface EditExpenseInput {
+  id: string;
+  description: string;
+  amount: number;
+  expense_date: string;
+  category?: string | null;
+  expense_type: string;
+  group_id?: string | null;
+}
+
+/* ---------- draft persistence (so a half-filled form survives app reopen) ---------- */
+const DRAFT_KEY = 'add_expense_draft_v1';
+const DRAFT_TTL = 12 * 60 * 60 * 1000;
+
+interface Draft {
+  mode: Mode;
+  activeGroupId: string;
+  bills: Bill[];
+  activeBillId: string;
+  ts: number;
+}
+
+export const readExpenseDraft = (): Draft | null => {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    const d = JSON.parse(raw) as Draft;
+    if (!d || !Array.isArray(d.bills) || d.bills.length === 0) return null;
+    if (Date.now() - (d.ts || 0) > DRAFT_TTL) return null;
+    return d;
+  } catch {
+    return null;
+  }
+};
+
+const writeExpenseDraft = (d: Omit<Draft, 'ts'>) => {
+  try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...d, ts: Date.now() })); } catch { /* ignore */ }
+};
+
+export const clearExpenseDraft = () => {
+  try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
+};
 
 const newBill = (selfId: string, date: string): Bill => ({
   id: crypto.randomUUID(),
@@ -66,8 +111,10 @@ const newItem = (ids: string[]): BillItem => ({
   selected: Object.fromEntries(ids.map((i) => [i, true])),
 });
 
-export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selectedDate }: Props) {
+export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selectedDate, editExpense }: Props) {
   const { user } = useAuth();
+  const isEdit = !!editExpense;
+  const skipInitRef = useRef(false);
   const [view, setView] = useState<'choose' | 'form'>('choose');
   const [mode, setMode] = useState<Mode>('personal');
   const [groups, setGroups] = useState<Group[]>([]);
@@ -125,15 +172,63 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
   }, [user]);
 
   useEffect(() => {
-    if (open && user) {
-      setView('choose');
-      setMode('personal');
-      setActiveGroupId('');
-      setBills([]);
-      if (!groupsLoaded) prefetchAll();
+    if (!open || !user) return;
+    if (!groupsLoaded) prefetchAll();
+    if (isEdit) return; // edit mode is hydrated by the effect below
+
+    const draft = readExpenseDraft();
+    if (draft) {
+      skipInitRef.current = true;
+      setMode(draft.mode);
+      setActiveGroupId(draft.activeGroupId);
+      setBills(draft.bills);
+      setActiveBillId(draft.activeBillId || draft.bills[0].id);
+      setView('form');
+      return;
     }
+    setView('choose');
+    setMode('personal');
+    setActiveGroupId('');
+    setBills([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, user]);
+  }, [open, user, isEdit]);
+
+  // Hydrate the form from an existing expense (edit mode)
+  useEffect(() => {
+    if (!open || !user || !editExpense) return;
+    let cancelled = false;
+    const load = async () => {
+      const isGroup = editExpense.expense_type === 'group' && !!editExpense.group_id;
+      const b = newBill(user.id, editExpense.expense_date);
+      b.description = editExpense.description;
+      b.amount = String(editExpense.amount);
+      b.category = editExpense.category || 'general';
+
+      if (editExpense.expense_type !== 'personal') {
+        const { data: splits } = await supabase
+          .from('expense_splits')
+          .select('user_id, amount_owed')
+          .eq('expense_id', editExpense.id);
+        const rows = (splits || []).map((s) => ({ user_id: s.user_id, amount: Number(s.amount_owed) }));
+        if (rows.length > 0) {
+          b.selected = Object.fromEntries(rows.map((r) => [r.user_id, true]));
+          b.customAmounts = Object.fromEntries(rows.map((r) => [r.user_id, r.amount.toFixed(2)]));
+          const allEqual = rows.every((r) => Math.abs(r.amount - rows[0].amount) < 0.02);
+          b.splitMode = allEqual ? 'equal' : 'unequal';
+        }
+      }
+      if (cancelled) return;
+      skipInitRef.current = true;
+      setMode(isGroup ? 'group' : 'personal');
+      setActiveGroupId(editExpense.group_id || '');
+      setBills([b]);
+      setActiveBillId(b.id);
+      setView('form');
+    };
+    load();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, user, editExpense?.id]);
 
   const people: Person[] = useMemo(() => {
     if (!user) return [];
@@ -145,6 +240,8 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
   // Instantly init first bill when form opens
   useEffect(() => {
     if (!user || view !== 'form') return;
+    if (skipInitRef.current) { skipInitRef.current = false; return; }
+    if (isEdit) return;
     const b = newBill(user.id, dateStr);
     b.selected = Object.fromEntries(people.map((p) => [p.user_id, true]));
     setBills([b]);
@@ -154,7 +251,7 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
 
   // Sync new members when background fetch completes
   useEffect(() => {
-    if (view !== 'form') return;
+    if (view !== 'form' || isEdit) return;
     setBills((prev) => prev.map((b) => {
       const next = { ...b.selected };
       let changed = false;
@@ -163,6 +260,19 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [people.length]);
+
+  // Keep an in-progress draft so reopening the app resumes where the user left off
+  useEffect(() => {
+    if (!open || isEdit) return;
+    if (view !== 'form' || bills.length === 0) return;
+    writeExpenseDraft({ mode, activeGroupId, bills, activeBillId });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, isEdit, view, mode, activeGroupId, bills, activeBillId]);
+
+  const handleOpenChange = (o: boolean) => {
+    if (!o && !isEdit) clearExpenseDraft();
+    onOpenChange(o);
+  };
 
   const activeBill = bills.find((b) => b.id === activeBillId);
 
@@ -229,8 +339,59 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
     return splits;
   };
 
+  const handleUpdate = async () => {
+    if (!user || !editExpense) return;
+    const b = bills[0];
+    if (!b) return;
+    const rawAmt = b.splitMode === 'itemwise' ? itemsTotal(b) : parseFloat(b.amount);
+    if (!b.description.trim()) return toast.error('Description is required');
+    if (isNaN(rawAmt) || rawAmt <= 0) return toast.error('Enter a valid amount');
+    const amt = Math.round(rawAmt * 100) / 100;
+
+    let splits: Array<{ user_id: string; amount_owed: number }> | null = null;
+    if (mode === 'group') {
+      const res = computeSplits(b, amt);
+      if (!res) return toast.error('Pick at least one person to split with');
+      if (res === 'invalid') return toast.error(`Splits don't add up to ₹${amt}`);
+      splits = res;
+    }
+
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.from('expenses').update({
+        description: b.description.trim().slice(0, 500),
+        amount: amt,
+        expense_date: b.date,
+        category: b.category || 'general',
+      }).eq('id', editExpense.id);
+      if (error) throw error;
+
+      if (splits) {
+        await supabase.from('expense_splits').delete().eq('expense_id', editExpense.id);
+        const { error: sErr } = await supabase.from('expense_splits').insert(
+          splits.map((s) => ({
+            expense_id: editExpense.id,
+            user_id: s.user_id,
+            amount_owed: s.amount_owed,
+            is_paid: s.user_id === user.id,
+          })),
+        );
+        if (sErr) throw sErr;
+      }
+      toast.success('Expense updated');
+      onSuccess();
+      onOpenChange(false);
+    } catch (e) {
+      console.error(e);
+      toast.error('Failed to update expense');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!user) return;
+    if (isEdit) return handleUpdate();
     for (const b of bills) {
       const amt = b.splitMode === 'itemwise' ? itemsTotal(b) : parseFloat(b.amount);
       if (!b.description.trim()) return toast.error(`Bill: description required`);
@@ -271,6 +432,7 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
         }
       }
       toast.success(`Added ${bills.length} ${bills.length === 1 ? 'expense' : 'expenses'}`);
+      clearExpenseDraft();
       onSuccess();
       onOpenChange(false);
     } catch (e) {
@@ -290,7 +452,7 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
   return (
     <>
       {/* Choose view — bottom sheet */}
-      <Sheet open={open && view === 'choose'} onOpenChange={onOpenChange}>
+      <Sheet open={open && view === 'choose'} onOpenChange={handleOpenChange}>
         <SheetContent side="bottom" className="rounded-t-2xl border-t border-border p-0 max-h-[85dvh] flex flex-col">
           <SheetHeader className="px-4 pt-4 pb-2">
             <SheetTitle className="font-display text-lg text-left">Add Expense</SheetTitle>
@@ -344,17 +506,20 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
       </Sheet>
 
       {/* Form dialog — full-screen */}
-      <Dialog open={open && view === 'form'} onOpenChange={onOpenChange}>
+      <Dialog open={open && view === 'form'} onOpenChange={handleOpenChange}>
         <DialogContent
           className="!left-0 !top-0 !translate-x-0 !translate-y-0 !max-w-none w-screen h-[100dvh] !rounded-none border-0 p-0 gap-0 flex flex-col data-[state=open]:slide-in-from-bottom-4 data-[state=closed]:slide-out-to-bottom-4"
         >
           <DialogHeader className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <button onClick={() => setView('choose')} className="p-1 -ml-1 rounded hover:bg-muted">
+                <button
+                  onClick={() => (isEdit ? onOpenChange(false) : setView('choose'))}
+                  className="p-1 -ml-1 rounded hover:bg-muted"
+                >
                   <ArrowLeft className="h-5 w-5" />
                 </button>
-                <DialogTitle className="font-display text-lg">Add Expense</DialogTitle>
+                <DialogTitle className="font-display text-lg">{isEdit ? 'Edit Expense' : 'Add Expense'}</DialogTitle>
               </div>
               <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-medium max-w-[40%] truncate">
                 {headerLabel}
@@ -378,6 +543,7 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
               </div>
             )}
 
+            {!isEdit && (
             <div className="flex gap-2 overflow-x-auto pb-1">
               {bills.map((b, i) => (
                 <button
@@ -406,6 +572,7 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
                 <Plus className="h-3.5 w-3.5" /> Add bill
               </button>
             </div>
+            )}
 
             {activeBill && (
               <div className="space-y-3">
@@ -489,32 +656,50 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
                       >Item wise</button>
                     </div>
 
-                    {activeBill.splitMode === 'equal' && (
-                      <div className="space-y-1.5 pt-1">
-                        <p className="text-xs text-muted-foreground">Split among ( Tap to unselect )</p>
-                        <div className="flex flex-wrap gap-2">
-                          {people.map((p) => {
-                            const on = !!activeBill.selected[p.user_id];
-                            return (
-                              <button
-                                key={p.user_id}
-                                onClick={() => updateBill(activeBill.id, {
-                                  selected: { ...activeBill.selected, [p.user_id]: !on },
-                                })}
-                                className={cn(
-                                  'px-3 py-1.5 rounded-full border text-sm',
-                                  on
-                                    ? 'bg-primary/10 border-primary text-primary'
-                                    : 'bg-background border-border text-muted-foreground',
-                                )}
-                              >
-                                {p.user_id === user?.id ? 'You' : p.full_name}
-                              </button>
-                            );
-                          })}
+                    {activeBill.splitMode === 'equal' && (() => {
+                      const selectedIds = Object.entries(activeBill.selected)
+                        .filter(([, v]) => v).map(([k]) => k);
+                      const total = parseFloat(activeBill.amount) || 0;
+                      const per = selectedIds.length ? total / selectedIds.length : 0;
+                      return (
+                        <div className="space-y-1.5 pt-1">
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs text-muted-foreground">Split among ( Tap to unselect )</p>
+                            {selectedIds.length > 0 && total > 0 && (
+                              <p className="text-xs font-medium">
+                                ₹{per.toFixed(2)} × {selectedIds.length}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {people.map((p) => {
+                              const on = !!activeBill.selected[p.user_id];
+                              return (
+                                <button
+                                  key={p.user_id}
+                                  onClick={() => updateBill(activeBill.id, {
+                                    selected: { ...activeBill.selected, [p.user_id]: !on },
+                                  })}
+                                  className={cn(
+                                    'flex flex-col items-center px-3 py-1.5 rounded-full border text-sm leading-tight',
+                                    on
+                                      ? 'bg-primary/10 border-primary text-primary'
+                                      : 'bg-background border-border text-muted-foreground',
+                                  )}
+                                >
+                                  <span>{p.user_id === user?.id ? 'You' : p.full_name}</span>
+                                  {on && total > 0 && (
+                                    <span className="text-[10px] font-semibold opacity-80">
+                                      ₹{per.toFixed(2)}
+                                    </span>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
 
                     {activeBill.splitMode === 'unequal' && (
                       <Button
@@ -545,7 +730,11 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
               disabled={submitting || bills.length === 0}
               className="w-full h-12 rounded-full bg-foreground text-background hover:bg-foreground/90"
             >
-              {submitting ? 'Submitting...' : `Submit ${bills.length > 1 ? `${bills.length} expenses` : 'expense'}`}
+              {submitting
+                ? (isEdit ? 'Updating...' : 'Submitting...')
+                : isEdit
+                  ? 'Update expense'
+                  : `Submit ${bills.length > 1 ? `${bills.length} expenses` : 'expense'}`}
             </Button>
           </div>
         </DialogContent>

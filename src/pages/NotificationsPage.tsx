@@ -85,6 +85,18 @@ export default function NotificationsPage() {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
   };
 
+  // Where a notification should take you when tapped
+  const targetFor = (n: Notification) => {
+    if (n.group_id) return `/settlement?group=${n.group_id}`;
+    if (n.type === 'settlement') return '/settlement';
+    return '/expenses';
+  };
+
+  const handleOpen = async (n: Notification) => {
+    if (!n.is_read) await markOneRead(n.id);
+    navigate(targetFor(n));
+  };
+
   const clearAll = async () => {
     const ids = notifications.map((n) => n.id);
     if (ids.length === 0) return;
@@ -170,7 +182,9 @@ export default function NotificationsPage() {
                       ? 'bg-card border-border shadow-sm'
                       : 'bg-muted/30 border-transparent'
                   )}
-                  onClick={() => !n.is_read && markOneRead(n.id)}
+                  onClick={() => handleOpen(n)}
+                  role="button"
+                  style={{ cursor: 'pointer' }}
                 >
                   <div className="mt-0.5 flex-shrink-0">
                     <div className={cn(

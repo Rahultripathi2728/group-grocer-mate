@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,6 +14,8 @@ interface Group { id: string; name: string; owner_id: string }
 
 export default function SettlementPage() {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedGroupId = searchParams.get('group');
   const [groups, setGroups] = useState<Group[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string>(() => {
     if (typeof window === 'undefined') return '';
@@ -37,12 +40,23 @@ export default function SettlementPage() {
     const uniq = all.filter((g, i, a) => i === a.findIndex((x: any) => x.id === g.id));
     setGroups(uniq as Group[]);
     setSelectedGroupId((prev) => {
+      if (requestedGroupId && uniq.some((g: any) => g.id === requestedGroupId)) return requestedGroupId;
       if (prev && uniq.some((g: any) => g.id === prev)) return prev;
       return uniq.length > 0 ? uniq[0].id : '';
     });
   };
 
-  useEffect(() => { fetchGroups(); }, [user]);
+  useEffect(() => { fetchGroups(); }, [user, requestedGroupId]);
+
+  // Once applied, drop the deep-link param so manual selection isn't overridden
+  useEffect(() => {
+    if (requestedGroupId && selectedGroupId === requestedGroupId) {
+      const next = new URLSearchParams(searchParams);
+      next.delete('group');
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestedGroupId, selectedGroupId]);
 
   const handleSettleAll = async () => {
     if (!user || !selectedGroupId) return;
