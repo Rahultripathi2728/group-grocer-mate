@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -45,7 +45,52 @@ interface Props {
   onOpenChange: (o: boolean) => void;
   onSuccess: () => void;
   selectedDate?: Date;
+  /** When provided the sheet works in edit mode on this expense */
+  editExpense?: EditExpenseInput | null;
 }
+
+export interface EditExpenseInput {
+  id: string;
+  description: string;
+  amount: number;
+  expense_date: string;
+  category?: string | null;
+  expense_type: string;
+  group_id?: string | null;
+}
+
+/* ---------- draft persistence (so a half-filled form survives app reopen) ---------- */
+const DRAFT_KEY = 'add_expense_draft_v1';
+const DRAFT_TTL = 12 * 60 * 60 * 1000;
+
+interface Draft {
+  mode: Mode;
+  activeGroupId: string;
+  bills: Bill[];
+  activeBillId: string;
+  ts: number;
+}
+
+export const readExpenseDraft = (): Draft | null => {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    const d = JSON.parse(raw) as Draft;
+    if (!d || !Array.isArray(d.bills) || d.bills.length === 0) return null;
+    if (Date.now() - (d.ts || 0) > DRAFT_TTL) return null;
+    return d;
+  } catch {
+    return null;
+  }
+};
+
+const writeExpenseDraft = (d: Omit<Draft, 'ts'>) => {
+  try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...d, ts: Date.now() })); } catch { /* ignore */ }
+};
+
+export const clearExpenseDraft = () => {
+  try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
+};
 
 const newBill = (selfId: string, date: string): Bill => ({
   id: crypto.randomUUID(),
@@ -66,8 +111,10 @@ const newItem = (ids: string[]): BillItem => ({
   selected: Object.fromEntries(ids.map((i) => [i, true])),
 });
 
-export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selectedDate }: Props) {
+export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selectedDate, editExpense }: Props) {
   const { user } = useAuth();
+  const isEdit = !!editExpense;
+  const skipInitRef = useRef(false);
   const [view, setView] = useState<'choose' | 'form'>('choose');
   const [mode, setMode] = useState<Mode>('personal');
   const [groups, setGroups] = useState<Group[]>([]);
