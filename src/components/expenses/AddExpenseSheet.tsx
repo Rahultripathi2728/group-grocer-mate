@@ -172,15 +172,63 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
   }, [user]);
 
   useEffect(() => {
-    if (open && user) {
-      setView('choose');
-      setMode('personal');
-      setActiveGroupId('');
-      setBills([]);
-      if (!groupsLoaded) prefetchAll();
+    if (!open || !user) return;
+    if (!groupsLoaded) prefetchAll();
+    if (isEdit) return; // edit mode is hydrated by the effect below
+
+    const draft = readExpenseDraft();
+    if (draft) {
+      skipInitRef.current = true;
+      setMode(draft.mode);
+      setActiveGroupId(draft.activeGroupId);
+      setBills(draft.bills);
+      setActiveBillId(draft.activeBillId || draft.bills[0].id);
+      setView('form');
+      return;
     }
+    setView('choose');
+    setMode('personal');
+    setActiveGroupId('');
+    setBills([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, user]);
+  }, [open, user, isEdit]);
+
+  // Hydrate the form from an existing expense (edit mode)
+  useEffect(() => {
+    if (!open || !user || !editExpense) return;
+    let cancelled = false;
+    const load = async () => {
+      const isGroup = editExpense.expense_type === 'group' && !!editExpense.group_id;
+      const b = newBill(user.id, editExpense.expense_date);
+      b.description = editExpense.description;
+      b.amount = String(editExpense.amount);
+      b.category = editExpense.category || 'general';
+
+      if (editExpense.expense_type !== 'personal') {
+        const { data: splits } = await supabase
+          .from('expense_splits')
+          .select('user_id, amount_owed')
+          .eq('expense_id', editExpense.id);
+        const rows = (splits || []).map((s) => ({ user_id: s.user_id, amount: Number(s.amount_owed) }));
+        if (rows.length > 0) {
+          b.selected = Object.fromEntries(rows.map((r) => [r.user_id, true]));
+          b.customAmounts = Object.fromEntries(rows.map((r) => [r.user_id, r.amount.toFixed(2)]));
+          const allEqual = rows.every((r) => Math.abs(r.amount - rows[0].amount) < 0.02);
+          b.splitMode = allEqual ? 'equal' : 'unequal';
+        }
+      }
+      if (cancelled) return;
+      skipInitRef.current = true;
+      setMode(isGroup ? 'group' : 'personal');
+      setActiveGroupId(editExpense.group_id || '');
+      setBills([b]);
+      setActiveBillId(b.id);
+      setView('form');
+    };
+    load();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, user, editExpense?.id]);
 
   const people: Person[] = useMemo(() => {
     if (!user) return [];
@@ -192,6 +240,8 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
   // Instantly init first bill when form opens
   useEffect(() => {
     if (!user || view !== 'form') return;
+    if (skipInitRef.current) { skipInitRef.current = false; return; }
+    if (isEdit) return;
     const b = newBill(user.id, dateStr);
     b.selected = Object.fromEntries(people.map((p) => [p.user_id, true]));
     setBills([b]);
@@ -201,7 +251,7 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
 
   // Sync new members when background fetch completes
   useEffect(() => {
-    if (view !== 'form') return;
+    if (view !== 'form' || isEdit) return;
     setBills((prev) => prev.map((b) => {
       const next = { ...b.selected };
       let changed = false;
@@ -210,6 +260,19 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [people.length]);
+
+  // Keep an in-progress draft so reopening the app resumes where the user left off
+  useEffect(() => {
+    if (!open || isEdit) return;
+    if (view !== 'form' || bills.length === 0) return;
+    writeExpenseDraft({ mode, activeGroupId, bills, activeBillId });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, isEdit, view, mode, activeGroupId, bills, activeBillId]);
+
+  const handleOpenChange = (o: boolean) => {
+    if (!o && !isEdit) clearExpenseDraft();
+    onOpenChange(o);
+  };
 
   const activeBill = bills.find((b) => b.id === activeBillId);
 
