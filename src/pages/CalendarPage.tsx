@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -36,8 +36,7 @@ import { ChevronLeft, ChevronRight, Plus, CheckCircle2, Wallet, Users, Trash2, C
 import { toast } from 'sonner';
 import { getCategoryById } from '@/lib/categories';
 import { cn } from '@/lib/utils';
-import AddExpenseSheet from '@/components/expenses/AddExpenseSheet';
-import EditExpenseDialog from '@/components/expenses/EditExpenseDialog';
+import AddExpenseSheet, { readExpenseDraft } from '@/components/expenses/AddExpenseSheet';
 import ExpenseCard from '@/components/expenses/ExpenseCard';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -79,6 +78,25 @@ export default function CalendarPage() {
   const [showMore, setShowMore] = useState(false);
   const [splitDetails, setSplitDetails] = useState<Array<{ user_id: string; full_name: string; amount_owed: number }> | null>(null);
   const [loadingSplits, setLoadingSplits] = useState(false);
+
+  // Resume an unfinished expense form after the app is reopened
+  useEffect(() => {
+    if (readExpenseDraft()) setAddExpenseOpen(true);
+  }, []);
+
+  const editTarget = useMemo(() => {
+    if (!detailExpense) return null;
+    return {
+      id: detailExpense.id,
+      description: detailExpense.description,
+      amount: detailExpense.amount,
+      expense_date: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
+      category: detailExpense.category,
+      expense_type: detailExpense.expense_type,
+      group_id: detailExpense.group_id,
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detailExpense?.id, selectedDate]);
 
   // Reset "More" state when opening a new detail dialog
   useEffect(() => {
