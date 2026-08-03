@@ -252,17 +252,30 @@ export default function ExpensesPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
             <StatCard title="Personal" value={`₹${summary.totalPersonal.toLocaleString('en-IN')}`}
-              icon={Wallet} iconColor="text-primary" iconBgColor="bg-primary/10" />
+              icon={Wallet} iconColor="text-primary" iconBgColor="bg-primary/10"
+              onClick={() => setBreakdownKind('personal')} />
           </motion.div>
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
             <StatCard title="My Share (Group)" value={`₹${summary.totalGroup.toLocaleString('en-IN')}`}
-              icon={Users} iconColor="text-accent-foreground" iconBgColor="bg-accent" />
+              icon={Users} iconColor="text-accent-foreground" iconBgColor="bg-accent"
+              onClick={() => setBreakdownKind('share')} />
           </motion.div>
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
             <StatCard title="Total" value={`₹${(summary.totalPersonal + summary.totalGroup).toLocaleString('en-IN')}`}
-              icon={TrendingUp} iconColor="text-success" iconBgColor="bg-success/10" />
+              icon={TrendingUp} iconColor="text-success" iconBgColor="bg-success/10"
+              onClick={() => setBreakdownKind('total')} />
           </motion.div>
         </div>
+
+        <p className="text-[11px] text-muted-foreground -mt-3">Tap a card above to see the detailed breakdown.</p>
+
+        <AnalyticsBreakdownDialog
+          open={!!breakdownKind}
+          onOpenChange={(o) => !o && setBreakdownKind(null)}
+          kind={breakdownKind || 'total'}
+          expenses={summary.allExpenses}
+          rangeLabel={`${format(dateFrom, 'dd MMM')} – ${format(dateTo, 'dd MMM yyyy')}`}
+        />
 
         <ChartToggle expenses={summary.allExpenses} dateFrom={dateFrom} dateTo={dateTo} />
 
