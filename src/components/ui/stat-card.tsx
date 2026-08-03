@@ -13,6 +13,7 @@ interface StatCardProps {
     positive?: boolean;
   };
   className?: string;
+  onClick?: () => void;
 }
 
 export default function StatCard({
@@ -23,13 +24,19 @@ export default function StatCard({
   iconBgColor = 'bg-primary/10',
   trend,
   className,
+  onClick,
 }: StatCardProps) {
   return (
     <div
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
       className={cn(
         'relative overflow-hidden p-4 sm:p-6 rounded-2xl bg-card border border-border',
         'hover:shadow-md transition-all duration-300',
         'group',
+        onClick && 'cursor-pointer active:scale-[0.98]',
         className
       )}
     >
