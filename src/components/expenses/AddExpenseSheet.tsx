@@ -339,8 +339,59 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
     return splits;
   };
 
+  const handleUpdate = async () => {
+    if (!user || !editExpense) return;
+    const b = bills[0];
+    if (!b) return;
+    const rawAmt = b.splitMode === 'itemwise' ? itemsTotal(b) : parseFloat(b.amount);
+    if (!b.description.trim()) return toast.error('Description is required');
+    if (isNaN(rawAmt) || rawAmt <= 0) return toast.error('Enter a valid amount');
+    const amt = Math.round(rawAmt * 100) / 100;
+
+    let splits: Array<{ user_id: string; amount_owed: number }> | null = null;
+    if (mode === 'group') {
+      const res = computeSplits(b, amt);
+      if (!res) return toast.error('Pick at least one person to split with');
+      if (res === 'invalid') return toast.error(`Splits don't add up to ₹${amt}`);
+      splits = res;
+    }
+
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.from('expenses').update({
+        description: b.description.trim().slice(0, 500),
+        amount: amt,
+        expense_date: b.date,
+        category: b.category || 'general',
+      }).eq('id', editExpense.id);
+      if (error) throw error;
+
+      if (splits) {
+        await supabase.from('expense_splits').delete().eq('expense_id', editExpense.id);
+        const { error: sErr } = await supabase.from('expense_splits').insert(
+          splits.map((s) => ({
+            expense_id: editExpense.id,
+            user_id: s.user_id,
+            amount_owed: s.amount_owed,
+            is_paid: s.user_id === user.id,
+          })),
+        );
+        if (sErr) throw sErr;
+      }
+      toast.success('Expense updated');
+      onSuccess();
+      onOpenChange(false);
+    } catch (e) {
+      console.error(e);
+      toast.error('Failed to update expense');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!user) return;
+    if (isEdit) return handleUpdate();
     for (const b of bills) {
       const amt = b.splitMode === 'itemwise' ? itemsTotal(b) : parseFloat(b.amount);
       if (!b.description.trim()) return toast.error(`Bill: description required`);
@@ -381,6 +432,7 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
         }
       }
       toast.success(`Added ${bills.length} ${bills.length === 1 ? 'expense' : 'expenses'}`);
+      clearExpenseDraft();
       onSuccess();
       onOpenChange(false);
     } catch (e) {
