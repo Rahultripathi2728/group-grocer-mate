@@ -433,6 +433,36 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
         const rawAmt = b.splitMode === 'itemwise' ? itemsTotal(b) : parseFloat(b.amount);
         const amt = Math.round(rawAmt * 100) / 100;
         const expense_type = mode === 'group' ? 'group' : 'personal';
+
+        // Item-wise group bills → one expense per distinct participant set
+        if (mode === 'group' && b.splitMode === 'itemwise') {
+          const groupsOfItems = itemwiseGroups(b);
+          for (const g of groupsOfItems) {
+            const label = groupsOfItems.length > 1
+              ? `${b.description.trim()} · ${g.names.join(', ')}`
+              : b.description.trim();
+            const { data: exp, error } = await supabase.from('expenses').insert({
+              user_id: user.id,
+              description: label.slice(0, 500),
+              amount: g.total,
+              expense_date: b.date,
+              expense_type: 'group',
+              category: b.category || 'general',
+              group_id: activeGroupId,
+            }).select().single();
+            if (error || !exp) throw error || new Error('insert failed');
+            const rows = equalSplits(g.ids, g.total).map((s) => ({
+              expense_id: exp.id,
+              user_id: s.user_id,
+              amount_owed: s.amount_owed,
+              is_paid: s.user_id === user.id,
+            }));
+            const { error: sErr } = await supabase.from('expense_splits').insert(rows);
+            if (sErr) throw sErr;
+          }
+          continue;
+        }
+
         const { data: exp, error } = await supabase.from('expenses').insert({
           user_id: user.id,
           description: b.description.trim().slice(0, 500),
@@ -798,10 +828,24 @@ function ItemwiseEditor({
 
   const total = bill.items.reduce((s, it) => s + (parseFloat(it.amount) || 0), 0);
 
+  // Running total each person owes across all items
+  const perPersonTotal: Record<string, number> = {};
+  bill.items.forEach((it) => {
+    const amt = parseFloat(it.amount) || 0;
+    const ids = Object.entries(it.selected).filter(([, v]) => v).map(([k]) => k);
+    if (!ids.length || amt <= 0) return;
+    const per = amt / ids.length;
+    ids.forEach((id) => { perPersonTotal[id] = (perPersonTotal[id] || 0) + per; });
+  });
+
   return (
     <div className="space-y-3 pt-2">
       <p className="text-xs text-muted-foreground">Add each item & pick who shares it</p>
-      {bill.items.map((it, idx) => (
+      {bill.items.map((it, idx) => {
+        const itemAmt = parseFloat(it.amount) || 0;
+        const selectedIds = Object.entries(it.selected).filter(([, v]) => v).map(([k]) => k);
+        const perItem = selectedIds.length ? itemAmt / selectedIds.length : 0;
+        return (
         <div key={it.id} className="space-y-2 rounded-lg border border-border p-3 bg-muted/20">
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground w-12">Item {idx + 1}</span>
@@ -823,6 +867,12 @@ function ItemwiseEditor({
               </button>
             )}
           </div>
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] text-muted-foreground">Shared by ( tap to unselect )</p>
+            {selectedIds.length > 0 && itemAmt > 0 && (
+              <p className="text-[11px] font-medium">₹{perItem.toFixed(2)} × {selectedIds.length}</p>
+            )}
+          </div>
           <div className="flex flex-wrap gap-1.5">
             {people.map((p) => {
               const on = !!it.selected[p.user_id];
@@ -831,17 +881,41 @@ function ItemwiseEditor({
                   key={p.user_id}
                   onClick={() => updateItem(it.id, { selected: { ...it.selected, [p.user_id]: !on } })}
                   className={cn(
-                    'px-2.5 py-1 rounded-full border text-xs',
+                    'flex flex-col items-center px-2.5 py-1 rounded-full border text-xs leading-tight',
                     on ? 'bg-primary/10 border-primary text-primary' : 'bg-background border-border text-muted-foreground',
                   )}
                 >
-                  {p.user_id === currentUserId ? 'You' : p.full_name}
+                  <span>{p.user_id === currentUserId ? 'You' : p.full_name}</span>
+                  {on && itemAmt > 0 && (
+                    <span className="text-[10px] font-semibold opacity-80">₹{perItem.toFixed(2)}</span>
+                  )}
                 </button>
               );
             })}
           </div>
         </div>
-      ))}
+        );
+      })}
+
+      {Object.keys(perPersonTotal).length > 0 && (
+        <div className="rounded-lg border border-border p-3 space-y-1.5">
+          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
+            Total per person
+          </p>
+          {people
+            .filter((p) => (perPersonTotal[p.user_id] || 0) > 0)
+            .map((p) => (
+              <div key={p.user_id} className="flex items-center justify-between text-xs">
+                <span>{p.user_id === currentUserId ? 'You' : p.full_name}</span>
+                <span className="font-semibold">₹{(perPersonTotal[p.user_id] || 0).toFixed(2)}</span>
+              </div>
+            ))}
+          <p className="text-[10px] text-muted-foreground pt-1">
+            Items shared by only one person are saved as that person's own expense.
+          </p>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <Button variant="outline" size="sm" onClick={addItem}>
           <Plus className="h-3.5 w-3.5 mr-1" /> Add item
