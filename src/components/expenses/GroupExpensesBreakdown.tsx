@@ -456,8 +456,9 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
                     </div>
                     <div>
                       <p className="text-sm font-medium">
-                        {settlement.settled_by === user?.id ? 'You' : settlement.settled_by_name} settled
-                        {' '}their share
+                        {settlement.settled_by === user?.id
+                          ? 'You settled your share'
+                          : `${settlement.settled_by_name} settled their share`}
                       </p>
                       {(settlement.total_amount || 0) > 0 && (
                         <p className="text-sm font-bold text-success">
