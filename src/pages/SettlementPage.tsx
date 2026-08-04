@@ -62,12 +62,13 @@ export default function SettlementPage() {
     if (!user || !selectedGroupId) return;
     setSettling(true);
     try {
-      const { data, error } = await supabase.rpc('settle_group_expenses', { p_group_id: selectedGroupId });
+      const { data, error } = await supabase.rpc('settle_my_share', { p_group_id: selectedGroupId });
       if (error) throw error;
       const row = Array.isArray(data) ? data[0] : data;
-      const count = row?.expenses_settled ?? 0;
-      if (!count) { toast.info('No unsettled expenses to settle.'); setSettling(false); return; }
-      toast.success(`Settled ${count} expense${count > 1 ? 's' : ''}!`);
+      const count = row?.splits_settled ?? 0;
+      const amount = Number(row?.total_amount ?? 0);
+      if (!count) { toast.info('You have nothing left to settle in this group.'); setSettling(false); return; }
+      toast.success(`Your share of ₹${amount.toFixed(0)} is settled!`);
       const current = selectedGroupId;
       setSelectedGroupId('');
       setTimeout(() => setSelectedGroupId(current), 100);
