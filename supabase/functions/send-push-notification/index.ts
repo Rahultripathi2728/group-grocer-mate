@@ -194,7 +194,7 @@ async function sendWebPush(
   subscription: { endpoint: string; p256dh: string; auth: string },
   vapidPublicKey: string,
   privateKeyData: { d: string; x: string; y: string },
-  payload: { title: string; body: string; type?: string }
+  payload: { title: string; body: string; type?: string; url?: string }
 ) {
   const vapidSubject = "mailto:push@expensetrack.app";
   const url = new URL(subscription.endpoint);
