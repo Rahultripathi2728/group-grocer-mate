@@ -305,6 +305,31 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
   const itemsTotal = (bill: Bill) =>
     bill.items.reduce((s, it) => s + (parseFloat(it.amount) || 0), 0);
 
+  /**
+   * Item-wise bills are stored as one expense per distinct set of participants.
+   * That way an item that only one person shares becomes an expense owed 100%
+   * by that person, so it shows up as *their* personal spend in analytics.
+   */
+  const itemwiseGroups = (bill: Bill) => {
+    const map = new Map<string, { ids: string[]; names: string[]; total: number }>();
+    for (const it of bill.items) {
+      const amt = parseFloat(it.amount) || 0;
+      const ids = Object.entries(it.selected).filter(([, v]) => v).map(([k]) => k).sort();
+      if (ids.length === 0 || amt <= 0) continue;
+      const key = ids.join(',');
+      const g = map.get(key) || { ids, names: [], total: 0 };
+      g.names.push(it.name.trim() || 'Item');
+      g.total = Math.round((g.total + amt) * 100) / 100;
+      map.set(key, g);
+    }
+    return Array.from(map.values());
+  };
+
+  const equalSplits = (ids: string[], total: number) => {
+    const per = Math.round((total / ids.length) * 100) / 100;
+    return ids.map((uid) => ({ user_id: uid, amount_owed: per }));
+  };
+
   const computeSplits = (bill: Bill, total: number) => {
     if (bill.splitMode === 'itemwise') {
       if (bill.items.length === 0) return null;
