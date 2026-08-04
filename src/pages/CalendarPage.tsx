@@ -283,6 +283,19 @@ export default function CalendarPage() {
 
   useEffect(() => { fetchExpenses(); }, [user, currentMonth]);
 
+  // Once the month's data is in, open the exact expense from the notification
+  useEffect(() => {
+    if (!deepExpenseId || !deepDate) return;
+    const day = expensesByDate.get(deepDate);
+    const target = day?.expenses.find((e) => e.id === deepExpenseId);
+    if (!target) return;
+    setDetailExpense(target);
+    const next = new URLSearchParams(searchParams);
+    next.delete('expense');
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expensesByDate, deepExpenseId, deepDate]);
+
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
   const calendarStart = startOfWeek(monthStart);
