@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -67,6 +68,9 @@ interface DayExpense {
 
 export default function CalendarPage() {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const deepDate = searchParams.get('date');
+  const deepExpenseId = searchParams.get('expense');
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [expensesByDate, setExpensesByDate] = useState<Map<string, DayExpense>>(new Map());
@@ -81,8 +85,19 @@ export default function CalendarPage() {
 
   // Resume an unfinished expense form after the app is reopened
   useEffect(() => {
+    if (deepDate) return; // came from a notification — show that day instead
     if (readExpenseDraft()) setAddExpenseOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Deep link from a notification: jump to the expense's date
+  useEffect(() => {
+    if (!deepDate) return;
+    const d = new Date(`${deepDate}T00:00:00`);
+    if (isNaN(d.getTime())) return;
+    setCurrentMonth(d);
+    setSelectedDate(d);
+  }, [deepDate]);
 
   const editTarget = useMemo(() => {
     if (!detailExpense) return null;
