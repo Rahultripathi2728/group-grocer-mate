@@ -17,6 +17,8 @@ interface Notification {
   is_read: boolean;
   created_at: string;
   group_id: string | null;
+  expense_id?: string | null;
+  expense_date?: string | null;
 }
 
 export default function NotificationsPage() {
@@ -87,8 +89,19 @@ export default function NotificationsPage() {
 
   // Where a notification should take you when tapped
   const targetFor = (n: Notification) => {
+    // Anything about an expense being added / edited / removed belongs on the calendar
+    if (n.type.startsWith('expense')) {
+      if (n.expense_date) {
+        const params = new URLSearchParams({ date: n.expense_date });
+        if (n.expense_id) params.set('expense', n.expense_id);
+        return `/calendar?${params.toString()}`;
+      }
+      return '/calendar';
+    }
+    if (n.type === 'settlement') {
+      return n.group_id ? `/settlement?group=${n.group_id}` : '/settlement';
+    }
     if (n.group_id) return `/settlement?group=${n.group_id}`;
-    if (n.type === 'settlement') return '/settlement';
     return '/expenses';
   };
 
@@ -108,6 +121,7 @@ export default function NotificationsPage() {
     switch (type) {
       case 'expense_added':
       case 'expense_split':
+      case 'expense_updated':
         return <Wallet className="h-5 w-5 text-foreground" />;
       case 'list_item_added':
         return <ShoppingCart className="h-5 w-5 text-foreground" />;

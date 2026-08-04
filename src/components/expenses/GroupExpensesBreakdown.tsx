@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,21 +11,14 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
-  Receipt,
-  User,
-  Calendar,
-  TrendingUp,
-  TrendingDown,
   ArrowRight,
   CheckCircle2,
   History,
   Users,
   Wallet,
-  IndianRupee,
 } from 'lucide-react';
-import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { getCategoryById } from '@/lib/categories';
 import SimplifiedBalances from './SimplifiedBalances';
@@ -43,6 +36,13 @@ interface GroupExpense {
   category: string | null;
   user_id: string;
   created_at: string;
+}
+
+interface Split {
+  expense_id: string;
+  user_id: string;
+  amount_owed: number;
+  is_paid: boolean;
 }
 
 interface MemberSpending {
@@ -79,295 +79,178 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
   const { user } = useAuth();
   const navigate = useNavigate();
   const [members, setMembers] = useState<Member[]>([]);
-  const [expenses, setExpenses] = useState<GroupExpense[]>([]);
+  const [pendingExpenses, setPendingExpenses] = useState<GroupExpense[]>([]);
   const [memberSpending, setMemberSpending] = useState<MemberSpending[]>([]);
   const [balances, setBalances] = useState<Balance[]>([]);
   const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [loading, setLoading] = useState(true);
-  const [lastSettlement, setLastSettlement] = useState<Settlement | null>(null);
-  const [expandedSettlement, setExpandedSettlement] = useState<string | null>(null);
-  const [settlementExpenses, setSettlementExpenses] = useState<Record<string, GroupExpense[]>>({});
-  const [settlementSplits, setSettlementSplits] = useState<Record<string, Record<string, { user_id: string; amount_owed: number }[]>>>({});
-  const [loadingSettlementDetail, setLoadingSettlementDetail] = useState<string | null>(null);
+  const [mySettlement, setMySettlement] = useState<Settlement | null>(null);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!groupId) return;
     setLoading(true);
 
-    // Fetch group members
-    const { data: memberships } = await supabase
-      .from('group_memberships')
-      .select('user_id, profiles(full_name)')
-      .eq('group_id', groupId);
-
-    const { data: group } = await supabase
-      .from('groups')
-      .select('owner_id, profiles(full_name)')
-      .eq('id', groupId)
-      .single();
+    const [{ data: memberships }, { data: group }, { data: settlementData }] = await Promise.all([
+      supabase.from('group_memberships').select('user_id, profiles(full_name)').eq('group_id', groupId),
+      supabase.from('groups').select('owner_id, profiles(full_name)').eq('id', groupId).maybeSingle(),
+      supabase
+        .from('settlements')
+        .select('*, profiles:settled_by(full_name)')
+        .eq('group_id', groupId)
+        .order('settled_at', { ascending: false })
+        .limit(10),
+    ]);
 
     const memberList: Member[] = [];
-
-    // Always add the owner to the member list regardless of profile data
     if (group) {
       memberList.push({
-        user_id: group.owner_id,
-        full_name: (group.profiles as any)?.full_name || 'Unknown',
+        user_id: (group as any).owner_id,
+        full_name: (group as any).profiles?.full_name || 'Unknown',
       });
     }
-
     memberships?.forEach((m: any) => {
-      if (m.user_id !== group?.owner_id) {
-        memberList.push({
-          user_id: m.user_id,
-          full_name: m.profiles?.full_name || 'Unknown',
-        });
+      if (m.user_id !== (group as any)?.owner_id) {
+        memberList.push({ user_id: m.user_id, full_name: m.profiles?.full_name || 'Unknown' });
       }
     });
-
     setMembers(memberList);
-
-    // Fetch settlement history
-    const { data: settlementData } = await supabase
-      .from('settlements')
-      .select('*, profiles:settled_by(full_name)')
-      .eq('group_id', groupId)
-      .order('settled_at', { ascending: false })
-      .limit(10);
 
     const formattedSettlements = (settlementData || []).map((s: any) => ({
       ...s,
       total_amount: Number(s.total_amount) || 0,
       settled_by_name: s.profiles?.full_name || 'Unknown',
     }));
-
     setSettlements(formattedSettlements);
-    const lastSettlementData = formattedSettlements[0] || null;
-    setLastSettlement(lastSettlementData);
+    setMySettlement(formattedSettlements.find((s: Settlement) => s.settled_by === user?.id) || null);
 
-    // Fetch only expenses AFTER last settlement (post-settlement expenses)
-    const lastSettlementDate = formattedSettlements[0]?.settled_at || null;
-    
-    let query = supabase
+    // Everything that is not fully settled yet — per-person dues live in expense_splits
+    const { data: expenseData } = await supabase
       .from('expenses')
       .select('*')
       .eq('group_id', groupId)
       .eq('expense_type', 'group')
+      .eq('is_settled', false)
       .order('expense_date', { ascending: false });
 
-    // If there's a last settlement, only fetch expenses created after it
-    if (lastSettlementDate) {
-      query = query.gt('created_at', lastSettlementDate);
-    }
+    const openExpenses = (expenseData || []).map((e) => ({ ...e, amount: Number(e.amount) })) as GroupExpense[];
 
-    const { data: postSettlementData } = await query;
-
-    const postSettlementExpenses = (postSettlementData || []).map((e) => ({
-      ...e,
-      amount: Number(e.amount),
-    }));
-
-    setExpenses(postSettlementExpenses);
-
-    // Fetch splits for these expenses (used to honor exclusions & item-wise/unequal splits)
-    const expenseIds = postSettlementExpenses.map((e) => e.id);
-    let splitsByExpense: Record<string, { user_id: string; amount_owed: number }[]> = {};
-    if (expenseIds.length > 0) {
-      const { data: splitsData } = await supabase
+    let splits: Split[] = [];
+    if (openExpenses.length > 0) {
+      const { data: splitData } = await supabase
         .from('expense_splits')
-        .select('expense_id, user_id, amount_owed')
-        .in('expense_id', expenseIds);
-      (splitsData || []).forEach((s: any) => {
-        if (!splitsByExpense[s.expense_id]) splitsByExpense[s.expense_id] = [];
-        splitsByExpense[s.expense_id].push({ user_id: s.user_id, amount_owed: Number(s.amount_owed) });
-      });
+        .select('expense_id, user_id, amount_owed, is_paid')
+        .in('expense_id', openExpenses.map((e) => e.id));
+      splits = (splitData || []).map((s: any) => ({
+        expense_id: s.expense_id,
+        user_id: s.user_id,
+        amount_owed: Number(s.amount_owed),
+        is_paid: !!s.is_paid,
+      }));
     }
 
-    // Calculate member spending & balances using actual splits (fallback: equal among all members)
-    calculateMemberSpending(memberList, postSettlementExpenses, splitsByExpense);
-    calculateBalances(memberList, postSettlementExpenses, splitsByExpense);
-
+    computeState(memberList, openExpenses, splits);
     setLoading(false);
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupId, user?.id]);
 
-  // Returns map: userId -> total amount owed across all expenses, honoring splits when present
-  const computeOwedByUser = (
+  /**
+   * Per-person model: a member's dues are their UNPAID splits.
+   * Once a member settles, only their own splits become paid, so their balance
+   * goes to zero while everyone else keeps their pending amount.
+   */
+  const computeState = (
     memberList: Member[],
     expenseList: GroupExpense[],
-    splitsByExpense: Record<string, { user_id: string; amount_owed: number }[]>
+    splits: Split[],
   ) => {
+    const byExpense = new Map<string, Split[]>();
+    splits.forEach((s) => {
+      const list = byExpense.get(s.expense_id) || [];
+      list.push(s);
+      byExpense.set(s.expense_id, list);
+    });
+
     const owed: Record<string, number> = {};
-    memberList.forEach((m) => (owed[m.user_id] = 0));
-    const memberCount = memberList.length;
+    const paidForOthers: Record<string, number> = {};
+    const totalPaid: Record<string, number> = {};
+    memberList.forEach((m) => {
+      owed[m.user_id] = 0;
+      paidForOthers[m.user_id] = 0;
+      totalPaid[m.user_id] = 0;
+    });
+
+    // debtor -> payer -> amount
+    const pairs: Record<string, Record<string, number>> = {};
+    const stillPending: GroupExpense[] = [];
+
     expenseList.forEach((e) => {
-      const splits = splitsByExpense[e.id];
-      if (splits && splits.length > 0) {
-        splits.forEach((s) => {
-          if (owed[s.user_id] !== undefined) owed[s.user_id] += s.amount_owed;
-        });
-      } else if (memberCount > 0) {
-        const per = e.amount / memberCount;
-        memberList.forEach((m) => (owed[m.user_id] += per));
+      let rows = byExpense.get(e.id) || [];
+      // Legacy rows without splits: treat as an equal split among all members
+      if (rows.length === 0 && memberList.length > 0) {
+        const per = e.amount / memberList.length;
+        rows = memberList.map((m) => ({
+          expense_id: e.id,
+          user_id: m.user_id,
+          amount_owed: per,
+          is_paid: m.user_id === e.user_id,
+        }));
       }
-    });
-    return owed;
-  };
+      const unpaid = rows.filter((r) => !r.is_paid && r.user_id !== e.user_id && r.amount_owed > 0.001);
+      if (unpaid.length === 0) return;
 
-  const calculateMemberSpending = (
-    memberList: Member[],
-    expenseList: GroupExpense[],
-    splitsByExpense: Record<string, { user_id: string; amount_owed: number }[]>
-  ) => {
-    const owedMap = computeOwedByUser(memberList, expenseList, splitsByExpense);
+      stillPending.push(e);
+      if (totalPaid[e.user_id] !== undefined) totalPaid[e.user_id] += e.amount;
 
-    const spending: MemberSpending[] = memberList.map((member) => {
-      const memberExpenses = expenseList.filter((e) => e.user_id === member.user_id);
-      const totalPaid = memberExpenses.reduce((sum, e) => sum + e.amount, 0);
-      const totalOwed = owedMap[member.user_id] || 0;
-      const netBalance = totalPaid - totalOwed;
-
-      return {
-        member,
-        totalPaid,
-        totalOwed,
-        netBalance,
-        expenses: memberExpenses,
-      };
+      unpaid.forEach((r) => {
+        if (owed[r.user_id] !== undefined) owed[r.user_id] += r.amount_owed;
+        if (paidForOthers[e.user_id] !== undefined) paidForOthers[e.user_id] += r.amount_owed;
+        pairs[r.user_id] = pairs[r.user_id] || {};
+        pairs[r.user_id][e.user_id] = (pairs[r.user_id][e.user_id] || 0) + r.amount_owed;
+      });
     });
 
-    // Sort by total paid (descending)
+    setPendingExpenses(stillPending);
+
+    const spending: MemberSpending[] = memberList.map((member) => ({
+      member,
+      totalPaid: totalPaid[member.user_id] || 0,
+      totalOwed: owed[member.user_id] || 0,
+      netBalance: (paidForOthers[member.user_id] || 0) - (owed[member.user_id] || 0),
+      expenses: stillPending.filter((e) => e.user_id === member.user_id),
+    }));
     spending.sort((a, b) => b.totalPaid - a.totalPaid);
     setMemberSpending(spending);
-  };
 
-  const calculateBalances = (
-    memberList: Member[],
-    expenseList: GroupExpense[],
-    splitsByExpense: Record<string, { user_id: string; amount_owed: number }[]>
-  ) => {
-    if (!expenseList.length || memberList.length < 2) {
-      setBalances([]);
-      return;
-    }
-
-    const paidByUser: Record<string, number> = {};
-    memberList.forEach((m) => (paidByUser[m.user_id] = 0));
-
-    expenseList.forEach((expense) => {
-      const payerId = expense.user_id;
-      if (paidByUser[payerId] !== undefined) {
-        paidByUser[payerId] += expense.amount;
-      }
-    });
-
-    const owedByUser = computeOwedByUser(memberList, expenseList, splitsByExpense);
-
-    const netBalance: Record<string, number> = {};
-    memberList.forEach((m) => {
-      netBalance[m.user_id] = paidByUser[m.user_id] - owedByUser[m.user_id];
-    });
-
-    const debtors: { user: Member; amount: number }[] = [];
-    const creditors: { user: Member; amount: number }[] = [];
-
-    memberList.forEach((m) => {
-      const balance = netBalance[m.user_id];
-      if (balance < -0.01) {
-        debtors.push({ user: m, amount: Math.abs(balance) });
-      } else if (balance > 0.01) {
-        creditors.push({ user: m, amount: balance });
-      }
-    });
-
-    const newBalances: Balance[] = [];
-    debtors.sort((a, b) => b.amount - a.amount);
-    creditors.sort((a, b) => b.amount - a.amount);
-
-    let i = 0, j = 0;
-    while (i < debtors.length && j < creditors.length) {
-      const debtor = debtors[i];
-      const creditor = creditors[j];
-      const transferAmount = Math.min(debtor.amount, creditor.amount);
-
-      if (transferAmount > 0.01) {
-        newBalances.push({
-          from_user: debtor.user,
-          to_user: creditor.user,
-          amount: transferAmount,
-        });
-      }
-
-      debtor.amount -= transferAmount;
-      creditor.amount -= transferAmount;
-
-      if (debtor.amount < 0.01) i++;
-      if (creditor.amount < 0.01) j++;
-    }
-
-    setBalances(newBalances);
-  };
-
-  const fetchSettlementDetail = async (settlementId: string, settlementIndex: number) => {
-    if (expandedSettlement === settlementId) {
-      setExpandedSettlement(null);
-      return;
-    }
-
-    // Already fetched
-    if (settlementExpenses[settlementId]) {
-      setExpandedSettlement(settlementId);
-      return;
-    }
-
-    setLoadingSettlementDetail(settlementId);
-    setExpandedSettlement(settlementId);
-
-    const currentSettlement = settlements[settlementIndex];
-    const previousSettlement = settlements[settlementIndex + 1] || null;
-
-    // Fetch expenses created between previous settlement and this settlement
-    let query = supabase
-      .from('expenses')
-      .select('*')
-      .eq('group_id', groupId)
-      .eq('expense_type', 'group')
-      .lte('created_at', currentSettlement.settled_at)
-      .order('expense_date', { ascending: false });
-
-    if (previousSettlement) {
-      query = query.gt('created_at', previousSettlement.settled_at);
-    }
-
-    const { data } = await query;
-    const expenseList = (data || []).map((e) => ({
-      ...e,
-      amount: Number(e.amount),
-    }));
-
-    // Fetch splits for these expenses too
-    const ids = expenseList.map((e) => e.id);
-    const splitsMap: Record<string, { user_id: string; amount_owed: number }[]> = {};
-    if (ids.length > 0) {
-      const { data: sData } = await supabase
-        .from('expense_splits')
-        .select('expense_id, user_id, amount_owed')
-        .in('expense_id', ids);
-      (sData || []).forEach((s: any) => {
-        if (!splitsMap[s.expense_id]) splitsMap[s.expense_id] = [];
-        splitsMap[s.expense_id].push({ user_id: s.user_id, amount_owed: Number(s.amount_owed) });
+    // Net each pair so A→B and B→A collapse into a single transfer
+    const memberMap = new Map(memberList.map((m) => [m.user_id, m]));
+    const seen = new Set<string>();
+    const result: Balance[] = [];
+    Object.entries(pairs).forEach(([debtor, creditors]) => {
+      Object.entries(creditors).forEach(([creditor, amount]) => {
+        const key = [debtor, creditor].sort().join('|');
+        if (seen.has(key)) return;
+        seen.add(key);
+        const reverse = pairs[creditor]?.[debtor] || 0;
+        const net = amount - reverse;
+        const from = net >= 0 ? debtor : creditor;
+        const to = net >= 0 ? creditor : debtor;
+        const value = Math.abs(net);
+        if (value < 0.01) return;
+        const fromUser = memberMap.get(from);
+        const toUser = memberMap.get(to);
+        if (!fromUser || !toUser) return;
+        result.push({ from_user: fromUser, to_user: toUser, amount: value });
       });
-    }
-
-    setSettlementExpenses((prev) => ({ ...prev, [settlementId]: expenseList }));
-    setSettlementSplits((prev) => ({ ...prev, [settlementId]: splitsMap }));
-    setLoadingSettlementDetail(null);
+    });
+    result.sort((a, b) => b.amount - a.amount);
+    setBalances(result);
   };
 
   useEffect(() => {
     fetchData();
-  }, [groupId]);
+  }, [fetchData]);
 
-  const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const totalExpenses = pendingExpenses.reduce((sum, e) => sum + e.amount, 0);
   const myShare = memberSpending.find((m) => m.member.user_id === user?.id)?.totalOwed || 0;
 
   if (loading) {
@@ -392,22 +275,21 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
             <div>
               <h2 className="text-xl font-display font-bold">{groupName}</h2>
               <p className="text-sm text-muted-foreground">
-                {members.length} members • {expenses.length} expenses since last settlement
+                {members.length} members • {pendingExpenses.length} pending expenses
               </p>
             </div>
           </div>
 
-          {lastSettlement && (
+          {mySettlement && (
             <div className="mb-4 p-3 rounded-xl bg-success/10 border border-success/20 flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-success flex-shrink-0" />
               <p className="text-sm">
-                <span className="font-medium text-success">Last Settlement:</span>{' '}
+                <span className="font-medium text-success">You last settled:</span>{' '}
                 <span className="text-foreground font-semibold">
-                  {format(new Date(lastSettlement.settled_at), 'dd MMM yyyy, hh:mm a')}
+                  {format(new Date(mySettlement.settled_at), 'dd MMM yyyy, hh:mm a')}
                 </span>
-                {' '}by {lastSettlement.settled_by_name}
-                {lastSettlement.total_amount > 0 && (
-                  <span className="text-muted-foreground"> • ₹{lastSettlement.total_amount.toLocaleString('en-IN')}</span>
+                {(mySettlement.total_amount || 0) > 0 && (
+                  <span className="text-muted-foreground"> • ₹{(mySettlement.total_amount || 0).toLocaleString('en-IN')}</span>
                 )}
               </p>
             </div>
@@ -415,11 +297,11 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
 
           <div className="grid grid-cols-2 gap-4">
             <div className="p-4 rounded-xl bg-muted">
-              <p className="text-xs text-muted-foreground mb-1">Total Since Settlement</p>
+              <p className="text-xs text-muted-foreground mb-1">Pending Total</p>
               <p className="text-2xl font-display font-bold">₹{totalExpenses.toLocaleString('en-IN')}</p>
             </div>
             <div className="p-4 rounded-xl bg-muted">
-              <p className="text-xs text-muted-foreground mb-1">Your Share</p>
+              <p className="text-xs text-muted-foreground mb-1">Your Pending Share</p>
               <p className="text-2xl font-display font-bold">₹{myShare.toFixed(0)}</p>
             </div>
           </div>
@@ -431,7 +313,7 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
         <CardHeader>
           <CardTitle className="font-display flex items-center gap-2">
             <Wallet className="h-5 w-5 text-foreground" />
-            Who Spent How Much
+            Who Owes How Much
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -441,7 +323,7 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
             </div>
           ) : (
             <Accordion type="single" collapsible className="space-y-3">
-              {memberSpending.map((ms, index) => (
+              {memberSpending.map((ms) => (
                 <AccordionItem
                   key={ms.member.user_id}
                   value={ms.member.user_id}
@@ -451,16 +333,16 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
                     <div className="flex items-center justify-between w-full pr-2">
                       <div className="flex items-center gap-3">
                         <div className={cn(
-                          "h-10 w-10 rounded-full flex items-center justify-center",
-                          ms.netBalance > 0 
-                            ? "bg-success/10" 
-                            : ms.netBalance < 0 
-                              ? "bg-destructive/10"
-                              : "bg-muted"
+                          'h-10 w-10 rounded-full flex items-center justify-center',
+                          ms.netBalance > 0.01
+                            ? 'bg-success/10'
+                            : ms.netBalance < -0.01
+                              ? 'bg-destructive/10'
+                              : 'bg-muted'
                         )}>
                           <span className={cn(
-                            "text-sm font-bold",
-                            ms.netBalance > 0 ? "text-success" : ms.netBalance < 0 ? "text-destructive" : "text-muted-foreground"
+                            'text-sm font-bold',
+                            ms.netBalance > 0.01 ? 'text-success' : ms.netBalance < -0.01 ? 'text-destructive' : 'text-muted-foreground'
                           )}>
                             {ms.member.full_name[0]?.toUpperCase() || 'U'}
                           </span>
@@ -473,28 +355,28 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
                             )}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            Paid ₹{ms.totalPaid.toFixed(0)} • Share ₹{ms.totalOwed.toFixed(0)}
+                            Paid ₹{ms.totalPaid.toFixed(0)} • Pending share ₹{ms.totalOwed.toFixed(0)}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
                         <p className={cn(
-                          "font-bold text-lg",
-                          ms.netBalance > 0 ? "text-success" : ms.netBalance < 0 ? "text-destructive" : "text-muted-foreground"
+                          'font-bold text-lg',
+                          ms.netBalance > 0.01 ? 'text-success' : ms.netBalance < -0.01 ? 'text-destructive' : 'text-muted-foreground'
                         )}>
-                          {ms.netBalance > 0 
-                            ? `+₹${ms.netBalance.toFixed(0)}` 
-                            : ms.netBalance < 0 
+                          {ms.netBalance > 0.01
+                            ? `+₹${ms.netBalance.toFixed(0)}`
+                            : ms.netBalance < -0.01
                               ? `-₹${Math.abs(ms.netBalance).toFixed(0)}`
                               : '₹0'}
                         </p>
                         <p className={cn(
-                          "text-xs",
-                          ms.netBalance > 0 ? "text-success" : ms.netBalance < 0 ? "text-destructive" : "text-muted-foreground"
+                          'text-xs',
+                          ms.netBalance > 0.01 ? 'text-success' : ms.netBalance < -0.01 ? 'text-destructive' : 'text-muted-foreground'
                         )}>
-                          {ms.netBalance > 0 
-                            ? 'Gets back' 
-                            : ms.netBalance < 0 
+                          {ms.netBalance > 0.01
+                            ? 'Gets back'
+                            : ms.netBalance < -0.01
                               ? 'Needs to pay'
                               : 'Settled'}
                         </p>
@@ -503,7 +385,7 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
                   </AccordionTrigger>
                   <AccordionContent className="px-4 pb-4">
                     {ms.expenses.length === 0 ? (
-                      <p className="text-sm text-muted-foreground py-2">No expenses added</p>
+                      <p className="text-sm text-muted-foreground py-2">No pending expenses paid by this member</p>
                     ) : (
                       <div className="space-y-2 mt-2">
                         {ms.expenses.map((expense) => {
@@ -517,8 +399,8 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
                               className="flex items-center justify-between p-3 rounded-lg bg-background/50"
                             >
                               <div className="flex items-center gap-3">
-                                <div className={cn("p-2 rounded-lg", categoryInfo.bgColor)}>
-                                  <IconComponent className={cn("h-4 w-4", categoryInfo.color)} />
+                                <div className={cn('p-2 rounded-lg', categoryInfo.bgColor)}>
+                                  <IconComponent className={cn('h-4 w-4', categoryInfo.color)} />
                                 </div>
                                 <div>
                                   <p className="text-sm font-medium">{expense.description}</p>
@@ -541,7 +423,7 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
         </CardContent>
       </Card>
 
-      {/* Simplified Splitwise-style Balances */}
+      {/* Simplified Splitwise-style Balances + per-person settle */}
       <SimplifiedBalances
         balances={balances}
         memberSpending={memberSpending}
@@ -549,7 +431,7 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
         settling={settling}
       />
 
-      {/* Settlement History */}
+      {/* Settlement History — each row is one person settling their own share */}
       {settlements.length > 0 && (
         <Card className="border border-border shadow-sm">
           <CardHeader>
@@ -560,177 +442,40 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {settlements.slice(0, 2).map((settlement, index) => {
-                const isExpanded = expandedSettlement === settlement.id;
-                const detailExpenses = settlementExpenses[settlement.id] || [];
-                const detailSplits = settlementSplits[settlement.id] || {};
-                const isLoadingDetail = loadingSettlementDetail === settlement.id;
-                const memberCount = members.length;
-                const settlementTotal = detailExpenses.reduce((sum, e) => sum + e.amount, 0);
-                // Per-member owed honoring splits
-                const owedMap: Record<string, number> = {};
-                members.forEach((m) => (owedMap[m.user_id] = 0));
-                detailExpenses.forEach((e) => {
-                  const sp = detailSplits[e.id];
-                  if (sp && sp.length > 0) {
-                    sp.forEach((s) => {
-                      if (owedMap[s.user_id] !== undefined) owedMap[s.user_id] += s.amount_owed;
-                    });
-                  } else if (memberCount > 0) {
-                    const per = e.amount / memberCount;
-                    members.forEach((m) => (owedMap[m.user_id] += per));
-                  }
-                });
-                const myShareDetail = owedMap[user?.id || ''] || 0;
-
-                return (
-                  <div key={settlement.id}>
-                    <motion.div
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      className={cn(
-                        "flex items-center justify-between p-4 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer",
-                        isExpanded && "bg-muted/50 rounded-b-none"
-                      )}
-                      onClick={() => fetchSettlementDetail(settlement.id, index)}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-success/10">
-                          <CheckCircle2 className="h-4 w-4 text-success" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">
-                            Settled by {settlement.settled_by_name}
-                            {settlement.settled_by === user?.id && (
-                              <span className="text-muted-foreground ml-1">(You)</span>
-                            )}
-                          </p>
-                          {settlement.total_amount > 0 && (
-                            <p className="text-sm font-bold text-success">
-                              ₹{settlement.total_amount.toLocaleString('en-IN')}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-semibold">
-                          {format(new Date(settlement.settled_at), 'dd MMM yyyy')}
+              {settlements.slice(0, 3).map((settlement, index) => (
+                <motion.div
+                  key={settlement.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="flex items-center justify-between p-4 rounded-xl bg-muted/30"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-success/10">
+                      <CheckCircle2 className="h-4 w-4 text-success" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">
+                        {settlement.settled_by === user?.id
+                          ? 'You settled your share'
+                          : `${settlement.settled_by_name} settled their share`}
+                      </p>
+                      {(settlement.total_amount || 0) > 0 && (
+                        <p className="text-sm font-bold text-success">
+                          ₹{(settlement.total_amount || 0).toLocaleString('en-IN')}
                         </p>
-                        <p className="text-xs text-muted-foreground">
-                          {isExpanded ? 'Tap to close' : 'Tap for details'}
-                        </p>
-                      </div>
-                    </motion.div>
-
-                    {/* Expanded Detail */}
-                    <AnimatePresence>
-                      {isExpanded && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: 'auto', opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          className="overflow-hidden rounded-b-xl border border-t-0 border-muted/50 bg-background/50"
-                        >
-                          <div className="p-4 space-y-4">
-                            {isLoadingDetail ? (
-                              <div className="space-y-2">
-                                {[1, 2, 3].map((i) => (
-                                  <div key={i} className="h-10 bg-muted/50 rounded-lg animate-pulse" />
-                                ))}
-                              </div>
-                            ) : detailExpenses.length === 0 ? (
-                              <p className="text-sm text-muted-foreground text-center py-4">No expense details found</p>
-                            ) : (
-                              <>
-                                {/* Summary */}
-                                <div className="grid grid-cols-2 gap-3">
-                                  <div className="p-3 rounded-lg bg-muted/30">
-                                    <p className="text-xs text-muted-foreground">Total Expenses</p>
-                                    <p className="text-lg font-bold">₹{settlementTotal.toLocaleString('en-IN')}</p>
-                                  </div>
-                                  <div className="p-3 rounded-lg bg-muted/30">
-                                    <p className="text-xs text-muted-foreground">Your Share</p>
-                                    <p className="text-lg font-bold">₹{myShareDetail.toFixed(0)}</p>
-                                  </div>
-                                </div>
-
-                                {/* Member Contributions */}
-                                <div>
-                                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-                                    Who Paid How Much
-                                  </p>
-                                  <div className="space-y-2">
-                                    {members.map((member) => {
-                                      const memberPaid = detailExpenses
-                                        .filter((e) => e.user_id === member.user_id)
-                                        .reduce((sum, e) => sum + e.amount, 0);
-                                      const memberOwed = owedMap[member.user_id] || 0;
-                                      const net = memberPaid - memberOwed;
-                                      return (
-                                        <div key={member.user_id} className="flex items-center justify-between p-2 rounded-lg bg-muted/20">
-                                          <div className="flex items-center gap-2">
-                                            <div className={cn(
-                                              "h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold",
-                                              net > 0.01 ? "bg-success/20 text-success" : net < -0.01 ? "bg-destructive/20 text-destructive" : "bg-muted text-muted-foreground"
-                                            )}>
-                                              {member.full_name[0]?.toUpperCase()}
-                                            </div>
-                                            <div>
-                                              <p className="text-sm font-medium">
-                                                {member.full_name}
-                                                {member.user_id === user?.id && <span className="text-muted-foreground text-xs ml-1">(You)</span>}
-                                              </p>
-                                              <p className="text-xs text-muted-foreground">
-                                                Paid ₹{memberPaid.toFixed(0)} • Share ₹{memberOwed.toFixed(0)}
-                                              </p>
-                                            </div>
-                                          </div>
-                                          <p className={cn(
-                                            "text-sm font-bold",
-                                            net > 0.01 ? "text-success" : net < -0.01 ? "text-destructive" : "text-muted-foreground"
-                                          )}>
-                                            {net > 0.01 ? `+₹${net.toFixed(0)}` : net < -0.01 ? `-₹${Math.abs(net).toFixed(0)}` : '₹0'}
-                                          </p>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                </div>
-
-                                {/* Expense List */}
-                                <div>
-                                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-                                    Expenses ({detailExpenses.length})
-                                  </p>
-                                  <div className="space-y-1.5 max-h-64 overflow-y-auto">
-                                    {detailExpenses.map((expense) => {
-                                      const payer = members.find((m) => m.user_id === expense.user_id);
-                                      return (
-                                        <div key={expense.id} className="flex items-center justify-between p-2.5 rounded-lg bg-muted/20">
-                                          <div>
-                                            <p className="text-sm font-medium">{expense.description}</p>
-                                            <p className="text-xs text-muted-foreground">
-                                              {format(new Date(expense.expense_date), 'dd MMM yyyy')} • by {payer?.full_name || 'Unknown'}
-                                            </p>
-                                          </div>
-                                          <p className="text-sm font-semibold">₹{expense.amount.toFixed(0)}</p>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        </motion.div>
                       )}
-                    </AnimatePresence>
+                    </div>
                   </div>
-                );
-              })}
+                  <p className="text-xs text-muted-foreground text-right">
+                    {format(new Date(settlement.settled_at), 'dd MMM yyyy')}
+                    <br />
+                    {format(new Date(settlement.settled_at), 'hh:mm a')}
+                  </p>
+                </motion.div>
+              ))}
             </div>
-            {settlements.length > 2 && (
+            {settlements.length > 3 && (
               <Button
                 variant="outline"
                 className="w-full mt-3"

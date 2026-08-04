@@ -309,6 +309,8 @@ export type Database = {
       notifications: {
         Row: {
           created_at: string
+          expense_date: string | null
+          expense_id: string | null
           group_id: string | null
           id: string
           is_read: boolean
@@ -319,6 +321,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          expense_date?: string | null
+          expense_id?: string | null
           group_id?: string | null
           id?: string
           is_read?: boolean
@@ -329,6 +333,8 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          expense_date?: string | null
+          expense_id?: string | null
           group_id?: string | null
           id?: string
           is_read?: boolean
@@ -504,11 +510,11 @@ export type Database = {
           username: string
         }[]
       }
-      settle_group_expenses: {
+      settle_my_share: {
         Args: { p_group_id: string }
         Returns: {
-          expenses_settled: number
           settlement_id: string
+          splits_settled: number
           total_amount: number
         }[]
       }

@@ -288,7 +288,7 @@ const SimplifiedBalances = forwardRef<HTMLDivElement, Props>(function Simplified
               disabled={settling}
             >
               <CheckCircle2 className="h-5 w-5 mr-2" />
-              {settling ? 'Settling...' : 'Mark All as Settled'}
+              {settling ? 'Settling...' : `Settle my share (₹${totalIOwe.toFixed(0)})`}
             </Button>
           </motion.div>
         )}
@@ -300,10 +300,10 @@ const SimplifiedBalances = forwardRef<HTMLDivElement, Props>(function Simplified
                 <div className="p-2 rounded-full bg-primary/10">
                   <CheckCircle2 className="h-5 w-5 text-primary" />
                 </div>
-                <AlertDialogTitle>Settle All Expenses?</AlertDialogTitle>
+                <AlertDialogTitle>Settle your share?</AlertDialogTitle>
               </div>
               <AlertDialogDescription>
-                You owe <strong>₹{totalIOwe.toFixed(0)}</strong> in total. This will mark all current group expenses as settled. This action cannot be undone.
+                You owe <strong>₹{totalIOwe.toFixed(0)}</strong> in total. This marks <strong>only your own share</strong> as paid — other members' pending amounts stay unsettled. This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -312,7 +312,7 @@ const SimplifiedBalances = forwardRef<HTMLDivElement, Props>(function Simplified
                 onClick={() => { setShowSettleConfirm(false); onSettle(); }}
                 className="bg-foreground text-background hover:bg-foreground/90"
               >
-                Confirm Settlement
+                Settle my share
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

@@ -194,7 +194,7 @@ async function sendWebPush(
   subscription: { endpoint: string; p256dh: string; auth: string },
   vapidPublicKey: string,
   privateKeyData: { d: string; x: string; y: string },
-  payload: { title: string; body: string; type?: string }
+  payload: { title: string; body: string; type?: string; url?: string }
 ) {
   const vapidSubject = "mailto:push@expensetrack.app";
   const url = new URL(subscription.endpoint);
@@ -279,7 +279,7 @@ serve(async (req) => {
       callerId = user.id;
     }
 
-    const { user_id, title, message, type } = await req.json();
+    const { user_id, title, message, type, url } = await req.json();
     const targetUserId = user_id || callerId;
 
     if (!targetUserId) {
@@ -365,6 +365,7 @@ serve(async (req) => {
       title: title || "Expense Manager",
       body: message || "You have a new notification",
       type: type || "general",
+      ...(typeof url === 'string' && url ? { url } : {}),
     };
 
     console.log(`Sending push to ${subscriptions.length} subscription(s): ${JSON.stringify(pushPayload)}`);
