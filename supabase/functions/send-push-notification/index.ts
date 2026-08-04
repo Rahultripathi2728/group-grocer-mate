@@ -279,7 +279,7 @@ serve(async (req) => {
       callerId = user.id;
     }
 
-    const { user_id, title, message, type } = await req.json();
+    const { user_id, title, message, type, url } = await req.json();
     const targetUserId = user_id || callerId;
 
     if (!targetUserId) {
@@ -365,6 +365,7 @@ serve(async (req) => {
       title: title || "Expense Manager",
       body: message || "You have a new notification",
       type: type || "general",
+      ...(typeof url === 'string' && url ? { url } : {}),
     };
 
     console.log(`Sending push to ${subscriptions.length} subscription(s): ${JSON.stringify(pushPayload)}`);
