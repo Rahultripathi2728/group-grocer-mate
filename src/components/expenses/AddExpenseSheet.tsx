@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { Users, Wallet, ArrowLeft, Plus, X, Info, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SplitItem, parseSplitItems } from '@/lib/split-items';
 
 type Mode = 'group' | 'personal';
 type SplitMode = 'equal' | 'unequal' | 'itemwise';
@@ -425,35 +426,6 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
         const amt = Math.round(rawAmt * 100) / 100;
         const expense_type = mode === 'group' ? 'group' : 'personal';
 
-        // Item-wise group bills → one expense per distinct participant set
-        if (mode === 'group' && b.splitMode === 'itemwise') {
-          const groupsOfItems = itemwiseGroups(b);
-          for (const g of groupsOfItems) {
-            const label = groupsOfItems.length > 1
-              ? `${b.description.trim()} · ${g.names.join(', ')}`
-              : b.description.trim();
-            const { data: exp, error } = await supabase.from('expenses').insert({
-              user_id: user.id,
-              description: label.slice(0, 500),
-              amount: g.total,
-              expense_date: b.date,
-              expense_type: 'group',
-              category: b.category || 'general',
-              group_id: activeGroupId,
-            }).select().single();
-            if (error || !exp) throw error || new Error('insert failed');
-            const rows = equalSplits(g.ids, g.total).map((s) => ({
-              expense_id: exp.id,
-              user_id: s.user_id,
-              amount_owed: s.amount_owed,
-              is_paid: s.user_id === user.id,
-            }));
-            const { error: sErr } = await supabase.from('expense_splits').insert(rows);
-            if (sErr) throw sErr;
-          }
-          continue;
-        }
-
         const { data: exp, error } = await supabase.from('expenses').insert({
           user_id: user.id,
           description: b.description.trim().slice(0, 500),
@@ -462,6 +434,7 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
           expense_type,
           category: b.category || 'general',
           group_id: mode === 'group' ? activeGroupId : null,
+          split_items: mode === 'group' && b.splitMode === 'itemwise' ? itemPayload(b) : null,
         }).select().single();
         if (error || !exp) throw error || new Error('insert failed');
 
