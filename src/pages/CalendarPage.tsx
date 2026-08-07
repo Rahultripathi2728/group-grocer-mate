@@ -85,6 +85,7 @@ export default function CalendarPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [showMore, setShowMore] = useState(false);
   const [splitDetails, setSplitDetails] = useState<Array<{ user_id: string; full_name: string; amount_owed: number }> | null>(null);
+  const [nameMap, setNameMap] = useState<Record<string, string>>({});
   const [loadingSplits, setLoadingSplits] = useState(false);
 
   // Resume an unfinished expense form after the app is reopened
@@ -154,6 +155,9 @@ export default function CalendarPage() {
       .select('id, full_name')
       .in('id', userIds);
     const nameMap = new Map<string, string>((profs || []).map((p) => [p.id, p.full_name || 'Unknown']));
+    setNameMap(Object.fromEntries(
+      userIds.map((id) => [id, id === user?.id ? 'You' : (nameMap.get(id) || 'Unknown')]),
+    ));
     const owedMap = new Map<string, number>(
       (splits || []).map((s) => [s.user_id, Number(s.amount_owed)])
     );
