@@ -306,28 +306,19 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
     bill.items.reduce((s, it) => s + (parseFloat(it.amount) || 0), 0);
 
   /**
-   * Item-wise bills are stored as one expense per distinct set of participants.
-   * That way an item that only one person shares becomes an expense owed 100%
-   * by that person, so it shows up as *their* personal spend in analytics.
+   * Item-wise bills stay ONE expense. The item list (name, amount, who shares it)
+   * is stored on the expense itself so analytics can treat an item shared by a
+   * single person as that person's personal spend.
    */
-  const itemwiseGroups = (bill: Bill) => {
-    const map = new Map<string, { ids: string[]; names: string[]; total: number }>();
+  const itemPayload = (bill: Bill): SplitItem[] | null => {
+    const rows: SplitItem[] = [];
     for (const it of bill.items) {
-      const amt = parseFloat(it.amount) || 0;
-      const ids = Object.entries(it.selected).filter(([, v]) => v).map(([k]) => k).sort();
-      if (ids.length === 0 || amt <= 0) continue;
-      const key = ids.join(',');
-      const g = map.get(key) || { ids, names: [], total: 0 };
-      g.names.push(it.name.trim() || 'Item');
-      g.total = Math.round((g.total + amt) * 100) / 100;
-      map.set(key, g);
+      const amount = Math.round((parseFloat(it.amount) || 0) * 100) / 100;
+      const user_ids = Object.entries(it.selected).filter(([, v]) => v).map(([k]) => k);
+      if (amount <= 0 || user_ids.length === 0) continue;
+      rows.push({ name: it.name.trim() || 'Item', amount, user_ids });
     }
-    return Array.from(map.values());
-  };
-
-  const equalSplits = (ids: string[], total: number) => {
-    const per = Math.round((total / ids.length) * 100) / 100;
-    return ids.map((uid) => ({ user_id: uid, amount_owed: per }));
+    return rows.length ? rows : null;
   };
 
   const computeSplits = (bill: Bill, total: number) => {
