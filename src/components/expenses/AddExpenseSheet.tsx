@@ -434,7 +434,9 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
           expense_type,
           category: b.category || 'general',
           group_id: mode === 'group' ? activeGroupId : null,
-          split_items: mode === 'group' && b.splitMode === 'itemwise' ? itemPayload(b) : null,
+          split_items: (mode === 'group' && b.splitMode === 'itemwise'
+            ? itemPayload(b)
+            : null) as unknown as never,
         }).select().single();
         if (error || !exp) throw error || new Error('insert failed');
 
