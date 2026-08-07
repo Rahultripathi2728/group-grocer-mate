@@ -206,12 +206,22 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
       b.category = editExpense.category || 'general';
 
       if (editExpense.expense_type !== 'personal') {
-        const { data: splits } = await supabase
-          .from('expense_splits')
-          .select('user_id, amount_owed')
-          .eq('expense_id', editExpense.id);
+        const [{ data: splits }, { data: expRow }] = await Promise.all([
+          supabase.from('expense_splits').select('user_id, amount_owed').eq('expense_id', editExpense.id),
+          supabase.from('expenses').select('split_items').eq('id', editExpense.id).maybeSingle(),
+        ]);
+        const items = parseSplitItems((expRow as { split_items?: unknown } | null)?.split_items);
         const rows = (splits || []).map((s) => ({ user_id: s.user_id, amount: Number(s.amount_owed) }));
-        if (rows.length > 0) {
+        if (items) {
+          b.splitMode = 'itemwise';
+          b.items = items.map((it) => ({
+            id: crypto.randomUUID(),
+            name: it.name,
+            amount: String(it.amount),
+            selected: Object.fromEntries(it.user_ids.map((u) => [u, true])),
+          }));
+          b.selected = Object.fromEntries(rows.map((r) => [r.user_id, true]));
+        } else if (rows.length > 0) {
           b.selected = Object.fromEntries(rows.map((r) => [r.user_id, true]));
           b.customAmounts = Object.fromEntries(rows.map((r) => [r.user_id, r.amount.toFixed(2)]));
           const allEqual = rows.every((r) => Math.abs(r.amount - rows[0].amount) < 0.02);
@@ -380,6 +390,9 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
         amount: amt,
         expense_date: b.date,
         category: b.category || 'general',
+        split_items: (mode === 'group' && b.splitMode === 'itemwise'
+          ? itemPayload(b)
+          : null) as unknown as never,
       }).eq('id', editExpense.id);
       if (error) throw error;
 
