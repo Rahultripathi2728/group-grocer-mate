@@ -178,7 +178,11 @@ export default function CalendarPage() {
   const handleDeleteExpense = async (expenseId: string) => {
     const { error } = await supabase.from('expenses').delete().eq('id', expenseId);
     if (error) {
-      toast.error('Failed to delete expense');
+      toast.error(
+        /locked/i.test(error.message)
+          ? 'Locked — a member already settled their share of this expense'
+          : 'Failed to delete expense',
+      );
     } else {
       toast.success('Expense deleted');
       setDetailExpense(null);
@@ -561,6 +565,16 @@ export default function CalendarPage() {
                                 {expense.expense_type === 'group' && expense.hasShare === false && (
                                   <span className="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground">
                                     Not in this expense
+                                  </span>
+                                )}
+                                {expense.locked && (
+                                  <span className="inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground">
+                                    <Lock className="h-2.5 w-2.5" />Locked
+                                  </span>
+                                )}
+                                {expense.splitItems && (
+                                  <span className="text-[10px] text-muted-foreground">
+                                    {expense.splitItems.length} items
                                   </span>
                                 )}
                               </div>
