@@ -694,6 +694,40 @@ export default function CalendarPage() {
                               <p className="text-[11px] text-muted-foreground pt-2">
                                 Share of each group member for this expense of ₹{detailExpense.amount.toLocaleString('en-IN')}
                               </p>
+                              {detailExpense.splitItems && (
+                                <div className="pt-2 space-y-2">
+                                  <p className="text-[11px] font-semibold">
+                                    Item wise ({detailExpense.splitItems.length} {detailExpense.splitItems.length === 1 ? 'item' : 'items'})
+                                  </p>
+                                  {detailExpense.splitItems.map((it, idx) => {
+                                    const per = it.amount / it.user_ids.length;
+                                    return (
+                                      <div key={`${it.name}-${idx}`} className="rounded-lg border border-border px-3 py-2">
+                                        <div className="flex items-center justify-between gap-2">
+                                          <span className="text-sm font-medium truncate">{it.name}</span>
+                                          <span className="text-sm font-semibold shrink-0">₹{it.amount.toLocaleString('en-IN')}</span>
+                                        </div>
+                                        <p className="text-[10px] text-muted-foreground mt-1">
+                                          Split among {it.user_ids.length}{' '}
+                                          {it.user_ids.length === 1 ? 'person' : 'people'} · ₹{per.toFixed(2)} each
+                                        </p>
+                                        <div className="flex flex-wrap gap-1.5 mt-1.5">
+                                          {it.user_ids.map((uid) => (
+                                            <span key={uid} className="text-[10px] px-1.5 py-0.5 rounded-md bg-muted">
+                                              {nameMap[uid] || (uid === user?.id ? 'You' : 'Member')} · ₹{per.toFixed(2)}
+                                            </span>
+                                          ))}
+                                        </div>
+                                        {it.user_ids.length === 1 && (
+                                          <p className="text-[10px] text-primary mt-1.5">
+                                            100% {it.user_ids[0] === user?.id ? 'yours' : `${nameMap[it.user_ids[0]] || 'member'}'s`} — counted as personal
+                                          </p>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
                               <div className="space-y-1.5 pt-1">
                                 {splitDetails.map((s) => (
                                   <div
@@ -723,7 +757,14 @@ export default function CalendarPage() {
                   )}
 
                   {/* Edit / Delete: only for the payer (and only when unsettled) */}
-                  {!detailExpense.is_settled && detailExpense.user_id === user?.id && (
+                  {detailExpense.locked ? (
+                    <div className="mt-2 flex items-center gap-2 rounded-xl border border-border bg-muted/40 px-3 py-2.5">
+                      <Lock className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <p className="text-xs text-muted-foreground">
+                        Locked — a member has already settled their share, so this expense can no longer be edited or deleted.
+                      </p>
+                    </div>
+                  ) : !detailExpense.is_settled && detailExpense.user_id === user?.id && (
                     <div className="flex gap-2 mt-2">
                       <Button
                         variant="outline"
