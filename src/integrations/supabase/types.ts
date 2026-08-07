@@ -106,6 +106,7 @@ export type Database = {
           id: string
           is_settled: boolean
           settled_at: string | null
+          split_items: Json | null
           updated_at: string
           user_id: string
         }
@@ -120,6 +121,7 @@ export type Database = {
           id?: string
           is_settled?: boolean
           settled_at?: string | null
+          split_items?: Json | null
           updated_at?: string
           user_id: string
         }
@@ -134,6 +136,7 @@ export type Database = {
           id?: string
           is_settled?: boolean
           settled_at?: string | null
+          split_items?: Json | null
           updated_at?: string
           user_id?: string
         }

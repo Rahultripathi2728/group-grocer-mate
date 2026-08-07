@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { Users, Wallet, ArrowLeft, Plus, X, Info, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SplitItem, parseSplitItems } from '@/lib/split-items';
 
 type Mode = 'group' | 'personal';
 type SplitMode = 'equal' | 'unequal' | 'itemwise';
@@ -205,12 +206,22 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
       b.category = editExpense.category || 'general';
 
       if (editExpense.expense_type !== 'personal') {
-        const { data: splits } = await supabase
-          .from('expense_splits')
-          .select('user_id, amount_owed')
-          .eq('expense_id', editExpense.id);
+        const [{ data: splits }, { data: expRow }] = await Promise.all([
+          supabase.from('expense_splits').select('user_id, amount_owed').eq('expense_id', editExpense.id),
+          supabase.from('expenses').select('split_items').eq('id', editExpense.id).maybeSingle(),
+        ]);
+        const items = parseSplitItems((expRow as { split_items?: unknown } | null)?.split_items);
         const rows = (splits || []).map((s) => ({ user_id: s.user_id, amount: Number(s.amount_owed) }));
-        if (rows.length > 0) {
+        if (items) {
+          b.splitMode = 'itemwise';
+          b.items = items.map((it) => ({
+            id: crypto.randomUUID(),
+            name: it.name,
+            amount: String(it.amount),
+            selected: Object.fromEntries(it.user_ids.map((u) => [u, true])),
+          }));
+          b.selected = Object.fromEntries(rows.map((r) => [r.user_id, true]));
+        } else if (rows.length > 0) {
           b.selected = Object.fromEntries(rows.map((r) => [r.user_id, true]));
           b.customAmounts = Object.fromEntries(rows.map((r) => [r.user_id, r.amount.toFixed(2)]));
           const allEqual = rows.every((r) => Math.abs(r.amount - rows[0].amount) < 0.02);
@@ -306,28 +317,19 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
     bill.items.reduce((s, it) => s + (parseFloat(it.amount) || 0), 0);
 
   /**
-   * Item-wise bills are stored as one expense per distinct set of participants.
-   * That way an item that only one person shares becomes an expense owed 100%
-   * by that person, so it shows up as *their* personal spend in analytics.
+   * Item-wise bills stay ONE expense. The item list (name, amount, who shares it)
+   * is stored on the expense itself so analytics can treat an item shared by a
+   * single person as that person's personal spend.
    */
-  const itemwiseGroups = (bill: Bill) => {
-    const map = new Map<string, { ids: string[]; names: string[]; total: number }>();
+  const itemPayload = (bill: Bill): SplitItem[] | null => {
+    const rows: SplitItem[] = [];
     for (const it of bill.items) {
-      const amt = parseFloat(it.amount) || 0;
-      const ids = Object.entries(it.selected).filter(([, v]) => v).map(([k]) => k).sort();
-      if (ids.length === 0 || amt <= 0) continue;
-      const key = ids.join(',');
-      const g = map.get(key) || { ids, names: [], total: 0 };
-      g.names.push(it.name.trim() || 'Item');
-      g.total = Math.round((g.total + amt) * 100) / 100;
-      map.set(key, g);
+      const amount = Math.round((parseFloat(it.amount) || 0) * 100) / 100;
+      const user_ids = Object.entries(it.selected).filter(([, v]) => v).map(([k]) => k);
+      if (amount <= 0 || user_ids.length === 0) continue;
+      rows.push({ name: it.name.trim() || 'Item', amount, user_ids });
     }
-    return Array.from(map.values());
-  };
-
-  const equalSplits = (ids: string[], total: number) => {
-    const per = Math.round((total / ids.length) * 100) / 100;
-    return ids.map((uid) => ({ user_id: uid, amount_owed: per }));
+    return rows.length ? rows : null;
   };
 
   const computeSplits = (bill: Bill, total: number) => {
@@ -388,6 +390,9 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
         amount: amt,
         expense_date: b.date,
         category: b.category || 'general',
+        split_items: (mode === 'group' && b.splitMode === 'itemwise'
+          ? itemPayload(b)
+          : null) as unknown as never,
       }).eq('id', editExpense.id);
       if (error) throw error;
 
@@ -434,35 +439,6 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
         const amt = Math.round(rawAmt * 100) / 100;
         const expense_type = mode === 'group' ? 'group' : 'personal';
 
-        // Item-wise group bills → one expense per distinct participant set
-        if (mode === 'group' && b.splitMode === 'itemwise') {
-          const groupsOfItems = itemwiseGroups(b);
-          for (const g of groupsOfItems) {
-            const label = groupsOfItems.length > 1
-              ? `${b.description.trim()} · ${g.names.join(', ')}`
-              : b.description.trim();
-            const { data: exp, error } = await supabase.from('expenses').insert({
-              user_id: user.id,
-              description: label.slice(0, 500),
-              amount: g.total,
-              expense_date: b.date,
-              expense_type: 'group',
-              category: b.category || 'general',
-              group_id: activeGroupId,
-            }).select().single();
-            if (error || !exp) throw error || new Error('insert failed');
-            const rows = equalSplits(g.ids, g.total).map((s) => ({
-              expense_id: exp.id,
-              user_id: s.user_id,
-              amount_owed: s.amount_owed,
-              is_paid: s.user_id === user.id,
-            }));
-            const { error: sErr } = await supabase.from('expense_splits').insert(rows);
-            if (sErr) throw sErr;
-          }
-          continue;
-        }
-
         const { data: exp, error } = await supabase.from('expenses').insert({
           user_id: user.id,
           description: b.description.trim().slice(0, 500),
@@ -471,6 +447,9 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
           expense_type,
           category: b.category || 'general',
           group_id: mode === 'group' ? activeGroupId : null,
+          split_items: (mode === 'group' && b.splitMode === 'itemwise'
+            ? itemPayload(b)
+            : null) as unknown as never,
         }).select().single();
         if (error || !exp) throw error || new Error('insert failed');
 

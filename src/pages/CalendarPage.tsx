@@ -33,12 +33,13 @@ import {
   startOfWeek,
   endOfWeek,
 } from 'date-fns';
-import { ChevronLeft, ChevronRight, Plus, CheckCircle2, Wallet, Users, Trash2, ChevronDown, Pencil } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, CheckCircle2, Wallet, Users, Trash2, ChevronDown, Pencil, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { getCategoryById } from '@/lib/categories';
 import { cn } from '@/lib/utils';
 import AddExpenseSheet, { readExpenseDraft } from '@/components/expenses/AddExpenseSheet';
 import ExpenseCard from '@/components/expenses/ExpenseCard';
+import { SplitItem, parseSplitItems } from '@/lib/split-items';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface DayExpense {
@@ -63,6 +64,9 @@ interface DayExpense {
     group_id?: string | null;
     groupName?: string;
     hasShare?: boolean;
+    splitItems?: SplitItem[] | null;
+    /** Someone else already settled their share → expense can't be edited or deleted */
+    locked?: boolean;
   }>;
 }
 
@@ -81,6 +85,7 @@ export default function CalendarPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [showMore, setShowMore] = useState(false);
   const [splitDetails, setSplitDetails] = useState<Array<{ user_id: string; full_name: string; amount_owed: number }> | null>(null);
+  const [nameMap, setNameMap] = useState<Record<string, string>>({});
   const [loadingSplits, setLoadingSplits] = useState(false);
 
   // Resume an unfinished expense form after the app is reopened
@@ -150,6 +155,9 @@ export default function CalendarPage() {
       .select('id, full_name')
       .in('id', userIds);
     const nameMap = new Map<string, string>((profs || []).map((p) => [p.id, p.full_name || 'Unknown']));
+    setNameMap(Object.fromEntries(
+      userIds.map((id) => [id, id === user?.id ? 'You' : (nameMap.get(id) || 'Unknown')]),
+    ));
     const owedMap = new Map<string, number>(
       (splits || []).map((s) => [s.user_id, Number(s.amount_owed)])
     );
@@ -170,7 +178,11 @@ export default function CalendarPage() {
   const handleDeleteExpense = async (expenseId: string) => {
     const { error } = await supabase.from('expenses').delete().eq('id', expenseId);
     if (error) {
-      toast.error('Failed to delete expense');
+      toast.error(
+        /locked/i.test(error.message)
+          ? 'Locked — a member already settled their share of this expense'
+          : 'Failed to delete expense',
+      );
     } else {
       toast.success('Expense deleted');
       setDetailExpense(null);
@@ -198,16 +210,22 @@ export default function CalendarPage() {
 
       let splitsMap = new Map<string, number>();
       let hasSplitSet = new Set<string>();
+      const lockedSet = new Set<string>();
       if (groupExpenseIds.length > 0) {
         const { data: splits } = await supabase
           .from('expense_splits')
-          .select('expense_id, amount_owed')
-          .eq('user_id', user.id)
+          .select('expense_id, user_id, amount_owed, is_paid')
           .in('expense_id', groupExpenseIds);
 
+        const payerOf = new Map<string, string>(
+          expenses.map((e) => [e.id, e.user_id as string]),
+        );
         (splits || []).forEach((s) => {
-          splitsMap.set(s.expense_id, Number(s.amount_owed));
-          hasSplitSet.add(s.expense_id);
+          if (s.user_id === user.id) {
+            splitsMap.set(s.expense_id, Number(s.amount_owed));
+            hasSplitSet.add(s.expense_id);
+          }
+          if (s.is_paid && s.user_id !== payerOf.get(s.expense_id)) lockedSet.add(s.expense_id);
         });
       }
 
@@ -273,6 +291,8 @@ export default function CalendarPage() {
           hasShare: expense.expense_type === 'group'
             ? hasSplitSet.has(expense.id)
             : true,
+          splitItems: parseSplitItems((expense as { split_items?: unknown }).split_items),
+          locked: lockedSet.has(expense.id),
         });
         grouped.set(dateKey, existing);
       });
@@ -547,6 +567,16 @@ export default function CalendarPage() {
                                     Not in this expense
                                   </span>
                                 )}
+                                {expense.locked && (
+                                  <span className="inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground">
+                                    <Lock className="h-2.5 w-2.5" />Locked
+                                  </span>
+                                )}
+                                {expense.splitItems && (
+                                  <span className="text-[10px] text-muted-foreground">
+                                    {expense.splitItems.length} items
+                                  </span>
+                                )}
                               </div>
                             </div>
 
@@ -678,6 +708,40 @@ export default function CalendarPage() {
                               <p className="text-[11px] text-muted-foreground pt-2">
                                 Share of each group member for this expense of ₹{detailExpense.amount.toLocaleString('en-IN')}
                               </p>
+                              {detailExpense.splitItems && (
+                                <div className="pt-2 space-y-2">
+                                  <p className="text-[11px] font-semibold">
+                                    Item wise ({detailExpense.splitItems.length} {detailExpense.splitItems.length === 1 ? 'item' : 'items'})
+                                  </p>
+                                  {detailExpense.splitItems.map((it, idx) => {
+                                    const per = it.amount / it.user_ids.length;
+                                    return (
+                                      <div key={`${it.name}-${idx}`} className="rounded-lg border border-border px-3 py-2">
+                                        <div className="flex items-center justify-between gap-2">
+                                          <span className="text-sm font-medium truncate">{it.name}</span>
+                                          <span className="text-sm font-semibold shrink-0">₹{it.amount.toLocaleString('en-IN')}</span>
+                                        </div>
+                                        <p className="text-[10px] text-muted-foreground mt-1">
+                                          Split among {it.user_ids.length}{' '}
+                                          {it.user_ids.length === 1 ? 'person' : 'people'} · ₹{per.toFixed(2)} each
+                                        </p>
+                                        <div className="flex flex-wrap gap-1.5 mt-1.5">
+                                          {it.user_ids.map((uid) => (
+                                            <span key={uid} className="text-[10px] px-1.5 py-0.5 rounded-md bg-muted">
+                                              {nameMap[uid] || (uid === user?.id ? 'You' : 'Member')} · ₹{per.toFixed(2)}
+                                            </span>
+                                          ))}
+                                        </div>
+                                        {it.user_ids.length === 1 && (
+                                          <p className="text-[10px] text-primary mt-1.5">
+                                            100% {it.user_ids[0] === user?.id ? 'yours' : `${nameMap[it.user_ids[0]] || 'member'}'s`} — counted as personal
+                                          </p>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
                               <div className="space-y-1.5 pt-1">
                                 {splitDetails.map((s) => (
                                   <div
@@ -707,7 +771,14 @@ export default function CalendarPage() {
                   )}
 
                   {/* Edit / Delete: only for the payer (and only when unsettled) */}
-                  {!detailExpense.is_settled && detailExpense.user_id === user?.id && (
+                  {detailExpense.locked ? (
+                    <div className="mt-2 flex items-center gap-2 rounded-xl border border-border bg-muted/40 px-3 py-2.5">
+                      <Lock className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <p className="text-xs text-muted-foreground">
+                        Locked — a member has already settled their share, so this expense can no longer be edited or deleted.
+                      </p>
+                    </div>
+                  ) : !detailExpense.is_settled && detailExpense.user_id === user?.id && (
                     <div className="flex gap-2 mt-2">
                       <Button
                         variant="outline"

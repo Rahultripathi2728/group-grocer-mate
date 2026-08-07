@@ -21,6 +21,7 @@ import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { detectCategory } from '@/lib/categories';
+import { parseSplitItems, soloItemsFor, sumItems } from '@/lib/split-items';
 
 interface ExpenseRow {
   id: string;
@@ -35,6 +36,10 @@ interface ExpenseRow {
   /** How this expense counts in analytics — a group expense paid 100% by you counts as personal */
   analyticsType?: 'personal' | 'group';
   soloPayer?: boolean;
+  /** Item names when this row came from an item-wise bill */
+  itemNames?: string[];
+  /** Who actually paid the bill (group expense counted as your personal spend) */
+  paidByName?: string;
 }
 
 interface ExpenseSummary {
@@ -95,30 +100,72 @@ export default function ExpensesPage() {
         });
       }
 
-      const mapped: ExpenseRow[] = expenses.map((e) => {
+      // Names of who paid each group bill
+      const payerIds = [...new Set(expenses.filter((e) => e.expense_type === 'group').map((e) => e.user_id))];
+      const payerNames = new Map<string, string>();
+      if (payerIds.length > 0) {
+        const { data: profs } = await supabase.from('profiles').select('id, full_name').in('id', payerIds);
+        (profs || []).forEach((p) => payerNames.set(p.id, p.full_name || 'Member'));
+      }
+
+      const mapped: ExpenseRow[] = expenses.flatMap((e) => {
         const amount = Number(e.amount);
         if (e.expense_type !== 'group') {
-          return {
+          return [{
             ...(e as any),
             amount,
             myShare: amount,
             groupName: (e as any).groups?.name || undefined,
             analyticsType: 'personal' as const,
-          };
+          }];
         }
         const rows = splitsByExpense.get(e.id) || [];
         const owing = rows.filter((r) => r.amount > 0);
         const myShare = rows.find((r) => r.user_id === user.id)?.amount || 0;
         // Only one person owes and that person is me → effectively a personal expense
         const soloPayer = owing.length === 1 && owing[0].user_id === user.id;
-        return {
+        const groupName = (e as any).groups?.name || undefined;
+        const paidByName = e.user_id === user.id ? 'You' : (payerNames.get(e.user_id) || 'Member');
+
+        // Item-wise bill: items only I share are 100% mine → personal spend
+        const items = parseSplitItems((e as any).split_items);
+        const mySolo = soloItemsFor(items, user.id);
+        if (!soloPayer && mySolo.length > 0) {
+          const soloTotal = sumItems(mySolo);
+          const out: ExpenseRow[] = [{
+            ...(e as any),
+            id: `${e.id}:solo`,
+            amount: soloTotal,
+            myShare: soloTotal,
+            groupName,
+            analyticsType: 'personal' as const,
+            soloPayer: true,
+            itemNames: mySolo.map((i) => i.name),
+            paidByName,
+          }];
+          const rest = Math.round((myShare - soloTotal) * 100) / 100;
+          if (rest > 0.009) {
+            out.push({
+              ...(e as any),
+              amount,
+              myShare: rest,
+              groupName,
+              analyticsType: 'group' as const,
+              paidByName,
+            });
+          }
+          return out;
+        }
+
+        return [{
           ...(e as any),
           amount,
           myShare,
-          groupName: (e as any).groups?.name || undefined,
+          groupName,
           analyticsType: soloPayer ? ('personal' as const) : ('group' as const),
           soloPayer,
-        };
+          paidByName: soloPayer ? paidByName : undefined,
+        }];
       });
 
       const totalPersonal = mapped
