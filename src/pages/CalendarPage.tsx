@@ -39,6 +39,7 @@ import { getCategoryById } from '@/lib/categories';
 import { cn } from '@/lib/utils';
 import AddExpenseSheet, { readExpenseDraft } from '@/components/expenses/AddExpenseSheet';
 import ExpenseCard from '@/components/expenses/ExpenseCard';
+import { SplitItem, parseSplitItems } from '@/lib/split-items';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface DayExpense {
@@ -63,6 +64,9 @@ interface DayExpense {
     group_id?: string | null;
     groupName?: string;
     hasShare?: boolean;
+    splitItems?: SplitItem[] | null;
+    /** Someone else already settled their share → expense can't be edited or deleted */
+    locked?: boolean;
   }>;
 }
 
@@ -198,16 +202,22 @@ export default function CalendarPage() {
 
       let splitsMap = new Map<string, number>();
       let hasSplitSet = new Set<string>();
+      const lockedSet = new Set<string>();
       if (groupExpenseIds.length > 0) {
         const { data: splits } = await supabase
           .from('expense_splits')
-          .select('expense_id, amount_owed')
-          .eq('user_id', user.id)
+          .select('expense_id, user_id, amount_owed, is_paid')
           .in('expense_id', groupExpenseIds);
 
+        const payerOf = new Map<string, string>(
+          expenses.map((e) => [e.id, e.user_id as string]),
+        );
         (splits || []).forEach((s) => {
-          splitsMap.set(s.expense_id, Number(s.amount_owed));
-          hasSplitSet.add(s.expense_id);
+          if (s.user_id === user.id) {
+            splitsMap.set(s.expense_id, Number(s.amount_owed));
+            hasSplitSet.add(s.expense_id);
+          }
+          if (s.is_paid && s.user_id !== payerOf.get(s.expense_id)) lockedSet.add(s.expense_id);
         });
       }
 
@@ -273,6 +283,8 @@ export default function CalendarPage() {
           hasShare: expense.expense_type === 'group'
             ? hasSplitSet.has(expense.id)
             : true,
+          splitItems: parseSplitItems((expense as { split_items?: unknown }).split_items),
+          locked: lockedSet.has(expense.id),
         });
         grouped.set(dateKey, existing);
       });
