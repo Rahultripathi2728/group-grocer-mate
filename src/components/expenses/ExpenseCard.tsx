@@ -30,6 +30,10 @@ interface ExpenseCardProps {
   groupName?: string;
   /** Group expense that only you owe — shown as personal */
   soloPayer?: boolean;
+  /** Items from an item-wise bill that are 100% yours */
+  itemNames?: string[];
+  /** Who actually paid this bill */
+  paidByName?: string;
   onDelete?: () => void;
 }
 
@@ -46,6 +50,8 @@ export default function ExpenseCard({
   myShare,
   groupName,
   soloPayer = false,
+  itemNames,
+  paidByName,
   onDelete,
 }: ExpenseCardProps) {
   const [deleting, setDeleting] = useState(false);
@@ -122,7 +128,15 @@ export default function ExpenseCard({
                         : groupName || 'Group'}
                   </span>
                 )}
+                {soloPayer && paidByName && paidByName !== 'You' && (
+                  <span className="text-[10px] text-muted-foreground">Paid by {paidByName}</span>
+                )}
               </div>
+              {itemNames && itemNames.length > 0 && (
+                <p className="text-[10px] text-muted-foreground truncate mt-0.5">
+                  Items: {itemNames.join(', ')}
+                </p>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2">
