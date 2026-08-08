@@ -208,6 +208,7 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
       b.description = editExpense.description;
       b.amount = String(editExpense.amount);
       b.category = editExpense.category || 'general';
+      b.categoryManual = true;
 
       if (editExpense.expense_type !== 'personal') {
         const [{ data: splits }, { data: expRow }] = await Promise.all([
