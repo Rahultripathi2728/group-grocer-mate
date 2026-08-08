@@ -292,7 +292,17 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
   const activeBill = bills.find((b) => b.id === activeBillId);
 
   const updateBill = (id: string, patch: Partial<Bill>) => {
-    setBills((prev) => prev.map((b) => (b.id === id ? { ...b, ...patch } : b)));
+    setBills((prev) =>
+      prev.map((b) => {
+        if (b.id !== id) return b;
+        const next = { ...b, ...patch };
+        // auto-detect category from the description until the user picks one
+        if (patch.description !== undefined && !next.categoryManual) {
+          next.category = detectCategory(patch.description || '');
+        }
+        return next;
+      }),
+    );
   };
 
   const addBill = () => {
