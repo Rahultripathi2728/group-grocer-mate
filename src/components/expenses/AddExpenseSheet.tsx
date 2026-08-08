@@ -129,6 +129,7 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
   const [activeBillId, setActiveBillId] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
   const [unequalOpenFor, setUnequalOpenFor] = useState<string | null>(null);
+  const [categoryOpenFor, setCategoryOpenFor] = useState<string | null>(null);
 
   const dateStr = useMemo(
     () => (selectedDate ? format(selectedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd')),
