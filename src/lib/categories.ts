@@ -7,6 +7,7 @@ import {
   Heart,
   Gift,
   MoreHorizontal,
+  Tag,
   LucideIcon,
 } from 'lucide-react';
 
@@ -77,8 +78,62 @@ export const categories: Record<string, Category> = {
   },
 };
 
+/* ---------- user-created categories (kept on the device) ---------- */
+const CUSTOM_KEY = 'custom_categories_v1';
+
+const CUSTOM_STYLES = [
+  { color: 'text-emerald-500', bgColor: 'bg-emerald-500/10' },
+  { color: 'text-indigo-500', bgColor: 'bg-indigo-500/10' },
+  { color: 'text-amber-500', bgColor: 'bg-amber-500/10' },
+  { color: 'text-rose-500', bgColor: 'bg-rose-500/10' },
+  { color: 'text-cyan-500', bgColor: 'bg-cyan-500/10' },
+];
+
+export const getCustomCategories = (): Category[] => {
+  try {
+    const raw = localStorage.getItem(CUSTOM_KEY);
+    const list = raw ? (JSON.parse(raw) as Array<{ id: string; label: string }>) : [];
+    return list
+      .filter((c) => c && c.id && c.label)
+      .map((c, i) => ({
+        id: c.id,
+        label: c.label,
+        icon: Tag,
+        ...CUSTOM_STYLES[i % CUSTOM_STYLES.length],
+      }));
+  } catch {
+    return [];
+  }
+};
+
+/** Adds a device-local category and returns its id. */
+export const addCustomCategory = (label: string): string => {
+  const clean = label.trim().slice(0, 24);
+  const id = `custom_${clean.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')}`;
+  try {
+    const raw = localStorage.getItem(CUSTOM_KEY);
+    const list = raw ? (JSON.parse(raw) as Array<{ id: string; label: string }>) : [];
+    if (!list.some((c) => c.id === id)) {
+      list.push({ id, label: clean });
+      localStorage.setItem(CUSTOM_KEY, JSON.stringify(list));
+    }
+  } catch { /* ignore */ }
+  return id;
+};
+
+export const removeCustomCategory = (id: string) => {
+  try {
+    const raw = localStorage.getItem(CUSTOM_KEY);
+    const list = raw ? (JSON.parse(raw) as Array<{ id: string; label: string }>) : [];
+    localStorage.setItem(CUSTOM_KEY, JSON.stringify(list.filter((c) => c.id !== id)));
+  } catch { /* ignore */ }
+};
+
 export const getCategoryById = (id: string | null | undefined): Category => {
-  return categories[id || 'general'] || categories.general;
+  const key = id || 'general';
+  if (categories[key]) return categories[key];
+  const custom = getCustomCategories().find((c) => c.id === key);
+  return custom || categories.general;
 };
 
 export const categoryList = Object.values(categories);
