@@ -7,14 +7,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { Users, Wallet, ArrowLeft, Plus, X, Info, Trash2 } from 'lucide-react';
+import { Users, Wallet, ArrowLeft, Plus, X, Info, Trash2, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SplitItem, parseSplitItems } from '@/lib/split-items';
+import { detectCategory, getCategoryById } from '@/lib/categories';
+import CategoryPickerSheet from './CategoryPickerSheet';
 
 type Mode = 'group' | 'personal';
 type SplitMode = 'equal' | 'unequal' | 'itemwise';
@@ -36,6 +37,8 @@ interface Bill {
   date: string;
   category: string;
   splitMode: SplitMode;
+  /** true once the user picks a category by hand — stops auto-detection */
+  categoryManual?: boolean;
   selected: Record<string, boolean>;
   customAmounts: Record<string, string>;
   items: BillItem[];
