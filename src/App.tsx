@@ -9,6 +9,7 @@ import Auth from "./pages/Auth";
 import ExpensesPage from "./pages/ExpensesPage";
 import AllExpensesPage from "./pages/AllExpensesPage";
 import CalendarPage from "./pages/CalendarPage";
+import ExpenseDetailPage from "./pages/ExpenseDetailPage";
 import GroupsPage from "./pages/GroupsPage";
 import SettlementPage from "./pages/SettlementPage";
 import SettlementHistoryPage from "./pages/SettlementHistoryPage";
@@ -93,6 +94,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <AllExpensesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/expense/:id"
+              element={
+                <ProtectedRoute>
+                  <ExpenseDetailPage />
                 </ProtectedRoute>
               }
             />
