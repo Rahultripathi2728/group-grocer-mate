@@ -647,19 +647,26 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
 
                 <div className="space-y-1.5">
                   <Label>Category</Label>
-                  <Select value={activeBill.category} onValueChange={(v) => updateBill(activeBill.id, { category: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="general">General</SelectItem>
-                      <SelectItem value="food">Food & Groceries</SelectItem>
-                      <SelectItem value="transport">Transport</SelectItem>
-                      <SelectItem value="utilities">Utilities</SelectItem>
-                      <SelectItem value="entertainment">Entertainment</SelectItem>
-                      <SelectItem value="shopping">Shopping</SelectItem>
-                      <SelectItem value="health">Health</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  {(() => {
+                    const cat = getCategoryById(activeBill.category);
+                    const Icon = cat.icon;
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => setCategoryOpenFor(activeBill.id)}
+                        className="w-full flex items-center gap-3 rounded-lg border border-border bg-background px-3 py-2.5 text-left"
+                      >
+                        <span className={cn('h-9 w-9 rounded-full flex items-center justify-center', cat.bgColor)}>
+                          <Icon className={cn('h-4.5 w-4.5', cat.color)} />
+                        </span>
+                        <span className="flex-1 text-sm font-medium">{cat.label}</span>
+                        {!activeBill.categoryManual && (
+                          <span className="text-[10px] text-muted-foreground">auto</span>
+                        )}
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      </button>
+                    );
+                  })()}
                 </div>
 
                 {/* Split */}
