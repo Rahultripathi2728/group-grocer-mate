@@ -299,7 +299,7 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
         const next = { ...b, ...patch };
         // auto-detect category from the description until the user picks one
         if (patch.description !== undefined && !next.categoryManual) {
-          next.category = detectCategory(patch.description || '');
+          next.category = detectCategory(patch.description || '') || 'general';
         }
         return next;
       }),
