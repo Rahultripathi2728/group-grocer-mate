@@ -7,14 +7,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { Users, Wallet, ArrowLeft, Plus, X, Info, Trash2 } from 'lucide-react';
+import { Users, Wallet, ArrowLeft, Plus, X, Info, Trash2, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SplitItem, parseSplitItems } from '@/lib/split-items';
+import { detectCategory, getCategoryById } from '@/lib/categories';
+import CategoryPickerSheet from './CategoryPickerSheet';
 
 type Mode = 'group' | 'personal';
 type SplitMode = 'equal' | 'unequal' | 'itemwise';
@@ -36,6 +37,8 @@ interface Bill {
   date: string;
   category: string;
   splitMode: SplitMode;
+  /** true once the user picks a category by hand — stops auto-detection */
+  categoryManual?: boolean;
   selected: Record<string, boolean>;
   customAmounts: Record<string, string>;
   items: BillItem[];
@@ -126,6 +129,7 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
   const [activeBillId, setActiveBillId] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
   const [unequalOpenFor, setUnequalOpenFor] = useState<string | null>(null);
+  const [categoryOpenFor, setCategoryOpenFor] = useState<string | null>(null);
 
   const dateStr = useMemo(
     () => (selectedDate ? format(selectedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd')),
@@ -204,6 +208,7 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
       b.description = editExpense.description;
       b.amount = String(editExpense.amount);
       b.category = editExpense.category || 'general';
+      b.categoryManual = true;
 
       if (editExpense.expense_type !== 'personal') {
         const [{ data: splits }, { data: expRow }] = await Promise.all([
@@ -288,7 +293,17 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
   const activeBill = bills.find((b) => b.id === activeBillId);
 
   const updateBill = (id: string, patch: Partial<Bill>) => {
-    setBills((prev) => prev.map((b) => (b.id === id ? { ...b, ...patch } : b)));
+    setBills((prev) =>
+      prev.map((b) => {
+        if (b.id !== id) return b;
+        const next = { ...b, ...patch };
+        // auto-detect category from the description until the user picks one
+        if (patch.description !== undefined && !next.categoryManual) {
+          next.category = detectCategory(patch.description || '') || 'general';
+        }
+        return next;
+      }),
+    );
   };
 
   const addBill = () => {
@@ -644,19 +659,26 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
 
                 <div className="space-y-1.5">
                   <Label>Category</Label>
-                  <Select value={activeBill.category} onValueChange={(v) => updateBill(activeBill.id, { category: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="general">General</SelectItem>
-                      <SelectItem value="food">Food & Groceries</SelectItem>
-                      <SelectItem value="transport">Transport</SelectItem>
-                      <SelectItem value="utilities">Utilities</SelectItem>
-                      <SelectItem value="entertainment">Entertainment</SelectItem>
-                      <SelectItem value="shopping">Shopping</SelectItem>
-                      <SelectItem value="health">Health</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  {(() => {
+                    const cat = getCategoryById(activeBill.category);
+                    const Icon = cat.icon;
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => setCategoryOpenFor(activeBill.id)}
+                        className="w-full flex items-center gap-3 rounded-lg border border-border bg-background px-3 py-2.5 text-left"
+                      >
+                        <span className={cn('h-9 w-9 rounded-full flex items-center justify-center', cat.bgColor)}>
+                          <Icon className={cn('h-4.5 w-4.5', cat.color)} />
+                        </span>
+                        <span className="flex-1 text-sm font-medium">{cat.label}</span>
+                        {!activeBill.categoryManual && (
+                          <span className="text-[10px] text-muted-foreground">auto</span>
+                        )}
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      </button>
+                    );
+                  })()}
                 </div>
 
                 {/* Split */}
@@ -781,6 +803,13 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
         people={people}
         currentUserId={user?.id}
         onChange={(patch) => unequalOpenFor && updateBill(unequalOpenFor, patch)}
+      />
+
+      <CategoryPickerSheet
+        open={!!categoryOpenFor}
+        onOpenChange={(o) => !o && setCategoryOpenFor(null)}
+        value={bills.find((b) => b.id === categoryOpenFor)?.category || 'general'}
+        onSelect={(id) => categoryOpenFor && updateBill(categoryOpenFor, { category: id, categoryManual: true })}
       />
     </>
   );
