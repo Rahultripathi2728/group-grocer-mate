@@ -70,21 +70,25 @@ export default function AnalyticsBreakdownDialog({ open, onOpenChange, kind, exp
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[85dvh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="font-display text-xl">{TITLES[kind]}</DialogTitle>
+      <DialogContent
+        className="max-w-none w-screen h-[100dvh] sm:h-[100dvh] rounded-none border-0 p-0 gap-0 flex flex-col translate-x-0 translate-y-0 top-0 left-0 sm:max-w-none data-[state=open]:slide-in-from-bottom-4"
+      >
+        <DialogHeader className="shrink-0 px-4 pt-4 pb-3 pr-12 border-b border-border text-left space-y-0.5">
+          <DialogTitle className="font-display text-xl text-left">{TITLES[kind]}</DialogTitle>
           <p className="text-xs text-muted-foreground text-left">{rangeLabel}</p>
         </DialogHeader>
 
-        <div className="p-3 rounded-xl bg-muted/50">
-          <p className="text-xs text-muted-foreground">
-            {rows.length} {rows.length === 1 ? 'expense' : 'expenses'}
-          </p>
-          <p className="text-2xl font-display font-bold">₹{total.toLocaleString('en-IN')}</p>
+        <div className="shrink-0 px-4 pt-4">
+          <div className="p-3 rounded-xl bg-muted/50">
+            <p className="text-xs text-muted-foreground">
+              {rows.length} {rows.length === 1 ? 'expense' : 'expenses'}
+            </p>
+            <p className="text-2xl font-display font-bold">₹{total.toLocaleString('en-IN')}</p>
+          </div>
         </div>
 
         {groups.length > 0 && (
-          <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
+          <div className="shrink-0 flex gap-2 overflow-x-auto px-4 py-3 scrollbar-none">
             <button
               onClick={() => setGroupFilter('all')}
               className={cn(
@@ -119,7 +123,7 @@ export default function AnalyticsBreakdownDialog({ open, onOpenChange, kind, exp
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+        <div className="flex-1 min-h-0 overflow-y-auto space-y-2 px-4 pb-6">
           {rows.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">Nothing here for this range.</p>
           ) : (
