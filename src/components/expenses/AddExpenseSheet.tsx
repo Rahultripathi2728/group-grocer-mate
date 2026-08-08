@@ -803,6 +803,13 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
         currentUserId={user?.id}
         onChange={(patch) => unequalOpenFor && updateBill(unequalOpenFor, patch)}
       />
+
+      <CategoryPickerSheet
+        open={!!categoryOpenFor}
+        onOpenChange={(o) => !o && setCategoryOpenFor(null)}
+        value={bills.find((b) => b.id === categoryOpenFor)?.category || 'general'}
+        onSelect={(id) => categoryOpenFor && updateBill(categoryOpenFor, { category: id, categoryManual: true })}
+      />
     </>
   );
 }
