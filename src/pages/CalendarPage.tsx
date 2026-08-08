@@ -1,24 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -33,7 +17,7 @@ import {
   startOfWeek,
   endOfWeek,
 } from 'date-fns';
-import { ChevronLeft, ChevronRight, Plus, CheckCircle2, Wallet, Users, Trash2, ChevronDown, Pencil, Lock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, CheckCircle2, Wallet, Users, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { getCategoryById } from '@/lib/categories';
 import { cn } from '@/lib/utils';
@@ -72,6 +56,7 @@ interface DayExpense {
 
 export default function CalendarPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const deepDate = searchParams.get('date');
   const deepExpenseId = searchParams.get('expense');
@@ -80,13 +65,6 @@ export default function CalendarPage() {
   const [expensesByDate, setExpensesByDate] = useState<Map<string, DayExpense>>(new Map());
   const [loading, setLoading] = useState(true);
   const [addExpenseOpen, setAddExpenseOpen] = useState(false);
-  const [detailExpense, setDetailExpense] = useState<DayExpense['expenses'][0] | null>(null);
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [editOpen, setEditOpen] = useState(false);
-  const [showMore, setShowMore] = useState(false);
-  const [splitDetails, setSplitDetails] = useState<Array<{ user_id: string; full_name: string; amount_owed: number }> | null>(null);
-  const [nameMap, setNameMap] = useState<Record<string, string>>({});
-  const [loadingSplits, setLoadingSplits] = useState(false);
 
   // Resume an unfinished expense form after the app is reopened
   useEffect(() => {
