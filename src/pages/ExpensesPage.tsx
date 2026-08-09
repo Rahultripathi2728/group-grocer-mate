@@ -135,6 +135,7 @@ export default function ExpensesPage() {
           const out: ExpenseRow[] = [{
             ...(e as any),
             id: `${e.id}:solo`,
+            description: mySolo.map((i) => i.name).join(', ') || e.description,
             amount: soloTotal,
             myShare: soloTotal,
             groupName,
