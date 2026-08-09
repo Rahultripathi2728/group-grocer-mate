@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { getCategoryById } from '@/lib/categories';
 import { format } from 'date-fns';
@@ -39,6 +40,11 @@ const TITLES: Record<BreakdownKind, string> = {
 
 export default function AnalyticsBreakdownDialog({ open, onOpenChange, kind, expenses, rangeLabel }: Props) {
   const [groupFilter, setGroupFilter] = useState<string>('all');
+  const navigate = useNavigate();
+  const openExpense = (rowId: string) => {
+    onOpenChange(false);
+    navigate(`/expense/${rowId.split(':')[0]}`);
+  };
 
   const base = useMemo(() => {
     const list = expenses.filter((e) => {
@@ -131,7 +137,12 @@ export default function AnalyticsBreakdownDialog({ open, onOpenChange, kind, exp
               const cat = getCategoryById(e.category);
               const Icon = cat.icon;
               return (
-                <div key={e.id} className="flex items-center gap-3 p-3 rounded-xl border border-border">
+                <button
+                  key={e.id}
+                  type="button"
+                  onClick={() => openExpense(e.id)}
+                  className="w-full text-left flex items-center gap-3 p-3 rounded-xl border border-border hover:bg-muted/40 transition-colors"
+                >
                   <div className={cn('p-2 rounded-lg shrink-0', cat.bgColor)}>
                     <Icon className={cn('h-4 w-4', cat.color)} />
                   </div>
@@ -167,7 +178,7 @@ export default function AnalyticsBreakdownDialog({ open, onOpenChange, kind, exp
                       <p className="text-[10px] text-muted-foreground">of ₹{e.amount.toLocaleString('en-IN')}</p>
                     )}
                   </div>
-                </div>
+                </button>
               );
             })
           )}
