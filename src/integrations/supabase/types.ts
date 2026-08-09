@@ -521,6 +521,14 @@ export type Database = {
           total_amount: number
         }[]
       }
+      settle_my_splits: {
+        Args: { p_group_id: string; p_split_ids: string[] }
+        Returns: {
+          settlement_id: string
+          splits_settled: number
+          total_amount: number
+        }[]
+      }
       user_has_expense_split: {
         Args: { _expense_id: string; _user_id: string }
         Returns: boolean
