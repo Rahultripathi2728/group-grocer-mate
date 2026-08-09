@@ -638,14 +638,29 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label>Price (₹)</Label>
-                    <Input
-                      type="number" step="0.01" min="0" placeholder="0.00"
-                      value={activeBill.splitMode === 'itemwise'
-                        ? itemsTotal(activeBill).toFixed(2)
-                        : activeBill.amount}
-                      disabled={activeBill.splitMode === 'itemwise'}
-                      onChange={(e) => updateBill(activeBill.id, { amount: e.target.value })}
-                    />
+                     <Input
+                       type="number" step="0.01" min="0" placeholder="0.00"
+                       value={activeBill.amount}
+                       onChange={(e) => updateBill(activeBill.id, { amount: e.target.value })}
+                     />
+                     {activeBill.splitMode === 'itemwise' && (() => {
+                       const entered = parseFloat(activeBill.amount) || 0;
+                       const done = itemsTotal(activeBill);
+                       const left = Math.round((entered - done) * 100) / 100;
+                       if (entered <= 0) {
+                         return <p className="text-[10px] text-muted-foreground">Items so far: ₹{done.toFixed(2)}</p>;
+                       }
+                       return (
+                         <p className={cn('text-[10px] font-medium',
+                           Math.abs(left) < 0.01 ? 'text-success' : left > 0 ? 'text-muted-foreground' : 'text-destructive')}>
+                           {Math.abs(left) < 0.01
+                             ? 'All matched ✓'
+                             : left > 0
+                               ? `₹${left.toFixed(2)} left to add in items`
+                               : `₹${Math.abs(left).toFixed(2)} over the total`}
+                         </p>
+                       );
+                     })()}
                   </div>
                   <div className="space-y-1.5">
                     <Label>Date</Label>
