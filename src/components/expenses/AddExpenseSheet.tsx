@@ -331,6 +331,13 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
   const itemsTotal = (bill: Bill) =>
     bill.items.reduce((s, it) => s + (parseFloat(it.amount) || 0), 0);
 
+  /** Total of a bill — item-wise bills use the typed main amount when present */
+  const billTotal = (bill: Bill) => {
+    if (bill.splitMode !== 'itemwise') return parseFloat(bill.amount);
+    const typed = parseFloat(bill.amount);
+    return typed > 0 ? typed : itemsTotal(bill);
+  };
+
   /**
    * Item-wise bills stay ONE expense. The item list (name, amount, who shares it)
    * is stored on the expense itself so analytics can treat an item shared by a
@@ -385,7 +392,7 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
     if (!user || !editExpense) return;
     const b = bills[0];
     if (!b) return;
-    const rawAmt = b.splitMode === 'itemwise' ? itemsTotal(b) : parseFloat(b.amount);
+    const rawAmt = billTotal(b);
     if (!b.description.trim()) return toast.error('Description is required');
     if (isNaN(rawAmt) || rawAmt <= 0) return toast.error('Enter a valid amount');
     const amt = Math.round(rawAmt * 100) / 100;
@@ -438,19 +445,19 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
     if (!user) return;
     if (isEdit) return handleUpdate();
     for (const b of bills) {
-      const amt = b.splitMode === 'itemwise' ? itemsTotal(b) : parseFloat(b.amount);
+      const amt = billTotal(b);
       if (!b.description.trim()) return toast.error(`Bill: description required`);
       if (isNaN(amt) || amt <= 0) return toast.error(`Bill "${b.description || '...'}" needs valid amount`);
       if (mode !== 'personal') {
         const splits = computeSplits(b, amt);
         if (!splits) return toast.error(`Pick at least one person to split with`);
-        if (splits === 'invalid') return toast.error(`Splits in "${b.description}" don't add up to ₹${amt}`);
+        if (splits === 'invalid') return toast.error(`Items in "${b.description}" add up to ₹${itemsTotal(b).toFixed(2)}, not ₹${amt}`);
       }
     }
     setSubmitting(true);
     try {
       for (const b of bills) {
-        const rawAmt = b.splitMode === 'itemwise' ? itemsTotal(b) : parseFloat(b.amount);
+        const rawAmt = billTotal(b);
         const amt = Math.round(rawAmt * 100) / 100;
         const expense_type = mode === 'group' ? 'group' : 'personal';
 
@@ -786,6 +793,7 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
                         bill={activeBill}
                         people={people}
                         currentUserId={user?.id}
+                        billAmount={parseFloat(activeBill.amount) || 0}
                         onChange={(patch) => updateBill(activeBill.id, patch)}
                       />
                     )}
@@ -831,11 +839,12 @@ export default function AddExpenseSheet({ open, onOpenChange, onSuccess, selecte
 }
 
 function ItemwiseEditor({
-  bill, people, currentUserId, onChange,
+  bill, people, currentUserId, billAmount, onChange,
 }: {
   bill: Bill;
   people: Person[];
   currentUserId?: string;
+  billAmount: number;
   onChange: (patch: Partial<Bill>) => void;
 }) {
   const updateItem = (id: string, patch: Partial<BillItem>) => {
@@ -943,7 +952,19 @@ function ItemwiseEditor({
         <Button variant="outline" size="sm" onClick={addItem}>
           <Plus className="h-3.5 w-3.5 mr-1" /> Add item
         </Button>
-        <span className="text-sm font-semibold">Total: ₹{total.toFixed(2)}</span>
+        <div className="text-right">
+          <span className="text-sm font-semibold">Items: ₹{total.toFixed(2)}</span>
+          {billAmount > 0 && (
+            <p className={cn('text-[10px] font-medium',
+              Math.abs(billAmount - total) < 0.01 ? 'text-success' : billAmount - total > 0 ? 'text-muted-foreground' : 'text-destructive')}>
+              {Math.abs(billAmount - total) < 0.01
+                ? `Matches bill total ₹${billAmount.toFixed(2)}`
+                : billAmount - total > 0
+                  ? `Pending ₹${(billAmount - total).toFixed(2)} of ₹${billAmount.toFixed(2)}`
+                  : `₹${(total - billAmount).toFixed(2)} more than ₹${billAmount.toFixed(2)}`}
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );
