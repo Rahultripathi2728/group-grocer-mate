@@ -429,6 +429,7 @@ export default function GroupExpensesBreakdown({ groupId, groupName, onSettle, s
         memberSpending={memberSpending}
         onSettle={onSettle}
         settling={settling}
+        groupId={groupId}
       />
 
       {/* Settlement History — each row is one person settling their own share */}

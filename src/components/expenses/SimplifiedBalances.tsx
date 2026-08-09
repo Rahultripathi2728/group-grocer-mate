@@ -1,10 +1,11 @@
 import { useState, useEffect, forwardRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
-import { ArrowRight, ArrowDownLeft, ArrowUpRight, CheckCircle2, ExternalLink, AlertTriangle } from 'lucide-react';
+import { ArrowRight, ArrowDownLeft, ArrowUpRight, CheckCircle2, ExternalLink, ListChecks } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import {
@@ -41,10 +42,12 @@ interface Props {
   memberSpending: MemberSpending[];
   onSettle: () => void;
   settling: boolean;
+  groupId?: string;
 }
 
-const SimplifiedBalances = forwardRef<HTMLDivElement, Props>(function SimplifiedBalances({ balances, memberSpending, onSettle, settling }, ref) {
+const SimplifiedBalances = forwardRef<HTMLDivElement, Props>(function SimplifiedBalances({ balances, memberSpending, onSettle, settling, groupId }, ref) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [upiMap, setUpiMap] = useState<Record<string, string>>({});
   const [showSettleConfirm, setShowSettleConfirm] = useState(false);
   // Fetch UPI IDs for all members in balances
@@ -279,7 +282,7 @@ const SimplifiedBalances = forwardRef<HTMLDivElement, Props>(function Simplified
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mt-5 flex justify-center"
+            className="mt-5 space-y-2"
           >
             <Button
               size="lg"
@@ -288,8 +291,22 @@ const SimplifiedBalances = forwardRef<HTMLDivElement, Props>(function Simplified
               disabled={settling}
             >
               <CheckCircle2 className="h-5 w-5 mr-2" />
-              {settling ? 'Settling...' : `Settle my share (₹${totalIOwe.toFixed(0)})`}
+              {settling ? 'Settling...' : `Pay everything now (₹${totalIOwe.toFixed(0)})`}
             </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className="w-full py-5 text-base"
+              disabled={settling || !groupId}
+              onClick={() => groupId && navigate(`/settlement/pay?group=${groupId}`)}
+            >
+              <ListChecks className="h-5 w-5 mr-2" />
+              Pay only some bills
+            </Button>
+            <p className="text-[11px] text-muted-foreground text-center">
+              “Pay everything now” settles your full pending share in one go. Choose “Pay only some bills” to tick the
+              bills you can pay right now — the rest stays pending.
+            </p>
           </motion.div>
         )}
 
