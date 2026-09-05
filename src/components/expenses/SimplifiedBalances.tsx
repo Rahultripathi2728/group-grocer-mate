@@ -248,14 +248,14 @@ const SimplifiedBalances = forwardRef<HTMLDivElement, Props>(function Simplified
                     </div>
                   </div>
 
-                  {/* UPI Pay button - only for the person who owes */}
+                  {/* Pay + settle — only for the person who owes this net amount */}
                   {isYouPaying && (
-                    <div className="px-3.5 pb-3 flex gap-2">
+                    <div className="px-3.5 pb-3 space-y-2">
                       {upiMap[balance.to_user.user_id] ? (
                         <Button
                           size="sm"
                           variant="outline"
-                          className="flex-1 border-primary/30 text-primary hover:bg-primary/5"
+                          className="w-full border-primary/30 text-primary hover:bg-primary/5"
                           onClick={() => handleUpiPay(
                             upiMap[balance.to_user.user_id],
                             balance.amount,
@@ -263,13 +263,22 @@ const SimplifiedBalances = forwardRef<HTMLDivElement, Props>(function Simplified
                           )}
                         >
                           <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-                          Pay via UPI
+                          Pay ₹{balance.amount.toFixed(0)} via UPI
                         </Button>
                       ) : (
-                        <span className="text-xs text-muted-foreground italic flex-1 flex items-center">
-                          {balance.to_user.full_name} hasn't added UPI ID
-                        </span>
+                        <p className="text-xs text-muted-foreground italic">
+                          {balance.to_user.full_name} hasn't added a UPI ID — pay them directly, then confirm below.
+                        </p>
                       )}
+                      <Button
+                        size="sm"
+                        className="w-full bg-foreground text-background hover:bg-foreground/90"
+                        disabled={settling}
+                        onClick={() => setConfirmWith(balance)}
+                      >
+                        <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
+                        {settling ? 'Settling...' : `I've paid ${balance.to_user.full_name} — settle ₹${balance.amount.toFixed(0)}`}
+                      </Button>
                     </div>
                   )}
                 </motion.div>
