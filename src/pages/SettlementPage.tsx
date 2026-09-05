@@ -58,23 +58,27 @@ export default function SettlementPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [requestedGroupId, selectedGroupId]);
 
-  const handleSettleAll = async () => {
+  // Per-person settle: clears both sides of this pair, so the net amount shown is what settles.
+  const handleSettleWith = async (otherUserId: string) => {
     if (!user || !selectedGroupId) return;
     setSettling(true);
     try {
-      const { data, error } = await supabase.rpc('settle_my_share', { p_group_id: selectedGroupId });
+      const { data, error } = await supabase.rpc('settle_with_member', {
+        p_group_id: selectedGroupId,
+        p_other_user: otherUserId,
+      });
       if (error) throw error;
       const row = Array.isArray(data) ? data[0] : data;
       const count = row?.splits_settled ?? 0;
-      const amount = Number(row?.total_amount ?? 0);
-      if (!count) { toast.info('You have nothing left to settle in this group.'); setSettling(false); return; }
-      toast.success(`Your share of ₹${amount.toFixed(0)} is settled!`);
+      const net = Math.abs(Number(row?.net_amount ?? 0));
+      if (!count) { toast.info('Nothing pending with this person.'); setSettling(false); return; }
+      toast.success(`Settled ₹${net.toFixed(0)} with this person.`);
       const current = selectedGroupId;
       setSelectedGroupId('');
       setTimeout(() => setSelectedGroupId(current), 100);
     } catch (e) {
       console.error(e);
-      toast.error('Failed to settle expenses');
+      toast.error('Failed to settle');
     }
     setSettling(false);
   };
@@ -132,7 +136,7 @@ export default function SettlementPage() {
               <GroupExpensesBreakdown
                 groupId={selectedGroupId}
                 groupName={groups.find(g => g.id === selectedGroupId)?.name || ''}
-                onSettle={handleSettleAll}
+                onSettle={handleSettleWith}
                 settling={settling}
               />
             ) : (

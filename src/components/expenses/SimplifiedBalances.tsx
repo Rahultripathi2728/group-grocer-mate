@@ -1,11 +1,10 @@
 import { useState, useEffect, forwardRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
-import { ArrowRight, ArrowDownLeft, ArrowUpRight, CheckCircle2, ExternalLink, ListChecks } from 'lucide-react';
+import { ArrowRight, ArrowDownLeft, ArrowUpRight, CheckCircle2, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import {
@@ -40,16 +39,15 @@ interface MemberSpending {
 interface Props {
   balances: Balance[];
   memberSpending: MemberSpending[];
-  onSettle: () => void;
+  onSettle: (otherUserId: string) => void;
   settling: boolean;
   groupId?: string;
 }
 
 const SimplifiedBalances = forwardRef<HTMLDivElement, Props>(function SimplifiedBalances({ balances, memberSpending, onSettle, settling, groupId }, ref) {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [upiMap, setUpiMap] = useState<Record<string, string>>({});
-  const [showSettleConfirm, setShowSettleConfirm] = useState(false);
+  const [confirmWith, setConfirmWith] = useState<Balance | null>(null);
   // Fetch UPI IDs for all members in balances
   useEffect(() => {
     const userIds = new Set<string>();
@@ -248,14 +246,14 @@ const SimplifiedBalances = forwardRef<HTMLDivElement, Props>(function Simplified
                     </div>
                   </div>
 
-                  {/* UPI Pay button - only for the person who owes */}
+                  {/* Pay + settle — only for the person who owes this net amount */}
                   {isYouPaying && (
-                    <div className="px-3.5 pb-3 flex gap-2">
+                    <div className="px-3.5 pb-3 space-y-2">
                       {upiMap[balance.to_user.user_id] ? (
                         <Button
                           size="sm"
                           variant="outline"
-                          className="flex-1 border-primary/30 text-primary hover:bg-primary/5"
+                          className="w-full border-primary/30 text-primary hover:bg-primary/5"
                           onClick={() => handleUpiPay(
                             upiMap[balance.to_user.user_id],
                             balance.amount,
@@ -263,13 +261,22 @@ const SimplifiedBalances = forwardRef<HTMLDivElement, Props>(function Simplified
                           )}
                         >
                           <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-                          Pay via UPI
+                          Pay ₹{balance.amount.toFixed(0)} via UPI
                         </Button>
                       ) : (
-                        <span className="text-xs text-muted-foreground italic flex-1 flex items-center">
-                          {balance.to_user.full_name} hasn't added UPI ID
-                        </span>
+                        <p className="text-xs text-muted-foreground italic">
+                          {balance.to_user.full_name} hasn't added a UPI ID — pay them directly, then confirm below.
+                        </p>
                       )}
+                      <Button
+                        size="sm"
+                        className="w-full bg-foreground text-background hover:bg-foreground/90"
+                        disabled={settling}
+                        onClick={() => setConfirmWith(balance)}
+                      >
+                        <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
+                        {settling ? 'Settling...' : `I've paid ${balance.to_user.full_name} — settle ₹${balance.amount.toFixed(0)}`}
+                      </Button>
                     </div>
                   )}
                 </motion.div>
@@ -279,57 +286,39 @@ const SimplifiedBalances = forwardRef<HTMLDivElement, Props>(function Simplified
         )}
 
         {iOwe.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mt-5 space-y-2"
-          >
-            <Button
-              size="lg"
-              className="bg-foreground text-background hover:bg-foreground/90 px-8 py-5 text-base w-full"
-              onClick={() => setShowSettleConfirm(true)}
-              disabled={settling}
-            >
-              <CheckCircle2 className="h-5 w-5 mr-2" />
-              {settling ? 'Settling...' : `Pay everything now (₹${totalIOwe.toFixed(0)})`}
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="w-full py-5 text-base"
-              disabled={settling || !groupId}
-              onClick={() => groupId && navigate(`/settlement/pay?group=${groupId}`)}
-            >
-              <ListChecks className="h-5 w-5 mr-2" />
-              Pay only some bills
-            </Button>
-            <p className="text-[11px] text-muted-foreground text-center">
-              “Pay everything now” settles your full pending share in one go. Choose “Pay only some bills” to tick the
-              bills you can pay right now — the rest stays pending.
-            </p>
-          </motion.div>
+          <p className="mt-4 text-[11px] text-muted-foreground text-center">
+            Each row is the final net amount for that person. Paying and settling a row clears both sides of that pair —
+            no one else's balance changes.
+          </p>
         )}
 
-        <AlertDialog open={showSettleConfirm} onOpenChange={setShowSettleConfirm}>
+        <AlertDialog open={!!confirmWith} onOpenChange={(o) => !o && setConfirmWith(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <div className="flex items-center gap-3 mb-2">
                 <div className="p-2 rounded-full bg-primary/10">
                   <CheckCircle2 className="h-5 w-5 text-primary" />
                 </div>
-                <AlertDialogTitle>Settle your share?</AlertDialogTitle>
+                <AlertDialogTitle>
+                  Settle ₹{(confirmWith?.amount || 0).toFixed(0)} with {confirmWith?.to_user.full_name}?
+                </AlertDialogTitle>
               </div>
               <AlertDialogDescription>
-                You owe <strong>₹{totalIOwe.toFixed(0)}</strong> in total. This marks <strong>only your own share</strong> as paid — other members' pending amounts stay unsettled. This action cannot be undone.
+                Confirm only after the payment has gone through. This clears everything pending between you and{' '}
+                {confirmWith?.to_user.full_name} — other members' balances stay exactly as they are. This cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
-                onClick={() => { setShowSettleConfirm(false); onSettle(); }}
+                onClick={() => {
+                  const target = confirmWith;
+                  setConfirmWith(null);
+                  if (target) onSettle(target.to_user.user_id);
+                }}
                 className="bg-foreground text-background hover:bg-foreground/90"
               >
-                Settle my share
+                Yes, settle
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
