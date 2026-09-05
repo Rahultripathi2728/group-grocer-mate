@@ -1,50 +1,42 @@
-## What will change
+# Settlement ka hisaab fix (diagnosis + plan)
 
-### 1. Add Expense chooser → small bottom sheet (full-screen only on form)
-- `AddExpenseSheet.tsx`: revert the **chooser** view (Group circles + "Add as personal") to the original short `Sheet` (bottom, `side="bottom"`, auto height). The **form** view stays full-screen `Dialog` as it is now.
+## Jo hua (Aman/Rahul case)
 
-### 2. Bottom nav becomes 4 tabs (List removed, Settlement promoted)
-New nav order: **Calendar · My Expenses · Settlement · Groups**
+Settlement page do alag-alag hisaab dikhata hai aur use karta hai — yahi asli bug hai.
 
-- `BottomNav.tsx`: remove `List`, add `Settlement` (icon `CheckCircle2`).
-- `App.tsx`: drop `/list` route + `ListPage` import. Add `/settlement` route. Keep `/expenses` mounting only the "My Expenses" view.
+1. **Dikhne wala hisaab (net):** "Who Pays Whom" me har jodi (pair) ke dono taraf ke amount aapas me kaat ke ek hi line dikhayi jaati hai.
+   Example: Aman ko Rahul se ₹500 dena hai (Rahul ke bills me), Rahul ko Aman se ₹300 dena hai (Aman ke bills me) → screen par sirf "Aman → Rahul ₹200".
 
-### 3. Split `ExpensesPage` into two separate pages
-- **New `MyExpensesPage.tsx`** (`/expenses`): exactly the current "Personal" tab content (date range filter, BudgetCard, stats, recent expenses, charts) — **no Tabs wrapper**.
-- **New `SettlementPage.tsx`** (`/settlement`):
-  - Horizontal scrollable group **avatar circles** (same look as AddExpense chooser — `Users` icon in circle, name under).
-  - Click circle → selects that group, shows its `GroupExpensesBreakdown` below (existing component).
-  - Persist selection in `localStorage` (`settlement_selected_group`).
-  - Empty state if no groups: "Create a group from the Groups tab".
-- Delete old `ExpensesPage.tsx`.
+2. **Settle karne wala hisaab (one-sided):** "Settle my share" dabane par sirf Aman ke apne saare pending share paid ho jaate hain — poore ₹500 — aur Rahul ka ₹300 pending hi rehta hai.
 
-### 4. Simplify expense detail (no "who pays whom")
-- `SimplifiedBalances.tsx`: keep "Your Balance" header + chips + "Mark All as Settled" button. **Remove** the entire "Who Pays Whom" per-balance list + UPI pay buttons (per user: no breakdown of who-pays-whom).
-- `GroupExpensesBreakdown.tsx` per-expense accordion content: when a user expands a single expense (within "Who Spent How Much"), show only:
-  - Total amount · Your share · Type (group/personal) · Status (Settled/Pending) · Date · Added by · **Split type** (Equal / Unequal / Item-wise) · **Split detail** = number of people involved, plus item list if item-wise. No per-person amount list, no settlement arrows.
+Result: Aman ne ₹200 (net) bheja, magar system ne ₹500 clear kar diya, aur Rahul ka ₹300 alag se pending dikh gaya. Isi liye Aman ke settle karte hi poora hisaab palat gaya aur "ab Rahul ko pay karna hai ₹300" aa gaya. Paisa ₹300 ka double count hua.
 
-### 5. Remove List feature completely (frontend + DB)
-- Delete files: `src/pages/ListPage.tsx`, any `List*` components under `src/components/list/` if present.
-- Remove route, nav item, any imports.
-- Migration: `DROP TABLE public.grocery_items; DROP TABLE public.grocery_lists;` and drop the related triggers/functions `notify_group_on_grocery_item`, `notify_group_on_grocery_check`. ⚠️ **All list data permanently deleted.**
+## Do sath wali kamiyan
 
-### 6. Fix duplicate notifications
-Root cause to verify & fix:
-- DB trigger `notify_group_on_expense` inserts a notification → trigger `send_push_on_notification` fires the edge function. That's one push.
-- But the chooser/form was being mounted twice (Sheet + Dialog open simultaneously in some states) — already gated. Will audit `bills` loop in `AddExpenseSheet.handleSubmit`: it iterates `for (const b of bills)` and inserts each expense, which causes a per-bill push. If user adds 2 bills they get 2 pushes (correct). But if `notify_group_on_expense` AND a client-side notification call exist, that's the dupe.
-- Audit:
-  1. Check whether anywhere in client code we ALSO call `supabase.functions.invoke('send-push-notification')` after inserting an expense. If yes → remove (DB trigger already handles it).
-  2. Check whether `send_push_on_notification` is bound to both `AFTER INSERT` and another event on `notifications` (would double).
-  3. Ensure `send-push-notification` edge function isn't being called twice per event (one push per subscription per notification row).
-- Fix whichever duplicate path exists. Most likely: a leftover client-side `.functions.invoke('send-push-notification')` call → remove it.
+- **Counterparty ka record nahi:** settlement sirf "kisne, kitna" store karta hai — "kisko diya" nahi. Isliye kabhi verify nahi ho paata ki Aman ne Rahul ko net ₹200 diya tha.
+- **"Pay only some bills" page (Pay selected bills):** ye bhi bill-wise one-sided settle karta hai, net hisaab ko bilkul ignore karke — usse yahi gadbad aur badhti hai. Aapke kehne par ise hata denge.
 
-## Files touched
-- Edit: `src/components/expenses/AddExpenseSheet.tsx`, `src/components/layout/BottomNav.tsx`, `src/App.tsx`, `src/components/expenses/SimplifiedBalances.tsx`, `src/components/expenses/GroupExpensesBreakdown.tsx`
-- New: `src/pages/MyExpensesPage.tsx`, `src/pages/SettlementPage.tsx`
-- Delete: `src/pages/ListPage.tsx`, `src/pages/ExpensesPage.tsx`, `src/components/expenses/AddExpenseDialog.tsx` (unused after audit)
-- New migration: drop grocery tables + 2 related trigger functions
-- Audit & fix push duplication (likely remove a client-side invoke)
+## Fix plan
 
-## Out of scope (confirm if you want these too)
-- I will NOT touch loans, calendar visuals, friend/profile pages, or notification UI.
-- Capacitor / GitHub Pages config untouched.
+**A. Net hisaab hi settle ho (core fix)**
+- Naya per-jodi settle: "Rahul ko ₹200 settle karo" — us button se Aman ke Rahul-wale pending share **aur** Rahul ke Aman-wale pending share, dono ek sath paid ho jaate hain (kyunki net ₹200 se dono side khatam). Amount mismatch ho to chhote side ko poora aur bade side ko net tak adjust kiya jayega, taaki koi paisa gum ya double na ho.
+- Screen par jo net amount dikh raha hai, wahi settle hoga — display aur action ek jaise.
+
+**B. Settlement ka proper record**
+- Settlement row me counterparty (kisko pay kiya) aur net amount save hoga, aur history me "Aman → Rahul ₹200" dikhega. Group balance hamesha isi ledger se milega.
+
+**C. Purana flow hatana**
+- "Settle my share" (poora group ek sath, one-sided) aur "Pay only some bills" page dono hata denge, aur unke links/route bhi. Jagah par sirf per-person "Pay & settle" cards rahenge — har card par UPI link + settle button.
+
+**D. Purana data theek karna**
+- Ek baar ka cleanup: jahan ek side paid aur doosri side unpaid pada hai (Aman/Rahul jaisa case), use net ke hisaab se sahi kar denge, taaki aaj ka balance sach dikhe.
+
+**E. Verify**
+- Aman ke settle karne ke baad Rahul ki screen par balance ₹0 hona chahiye (na palat kar naya amount aana chahiye), aur naye bill ke baad hisaab zero se shuru ho.
+
+## Technical notes
+
+- Nayi RPC `settle_with_member(p_group_id, p_other_user)`: dono taraf ke `expense_splits` net karke `is_paid` set karti hai (SECURITY DEFINER, caller khud hi apni taraf se call kar sakta hai), aur `settlements` me `counterparty_id` + `net_amount` insert karti hai.
+- `settlements` table me `counterparty_id uuid` add hoga (migration + GRANT).
+- `settle_my_share` / `settle_my_splits` remove; `PaySelectedBillsPage.tsx` aur uska route delete.
+- `GroupExpensesBreakdown.tsx` ka pair-netting logic RPC ke saath exactly match karega (shared helper).
