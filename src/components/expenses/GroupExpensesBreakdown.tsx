@@ -71,7 +71,7 @@ interface Settlement {
 interface Props {
   groupId: string;
   groupName: string;
-  onSettle: () => void;
+  onSettle: (otherUserId: string) => void;
   settling: boolean;
 }
 

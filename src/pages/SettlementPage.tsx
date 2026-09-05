@@ -136,7 +136,7 @@ export default function SettlementPage() {
               <GroupExpensesBreakdown
                 groupId={selectedGroupId}
                 groupName={groups.find(g => g.id === selectedGroupId)?.name || ''}
-                onSettle={handleSettleAll}
+                onSettle={handleSettleWith}
                 settling={settling}
               />
             ) : (
