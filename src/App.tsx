@@ -13,7 +13,7 @@ import ExpenseDetailPage from "./pages/ExpenseDetailPage";
 import GroupsPage from "./pages/GroupsPage";
 import SettlementPage from "./pages/SettlementPage";
 import SettlementHistoryPage from "./pages/SettlementHistoryPage";
-import PaySelectedBillsPage from "./pages/PaySelectedBillsPage";
+
 import InstallPage from "./pages/InstallPage";
 import ProfilePage from "./pages/ProfilePage";
 import NotificationsPage from "./pages/NotificationsPage";
@@ -87,14 +87,6 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <SettlementHistoryPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/settlement/pay"
-              element={
-                <ProtectedRoute>
-                  <PaySelectedBillsPage />
                 </ProtectedRoute>
               }
             />
