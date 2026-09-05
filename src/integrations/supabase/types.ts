@@ -423,6 +423,7 @@ export type Database = {
       }
       settlements: {
         Row: {
+          counterparty_id: string | null
           group_id: string
           id: string
           notes: string | null
@@ -431,6 +432,7 @@ export type Database = {
           total_amount: number | null
         }
         Insert: {
+          counterparty_id?: string | null
           group_id: string
           id?: string
           notes?: string | null
@@ -439,6 +441,7 @@ export type Database = {
           total_amount?: number | null
         }
         Update: {
+          counterparty_id?: string | null
           group_id?: string
           id?: string
           notes?: string | null
@@ -447,6 +450,13 @@ export type Database = {
           total_amount?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "settlements_counterparty_id_fkey"
+            columns: ["counterparty_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "settlements_group_id_fkey"
             columns: ["group_id"]
@@ -513,20 +523,12 @@ export type Database = {
           username: string
         }[]
       }
-      settle_my_share: {
-        Args: { p_group_id: string }
+      settle_with_member: {
+        Args: { p_group_id: string; p_other_user: string }
         Returns: {
+          net_amount: number
           settlement_id: string
           splits_settled: number
-          total_amount: number
-        }[]
-      }
-      settle_my_splits: {
-        Args: { p_group_id: string; p_split_ids: string[] }
-        Returns: {
-          settlement_id: string
-          splits_settled: number
-          total_amount: number
         }[]
       }
       user_has_expense_split: {
