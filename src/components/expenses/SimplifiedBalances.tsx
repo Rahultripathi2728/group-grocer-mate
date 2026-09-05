@@ -1,11 +1,10 @@
 import { useState, useEffect, forwardRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
-import { ArrowRight, ArrowDownLeft, ArrowUpRight, CheckCircle2, ExternalLink, ListChecks } from 'lucide-react';
+import { ArrowRight, ArrowDownLeft, ArrowUpRight, CheckCircle2, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import {
