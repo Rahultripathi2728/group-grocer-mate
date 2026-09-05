@@ -40,16 +40,15 @@ interface MemberSpending {
 interface Props {
   balances: Balance[];
   memberSpending: MemberSpending[];
-  onSettle: () => void;
+  onSettle: (otherUserId: string) => void;
   settling: boolean;
   groupId?: string;
 }
 
 const SimplifiedBalances = forwardRef<HTMLDivElement, Props>(function SimplifiedBalances({ balances, memberSpending, onSettle, settling, groupId }, ref) {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [upiMap, setUpiMap] = useState<Record<string, string>>({});
-  const [showSettleConfirm, setShowSettleConfirm] = useState(false);
+  const [confirmWith, setConfirmWith] = useState<Balance | null>(null);
   // Fetch UPI IDs for all members in balances
   useEffect(() => {
     const userIds = new Set<string>();
